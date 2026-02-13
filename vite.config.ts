@@ -1,18 +1,43 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { fileURLToPath, URL } from 'node:url';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { fileURLToPath, URL } from "node:url";
+import electron from "vite-plugin-electron/simple";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    electron({
+      main: {
+        entry: "electron/main.ts",
+        vite: {
+          build: {
+            outDir: "dist-electron",
+            rollupOptions: {
+              external: ["electron"],
+            },
+          },
+        },
+      },
+      preload: {
+        input: "electron/preload.ts",
+        vite: {
+          build: {
+            outDir: "dist-electron",
+          },
+        },
+      },
+      renderer: {},
+    }),
+  ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  base: './',
+  base: "./",
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     emptyOutDir: true,
   },
   server: {

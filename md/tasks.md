@@ -14,6 +14,10 @@
 
 ### 已完成
 
+- [x] TASK-002: 修复 Electron 启动配置 | 完成时间: 2026-02-13 23:10
+  - 添加 vite-plugin-electron 插件解决主进程构建问题
+  - 配置 Vite 正确编译 Electron 主进程和预加载脚本
+
 - [x] TASK-001: 项目初始化 | 完成时间: 2026-02-13 23:00
   - 创建 Electron + React + TypeScript + Ant Design + Vite 项目
   - 配置项目规范文件 (rules.md)

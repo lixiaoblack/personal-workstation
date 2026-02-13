@@ -4,6 +4,19 @@
 
 ---
 
+## [0.1.1] - 2026-02-13
+
+### 修复 (Fixed)
+
+- 修复 Electron 启动配置问题
+  - 添加 vite-plugin-electron 插件
+  - 添加 vite-plugin-electron-renderer 插件
+  - 更新 vite.config.ts 配置 Electron 主进程和预加载脚本构建
+  - 简化 package.json 脚本命令
+  - 更新 .gitignore 排除 dist-electron 目录
+
+---
+
 ## [0.1.0] - 2026-02-13
 
 ### 新增 (Added)

@@ -14,6 +14,10 @@
 
 ### 已完成
 
+- [x] TASK-004: 修复 Tailwind CSS 配置和组件样式 | 完成时间: 2026-02-14 22:25
+  - 补充 tailwind.config.js 的 content 配置
+  - 重写所有全局组件使用 Tailwind CSS 原子类
+
 - [x] TASK-003: 集成 Tailwind CSS 和创建路由 | 完成时间: 2026-02-14 22:10
   - 安装并配置 Tailwind CSS
   - 创建路由系统 (react-router-dom)

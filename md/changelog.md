@@ -4,6 +4,17 @@
 
 ---
 
+## [0.2.1] - 2026-02-14
+
+### 修复 (Fixed)
+
+- 修复 Tailwind CSS 配置问题
+  - 补充 tailwind.config.js 的 content 配置
+  - 重写所有全局组件使用 Tailwind CSS 原子类
+  - WSidebar、WHeader、WCard、WProgress 组件完全使用 Tailwind CSS
+
+---
+
 ## [0.2.0] - 2026-02-14
 
 ### 新增 (Added)

@@ -14,6 +14,10 @@
 
 ### 已完成
 
+- [x] TASK-006: 修复边框颜色显示问题 | 完成时间: 2026-02-14 23:45
+  - 修复 Tailwind 边框配置结构
+  - border-border 类正确使用 CSS 变量
+
 - [x] TASK-005: 实现主题切换功能 | 完成时间: 2026-02-14 23:30
   - 创建 CSS 变量定义深色/浅色主题
   - 创建 ThemeContext 和 useTheme Hook

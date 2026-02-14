@@ -3,10 +3,10 @@
  * 用于展示系统状态、任务进度等
  * 使用 Tailwind CSS + 主题变量
  */
-import React from 'react';
+import React from "react";
 
 // 进度条状态
-export type TProgressStatus = 'normal' | 'success' | 'warning' | 'error';
+export type TProgressStatus = "normal" | "success" | "warning" | "error";
 
 // WProgress 组件属性
 export interface IWProgressProps {
@@ -25,32 +25,33 @@ export interface IWProgressProps {
 }
 
 // 状态颜色映射
-const statusColorMap: Record<TProgressStatus, { bar: string; value: string }> = {
-  normal: {
-    bar: 'bg-primary',
-    value: 'text-primary',
-  },
-  success: {
-    bar: 'bg-success',
-    value: 'text-success',
-  },
-  warning: {
-    bar: 'bg-warning',
-    value: 'text-warning',
-  },
-  error: {
-    bar: 'bg-error',
-    value: 'text-error',
-  },
-};
+const statusColorMap: Record<TProgressStatus, { bar: string; value: string }> =
+  {
+    normal: {
+      bar: "bg-primary",
+      value: "text-primary",
+    },
+    success: {
+      bar: "bg-success",
+      value: "text-success",
+    },
+    warning: {
+      bar: "bg-warning",
+      value: "text-warning",
+    },
+    error: {
+      bar: "bg-error",
+      value: "text-error",
+    },
+  };
 
 const WProgress: React.FC<IWProgressProps> = ({
   label,
   value,
   percent,
-  status = 'normal',
+  status = "normal",
   showInfo = true,
-  className = '',
+  className = "",
 }) => {
   // 确保百分比在有效范围内
   const validPercent = Math.min(100, Math.max(0, percent));

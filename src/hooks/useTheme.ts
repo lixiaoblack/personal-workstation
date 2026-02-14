@@ -2,9 +2,9 @@
  * 主题 Hook
  * 提供主题状态和切换方法
  */
-import { useContext } from 'react';
-import { ThemeContext } from '@/contexts/ThemeContext';
-import type { ThemeContextValue } from '@/contexts/theme.types';
+import { useContext } from "react";
+import { ThemeContext } from "@/contexts/ThemeContext";
+import type { ThemeContextValue } from "@/contexts/theme.types";
 
 /**
  * 获取主题上下文
@@ -13,11 +13,11 @@ import type { ThemeContextValue } from '@/contexts/theme.types';
  */
 export const useTheme = (): ThemeContextValue => {
   const context = useContext(ThemeContext);
-  
+
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
-  
+
   return context;
 };
 

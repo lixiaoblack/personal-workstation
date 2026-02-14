@@ -3,10 +3,10 @@
  * 通用卡片组件，用于模块入口、内容展示
  * 使用 Tailwind CSS + 主题变量
  */
-import React from 'react';
+import React from "react";
 
 // 预设颜色类型
-export type TCardColor = 'blue' | 'emerald' | 'purple' | 'amber' | 'rose';
+export type TCardColor = "blue" | "emerald" | "purple" | "amber" | "rose";
 
 // WCard 组件属性
 export interface IWCardProps {
@@ -29,31 +29,34 @@ export interface IWCardProps {
 }
 
 // 颜色映射（使用 Tailwind 内置色）
-const colorMap: Record<TCardColor, { bg: string; text: string; hoverBg: string }> = {
+const colorMap: Record<
+  TCardColor,
+  { bg: string; text: string; hoverBg: string }
+> = {
   blue: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-500',
-    hoverBg: 'group-hover:bg-blue-500 group-hover:text-white',
+    bg: "bg-blue-500/10",
+    text: "text-blue-500",
+    hoverBg: "group-hover:bg-blue-500 group-hover:text-white",
   },
   emerald: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-500',
-    hoverBg: 'group-hover:bg-emerald-500 group-hover:text-white',
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-500",
+    hoverBg: "group-hover:bg-emerald-500 group-hover:text-white",
   },
   purple: {
-    bg: 'bg-purple-500/10',
-    text: 'text-purple-500',
-    hoverBg: 'group-hover:bg-purple-500 group-hover:text-white',
+    bg: "bg-purple-500/10",
+    text: "text-purple-500",
+    hoverBg: "group-hover:bg-purple-500 group-hover:text-white",
   },
   amber: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-500',
-    hoverBg: 'group-hover:bg-amber-500 group-hover:text-white',
+    bg: "bg-amber-500/10",
+    text: "text-amber-500",
+    hoverBg: "group-hover:bg-amber-500 group-hover:text-white",
   },
   rose: {
-    bg: 'bg-rose-500/10',
-    text: 'text-rose-500',
-    hoverBg: 'group-hover:bg-rose-500 group-hover:text-white',
+    bg: "bg-rose-500/10",
+    text: "text-rose-500",
+    hoverBg: "group-hover:bg-rose-500 group-hover:text-white",
   },
 };
 
@@ -61,10 +64,10 @@ const WCard: React.FC<IWCardProps> = ({
   icon,
   title,
   description,
-  color = 'blue',
+  color = "blue",
   hoverable = false,
   onClick,
-  className = '',
+  className = "",
   children,
 }) => {
   const colorStyles = colorMap[color];
@@ -73,13 +76,23 @@ const WCard: React.FC<IWCardProps> = ({
     <div
       className={`
         relative bg-bg-secondary p-5 rounded-xl border border-border transition-all
-        ${hoverable ? 'group cursor-pointer hover:border-primary/50 hover:-translate-y-1' : ''}
+        ${
+          hoverable
+            ? "group cursor-pointer hover:border-primary/50 hover:-translate-y-1"
+            : ""
+        }
         ${className}
       `}
       onClick={onClick}
     >
       {/* 图标 */}
-      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorStyles.bg} ${colorStyles.text} ${hoverable ? colorStyles.hoverBg : ''} transition-colors`}>
+      <div
+        className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+          colorStyles.bg
+        } ${colorStyles.text} ${
+          hoverable ? colorStyles.hoverBg : ""
+        } transition-colors`}
+      >
         <span className="material-symbols-outlined">{icon}</span>
       </div>
 
@@ -87,7 +100,9 @@ const WCard: React.FC<IWCardProps> = ({
       <h4 className="font-bold mt-3 text-text-primary">{title}</h4>
 
       {/* 描述 */}
-      {description && <p className="text-xs text-text-tertiary mt-1">{description}</p>}
+      {description && (
+        <p className="text-xs text-text-tertiary mt-1">{description}</p>
+      )}
 
       {/* 悬停箭头 */}
       {hoverable && (

@@ -3,8 +3,8 @@
  * 包含品牌标识、导航菜单、用户操作区
  * 使用 Tailwind CSS + 主题变量
  */
-import React, { useState } from 'react';
-import type { ReactNode } from 'react';
+import React, { useState } from "react";
+import type { ReactNode } from "react";
 
 // 导航菜单项类型
 export interface INavMenuItem {
@@ -35,11 +35,13 @@ const WSidebar: React.FC<IWSidebarProps> = ({
   menuItems,
   activeKey,
   onMenuClick,
-  brandName = '个人工作站',
-  version = '专业版 v2.4.0',
+  brandName = "个人工作站",
+  version = "专业版 v2.4.0",
   footerExtra,
 }) => {
-  const [selectedKey, setSelectedKey] = useState(activeKey || menuItems[0]?.key);
+  const [selectedKey, setSelectedKey] = useState(
+    activeKey || menuItems[0]?.key
+  );
 
   // 处理菜单点击
   const handleMenuClick = (item: INavMenuItem) => {
@@ -58,7 +60,9 @@ const WSidebar: React.FC<IWSidebarProps> = ({
               <span className="material-symbols-outlined">terminal</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight text-text-primary">{brandName}</h1>
+              <h1 className="text-lg font-bold leading-tight text-text-primary">
+                {brandName}
+              </h1>
               <p className="text-xs text-text-tertiary">{version}</p>
             </div>
           </div>
@@ -69,14 +73,17 @@ const WSidebar: React.FC<IWSidebarProps> = ({
               <a
                 key={item.key}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors cursor-pointer
-                  ${selectedKey === item.key 
-                    ? 'bg-bg-hover text-text-primary' 
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
+                  ${
+                    selectedKey === item.key
+                      ? "bg-bg-hover text-text-primary"
+                      : "text-text-secondary hover:text-text-primary hover:bg-bg-hover"
                   }`}
                 onClick={() => handleMenuClick(item)}
-                href={item.path || '#'}
+                href={item.path || "#"}
               >
-                <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                <span className="material-symbols-outlined text-xl">
+                  {item.icon}
+                </span>
                 <span>{item.label}</span>
               </a>
             ))}
@@ -93,11 +100,19 @@ const WSidebar: React.FC<IWSidebarProps> = ({
 
           {/* 设置和退出 */}
           <div className="flex flex-col gap-1">
-            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer" href="#">
-              <span className="material-symbols-outlined text-xl">settings</span>
+            <a
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer"
+              href="#"
+            >
+              <span className="material-symbols-outlined text-xl">
+                settings
+              </span>
               <span>设置</span>
             </a>
-            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-error hover:bg-error-light transition-colors cursor-pointer" href="#">
+            <a
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-error hover:bg-error-light transition-colors cursor-pointer"
+              href="#"
+            >
               <span className="material-symbols-outlined text-xl">logout</span>
               <span>退出登录</span>
             </a>

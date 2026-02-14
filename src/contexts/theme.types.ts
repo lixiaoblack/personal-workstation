@@ -1,8 +1,8 @@
 /**
  * 主题类型定义
  */
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type ResolvedTheme = 'light' | 'dark';
+export type ThemeMode = "light" | "dark" | "system";
+export type ResolvedTheme = "light" | "dark";
 
 /**
  * 主题上下文值类型
@@ -21,4 +21,4 @@ export interface ThemeContextValue {
 /**
  * 本地存储键名
  */
-export const THEME_STORAGE_KEY = 'theme';
+export const THEME_STORAGE_KEY = "theme";

@@ -14,6 +14,13 @@
 
 ### 已完成
 
+- [x] TASK-005: 实现主题切换功能 | 完成时间: 2026-02-14 23:30
+  - 创建 CSS 变量定义深色/浅色主题
+  - 创建 ThemeContext 和 useTheme Hook
+  - 配置 Ant Design 主题动态切换
+  - 更新所有组件使用主题变量
+  - 添加主题切换过渡动画
+
 - [x] TASK-004: 修复 Tailwind CSS 配置和组件样式 | 完成时间: 2026-02-14 22:25
   - 补充 tailwind.config.js 的 content 配置
   - 重写所有全局组件使用 Tailwind CSS 原子类

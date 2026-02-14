@@ -4,6 +4,43 @@
 
 ---
 
+## [0.3.0] - 2026-02-14
+
+### 新增 (Added)
+
+- 实现主题切换功能
+  - 创建 CSS 变量文件 `src/styles/themes/variables.css`
+  - 定义深色/浅色模式的颜色变量
+  - 添加主题切换过渡动画
+
+- 创建主题管理系统
+  - 创建 `ThemeContext` 主题上下文
+  - 创建 `useTheme` Hook
+  - 支持三种主题模式：light、dark、system
+  - 默认跟随系统主题
+  - 使用 localStorage 持久化用户选择
+
+- 配置 Ant Design 主题
+  - 创建 `antd-theme.ts` 配置文件
+  - 根据当前主题动态切换 Ant Design 组件样式
+  - 深色/浅色模式完整适配
+
+- 更新 Tailwind CSS 配置
+  - 使用 CSS 变量定义主题色
+  - 支持 `bg-primary`、`text-primary`、`border-color` 等主题类
+
+- 更新所有组件使用主题变量
+  - WSidebar、WHeader、WCard、WProgress 组件适配主题
+  - Home 页面完全适配深色/浅色模式
+
+### 更新规范
+
+- 添加主题规范章节
+- 添加 Git 提交前 TS 检查规范
+- 添加主题变量对照表
+
+---
+
 ## [0.2.1] - 2026-02-14
 
 ### 修复 (Fixed)

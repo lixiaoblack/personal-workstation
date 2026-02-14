@@ -8,6 +8,7 @@ import { WSidebar } from "@/components/WSidebar";
 import { WHeader } from "@/components/WHeader";
 import { WCard } from "@/components/WCard";
 import { WProgress } from "@/components/WProgress";
+import { useAuth } from "@/contexts";
 import {
   NAV_MENU_CONFIG,
   MODULE_CARDS_CONFIG,
@@ -17,6 +18,8 @@ import {
 } from "./config";
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
+  
   // 当前日期
   const currentDate = new Date();
   const dateStr = `${currentDate.getFullYear()}年${
@@ -236,7 +239,7 @@ const Home: React.FC = () => {
             <div className="relative z-20 flex justify-between items-end">
               <div>
                 <h2 className="text-4xl font-black tracking-tight text-text-primary mb-2">
-                  欢迎回来，管理员
+                  欢迎回来，{user?.nickname || user?.username || "用户"}
                   <span className="text-primary inline-block animate-pulse">
                     _
                   </span>

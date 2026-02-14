@@ -1,20 +1,18 @@
 /**
  * WHeader 头部组件
- * 包含搜索栏、通知按钮、用户信息
+ * 包含搜索栏、通知按钮、用户信息、退出登录
  * 使用 Tailwind CSS + 主题变量
  */
-import React from "react";
+import React, { useState } from "react";
+import { Dropdown, message } from "antd";
+import { useNavigate } from "react-router-dom";
+import type { MenuProps } from "antd";
+import { useAuth } from "@/contexts";
 
 // WHeader 组件属性
 export interface IWHeaderProps {
   /** 搜索框占位文本 */
   searchPlaceholder?: string;
-  /** 用户名 */
-  userName?: string;
-  /** 用户头像 URL */
-  userAvatar?: string;
-  /** 最后登录时间 */
-  lastLogin?: string;
   /** 搜索回调 */
   onSearch?: (value: string) => void;
   /** 通知点击回调 */
@@ -23,18 +21,78 @@ export interface IWHeaderProps {
 
 const WHeader: React.FC<IWHeaderProps> = ({
   searchPlaceholder = "搜索功能、任务或日志...",
-  userName = "管理员",
-  userAvatar,
-  lastLogin = "10:24 AM",
   onSearch,
   onNotificationClick,
 }) => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   // 处理搜索
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       onSearch?.((e.target as HTMLInputElement).value);
     }
   };
+
+  // 处理退出登录
+  const handleLogout = async () => {
+    try {
+      await logout();
+      message.success("已退出登录");
+      navigate("/login", { replace: true });
+    } catch {
+      message.error("退出登录失败");
+    }
+  };
+
+  // 用户下拉菜单
+  const menuItems: MenuProps["items"] = [
+    {
+      key: "profile",
+      label: "个人资料",
+      icon: <span className="material-symbols-outlined text-[18px]">person</span>,
+    },
+    {
+      key: "settings",
+      label: "设置",
+      icon: <span className="material-symbols-outlined text-[18px]">settings</span>,
+    },
+    {
+      type: "divider",
+    },
+    {
+      key: "logout",
+      label: "退出登录",
+      icon: <span className="material-symbols-outlined text-[18px]">logout</span>,
+      danger: true,
+    },
+  ];
+
+  // 菜单点击
+  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "logout") {
+      handleLogout();
+    } else if (key === "profile") {
+      // TODO: 跳转到个人资料页
+      message.info("个人资料功能开发中");
+    } else if (key === "settings") {
+      // TODO: 跳转到设置页
+      message.info("设置功能开发中");
+    }
+    setDropdownOpen(false);
+  };
+
+  // 用户名显示
+  const displayName = user?.nickname || user?.username || "用户";
+
+  // 最后登录时间格式化
+  const lastLoginTime = user?.last_login_at
+    ? new Date(user.last_login_at).toLocaleTimeString("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "首次登录";
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-bg-primary/80 backdrop-blur-xl border-b border-border">
@@ -65,23 +123,30 @@ const WHeader: React.FC<IWHeaderProps> = ({
         <div className="w-px h-8 bg-border" />
 
         {/* 用户信息 */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-sm font-medium text-text-primary">{userName}</p>
-            <p className="text-xs text-text-tertiary">最后登录: {lastLogin}</p>
-          </div>
-          {userAvatar ? (
-            <img
-              className="w-10 h-10 rounded-full object-cover"
-              src={userAvatar}
-              alt={userName}
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-              {userName.charAt(0)}
+        <Dropdown
+          menu={{ items: menuItems, onClick: handleMenuClick }}
+          trigger={["click"]}
+          open={dropdownOpen}
+          onOpenChange={setDropdownOpen}
+        >
+          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="text-right">
+              <p className="text-sm font-medium text-text-primary">{displayName}</p>
+              <p className="text-xs text-text-tertiary">最后登录: {lastLoginTime}</p>
             </div>
-          )}
-        </div>
+            {user?.avatar ? (
+              <img
+                className="w-10 h-10 rounded-full object-cover"
+                src={user.avatar}
+                alt={displayName}
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+        </Dropdown>
       </div>
     </header>
   );

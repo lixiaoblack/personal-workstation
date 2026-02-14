@@ -4,6 +4,24 @@
 
 ---
 
+## [0.3.2] - 2026-02-14
+
+### 修改 (Changed)
+
+- 使用 @types/better-sqlite3 替代自定义类型声明
+  - 安装 @types/better-sqlite3 开发依赖
+  - 删除自定义的 electron/types/better-sqlite3.d.ts 类型声明文件
+  - 删除空的 electron/types 目录
+  - 将 better-sqlite3 正确添加到 package.json 依赖
+
+### 修复 (Fixed)
+
+- 修复 ESLint 错误
+  - userService.ts 中未使用变量警告
+  - ForgotPassword 页面中未使用的状态变量
+
+---
+
 ## [0.3.1] - 2026-02-14
 
 ### 修复 (Fixed)

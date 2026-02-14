@@ -1,10 +1,10 @@
 /**
  * 应用入口组件
- * 配置主题提供者和路由
+ * 配置主题提供者、认证提供者和路由
  */
 import { RouterProvider } from "react-router-dom";
 import { ConfigProvider } from "antd";
-import { ThemeProvider, useTheme } from "@/contexts";
+import { ThemeProvider, AuthProvider, useTheme } from "@/contexts";
 import { getAntdTheme } from "@/styles/themes/antd-theme";
 import router from "@/router";
 
@@ -29,7 +29,9 @@ const ThemeWrapper: React.FC = () => {
 function App() {
   return (
     <ThemeProvider>
-      <ThemeWrapper />
+      <AuthProvider>
+        <ThemeWrapper />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

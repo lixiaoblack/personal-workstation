@@ -1,4 +1,7 @@
-import { contextBridge, ipcRenderer } from "electron";
+/**
+ * Electron API 类型声明
+ * 用于渲染进程访问主进程暴露的 API
+ */
 
 // 用户信息接口
 export interface User {
@@ -62,36 +65,7 @@ export interface ResetPasswordData {
   newPassword: string;
 }
 
-// 通过 contextBridge 暴露安全的 API 给渲染进程
-contextBridge.exposeInMainWorld("electronAPI", {
-  // 用户认证
-  login: (credentials: LoginCredentials): Promise<LoginResult> => 
-    ipcRenderer.invoke('user:login', credentials),
-  register: (data: RegisterData): Promise<LoginResult> => 
-    ipcRenderer.invoke('user:register', data),
-  logout: (): Promise<boolean> => 
-    ipcRenderer.invoke('user:logout'),
-  getCurrentUser: (): Promise<User | null> => 
-    ipcRenderer.invoke('user:getCurrent'),
-  validateToken: (token: string): Promise<User | null> => 
-    ipcRenderer.invoke('user:validateToken', token),
-  
-  // 用户信息管理
-  updateProfile: (data: UpdateProfileData): Promise<User | null> => 
-    ipcRenderer.invoke('user:updateProfile', data),
-  updatePassword: (data: UpdatePasswordData): Promise<{ success: boolean; error?: string }> => 
-    ipcRenderer.invoke('user:updatePassword', data),
-  resetPassword: (data: ResetPasswordData): Promise<{ success: boolean; error?: string }> => 
-    ipcRenderer.invoke('user:resetPassword', data),
-  
-  // 检查状态
-  isInitialized: (): Promise<boolean> => 
-    ipcRenderer.invoke('user:isInitialized'),
-  checkUsername: (username: string): Promise<boolean> => 
-    ipcRenderer.invoke('user:checkUsername', username),
-});
-
-// 类型声明
+// Electron API 接口
 export interface ElectronAPI {
   // 用户认证
   login: (credentials: LoginCredentials) => Promise<LoginResult>;
@@ -115,3 +89,5 @@ declare global {
     electronAPI: ElectronAPI;
   }
 }
+
+export {};

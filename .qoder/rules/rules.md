@@ -437,7 +437,7 @@ import { HomeSidebar } from './components/HomeSidebar';
 | `bg-tertiary` | #282e39 | 第三背景色 |
 | `primary` | #3c83f6 | 主色调 |
 | `primary-hover` | #2d6ed4 | 主色悬停 |
-| `border-color` | #1e2939 | 边框色 |
+| `border-border` | #1e2939 | 边框色 |
 
 ## 路由规范
 
@@ -553,7 +553,7 @@ const MyComponent = () => {
 | `text-primary` | --color-text-primary | #FFFFFF | #0F172A |
 | `text-secondary` | --color-text-secondary | #CBD5E1 | #475569 |
 | `text-tertiary` | --color-text-tertiary | #64748B | #94A3B8 |
-| `border-color` | --color-border | #334155 | #E2E8F0 |
+| `border-border` | --color-border | #334155 | #E2E8F0 |
 | `primary` | --color-primary | #3C83F6 | #3C83F6 |
 | `success` | --color-success | #10B981 | #10B981 |
 | `warning` | --color-warning | #F59E0B | #F59E0B |

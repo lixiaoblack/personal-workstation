@@ -14,6 +14,12 @@
 
 ### 已完成
 
+- [x] TASK-007: 使用 @types/better-sqlite3 替代自定义类型声明 | 完成时间: 2026-02-14 23:55
+  - 安装 @types/better-sqlite3 开发依赖
+  - 删除自定义的 electron/types/better-sqlite3.d.ts
+  - 删除空的 electron/types 目录
+  - 修复 lint 错误
+
 - [x] TASK-006: 修复边框颜色显示问题 | 完成时间: 2026-02-14 23:45
   - 修复 Tailwind 边框配置结构
   - border-border 类正确使用 CSS 变量

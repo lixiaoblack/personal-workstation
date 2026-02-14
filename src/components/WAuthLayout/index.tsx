@@ -3,9 +3,10 @@
  * 用于登录、注册、忘记密码等认证页面的统一布局
  */
 import React from "react";
-import { useTheme } from "@/contexts";
 
 export interface IWAuthLayoutProps {
+  /** Logo 图标 */
+  logoIcon?: string;
   /** 页面标题 */
   title: string;
   /** 页面副标题 */
@@ -17,71 +18,52 @@ export interface IWAuthLayoutProps {
 }
 
 const WAuthLayout: React.FC<IWAuthLayoutProps> = ({
+  logoIcon = "terminal",
   title,
   subtitle,
   children,
   footer,
 }) => {
-  const { resolvedTheme } = useTheme();
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary p-4">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="min-h-screen flex items-center justify-center bg-bg-primary p-4 relative">
+      {/* 背景装饰 - 模糊圆形 */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         {/* 左上角装饰圆 */}
-        <div
-          className={`
-            absolute -top-32 -left-32 w-96 h-96 rounded-full
-            ${resolvedTheme === "dark" ? "bg-primary/5" : "bg-primary/10"}
-          `}
-        />
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
         {/* 右下角装饰圆 */}
-        <div
-          className={`
-            absolute -bottom-32 -right-32 w-96 h-96 rounded-full
-            ${resolvedTheme === "dark" ? "bg-primary/5" : "bg-primary/10"}
-          `}
-        />
-        {/* 装饰线条 */}
-        <div
-          className={`
-            absolute top-1/4 right-1/4 w-64 h-64 rounded-full
-            border border-primary/10
-          `}
-        />
-        <div
-          className={`
-            absolute bottom-1/4 left-1/4 w-48 h-48 rounded-full
-            border border-primary/10
-          `}
-        />
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
       </div>
 
       {/* 主内容区 */}
-      <div className="relative w-full max-w-md">
+      <div className="w-full max-w-[440px] animate-fade-in">
         {/* Logo 区域 */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <span className="material-symbols-outlined text-3xl text-primary">
-              terminal
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+            <span
+              className="material-symbols-outlined text-primary text-4xl"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              {logoIcon}
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary">{title}</h1>
+          <h1 className="text-2xl font-bold text-text-primary mb-2">
+            {title}
+          </h1>
           {subtitle && (
-            <p className="text-text-tertiary mt-2">{subtitle}</p>
+            <p className="text-text-tertiary text-sm">{subtitle}</p>
           )}
         </div>
 
         {/* 表单卡片 */}
-        <div className="bg-bg-secondary rounded-2xl border border-border p-8 shadow-lg">
+        <div className="bg-bg-secondary rounded-xl shadow-2xl border border-border p-8">
           {children}
         </div>
 
         {/* 底部链接 */}
         {footer && (
-          <div className="text-center mt-6 text-text-secondary">
+          <p className="mt-8 text-center text-text-tertiary text-sm">
             {footer}
-          </div>
+          </p>
         )}
       </div>
     </div>

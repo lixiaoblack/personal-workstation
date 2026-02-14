@@ -14,6 +14,12 @@
 
 ### 已完成
 
+- [x] TASK-008: 重新设计登录页面布局 | 完成时间: 2026-02-14 23:58
+  - 按照 login.html 设计更新 WAuthLayout 组件
+  - 更新登录页面布局：移除 Tabs，添加记住我、密码显示切换
+  - 添加其他登录方式（扫码登录、指纹登录）
+  - 添加背景模糊圆形装饰效果
+
 - [x] TASK-007: 使用 @types/better-sqlite3 替代自定义类型声明 | 完成时间: 2026-02-14 23:55
   - 安装 @types/better-sqlite3 开发依赖
   - 删除自定义的 electron/types/better-sqlite3.d.ts

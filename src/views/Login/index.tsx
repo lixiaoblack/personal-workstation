@@ -3,7 +3,7 @@
  * 支持账号密码登录、首次启动注册、忘记密码跳转
  */
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, message, Tabs } from "antd";
+import { Form, Input, Button, message, Checkbox } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { WAuthLayout } from "@/components/WAuthLayout";
@@ -29,7 +29,8 @@ const Login: React.FC = () => {
   const [loginForm] = Form.useForm<LoginFormValues>();
   const [registerForm] = Form.useForm<RegisterFormValues>();
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [showRegister, setShowRegister] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   // 如果已登录，跳转到首页
   useEffect(() => {
@@ -38,10 +39,10 @@ const Login: React.FC = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  // 如果系统未初始化，默认显示注册标签
+  // 如果系统未初始化，默认显示注册表单
   useEffect(() => {
     if (!isInitialized && !isLoading) {
-      setActiveTab("register");
+      setShowRegister(true);
     }
   }, [isInitialized, isLoading]);
 
@@ -101,6 +102,13 @@ const Login: React.FC = () => {
     navigate("/forgot-password");
   };
 
+  // 切换登录/注册
+  const toggleMode = () => {
+    setShowRegister(!showRegister);
+    loginForm.resetFields();
+    registerForm.resetFields();
+  };
+
   // 如果正在加载，显示加载状态
   if (isLoading) {
     return (
@@ -114,155 +122,257 @@ const Login: React.FC = () => {
     );
   }
 
-  const tabItems = [
-    {
-      key: "login",
-      label: "登录",
-      children: (
-        <Form
-          form={loginForm}
-          layout="vertical"
-          onFinish={handleLogin}
-          autoComplete="off"
-        >
+  // 渲染登录表单
+  const renderLoginForm = () => (
+    <Form
+      form={loginForm}
+      layout="vertical"
+      onFinish={handleLogin}
+      autoComplete="off"
+      className="space-y-6"
+    >
+      {/* 账号 */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-text-secondary">
+          账号
+        </label>
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xl">
+            person
+          </span>
           <Form.Item
             name="username"
             rules={loginConfig.form.username.rules}
+            className="mb-0"
           >
             <Input
-              prefix={<UserOutlined className="text-text-tertiary" />}
+              className="block w-full pl-11 pr-4 py-3 bg-bg-tertiary border-border text-text-primary rounded-lg focus:ring-primary focus:border-primary transition-colors"
               placeholder={loginConfig.form.username.placeholder}
-              size="large"
             />
           </Form.Item>
+        </div>
+      </div>
 
+      {/* 密码 */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-text-secondary">
+          密码
+        </label>
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xl">
+            lock
+          </span>
           <Form.Item
             name="password"
             rules={loginConfig.form.password.rules}
+            className="mb-0"
           >
-            <Input.Password
-              prefix={<LockOutlined className="text-text-tertiary" />}
+            <Input
+              type={passwordVisible ? "text" : "password"}
+              className="block w-full pl-11 pr-12 py-3 bg-bg-tertiary border-border text-text-primary rounded-lg focus:ring-primary focus:border-primary transition-colors"
               placeholder={loginConfig.form.password.placeholder}
-              size="large"
             />
           </Form.Item>
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors"
+            onClick={() => setPasswordVisible(!passwordVisible)}
+          >
+            <span className="material-symbols-outlined text-xl">
+              {passwordVisible ? "visibility_off" : "visibility"}
+            </span>
+          </button>
+        </div>
+      </div>
 
-          <Form.Item>
-            <div className="flex justify-between items-center">
-              <a
-                onClick={handleForgotPassword}
-                className="text-primary hover:text-primary/80 text-sm"
-              >
-                忘记密码？
-              </a>
-            </div>
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={submitting}
-            >
-              登录
-            </Button>
-          </Form.Item>
-        </Form>
-      ),
-    },
-    {
-      key: "register",
-      label: "注册",
-      children: (
-        <Form
-          form={registerForm}
-          layout="vertical"
-          onFinish={handleRegister}
-          autoComplete="off"
+      {/* 记住我 & 忘记密码 */}
+      <div className="flex items-center justify-between">
+        <Form.Item name="remember" valuePropName="checked" className="mb-0">
+          <Checkbox className="text-text-secondary text-sm">记住我</Checkbox>
+        </Form.Item>
+        <a
+          onClick={handleForgotPassword}
+          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
         >
-          <Form.Item
-            name="username"
-            rules={loginConfig.form.username.rules}
-          >
-            <Input
-              prefix={<UserOutlined className="text-text-tertiary" />}
-              placeholder={loginConfig.form.username.placeholder}
-              size="large"
-            />
-          </Form.Item>
+          忘记密码?
+        </a>
+      </div>
 
-          <Form.Item
-            name="nickname"
-          >
-            <Input
-              prefix={<UserOutlined className="text-text-tertiary" />}
-              placeholder="昵称（可选）"
-              size="large"
-            />
-          </Form.Item>
+      {/* 登录按钮 */}
+      <Form.Item className="mb-0">
+        <Button
+          type="primary"
+          htmlType="submit"
+          size="large"
+          block
+          loading={submitting}
+          className="h-11 font-semibold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
+        >
+          登录
+        </Button>
+      </Form.Item>
+    </Form>
+  );
 
-          <Form.Item
-            name="password"
-            rules={loginConfig.form.password.rules}
-          >
-            <Input.Password
-              prefix={<LockOutlined className="text-text-tertiary" />}
-              placeholder={loginConfig.form.password.placeholder}
-              size="large"
-            />
-          </Form.Item>
+  // 渲染注册表单
+  const renderRegisterForm = () => (
+    <Form
+      form={registerForm}
+      layout="vertical"
+      onFinish={handleRegister}
+      autoComplete="off"
+      className="space-y-4"
+    >
+      <Form.Item
+        name="username"
+        rules={loginConfig.form.username.rules}
+        label={<span className="text-sm font-medium text-text-secondary">用户名</span>}
+      >
+        <Input
+          prefix={<UserOutlined className="text-text-tertiary" />}
+          placeholder={loginConfig.form.username.placeholder}
+          size="large"
+        />
+      </Form.Item>
 
-          <Form.Item
-            name="confirmPassword"
-            dependencies={["password"]}
-            rules={[
-              { required: true, message: "请确认密码" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue("password") === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error("两次输入的密码不一致"));
-                },
-              }),
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined className="text-text-tertiary" />}
-              placeholder="确认密码"
-              size="large"
-            />
-          </Form.Item>
+      <Form.Item
+        name="nickname"
+        label={<span className="text-sm font-medium text-text-secondary">昵称</span>}
+      >
+        <Input
+          prefix={<UserOutlined className="text-text-tertiary" />}
+          placeholder="昵称（可选）"
+          size="large"
+        />
+      </Form.Item>
 
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={submitting}
-            >
-              注册
-            </Button>
-          </Form.Item>
-        </Form>
-      ),
-    },
-  ];
+      <Form.Item
+        name="password"
+        rules={loginConfig.form.password.rules}
+        label={<span className="text-sm font-medium text-text-secondary">密码</span>}
+      >
+        <Input.Password
+          prefix={<LockOutlined className="text-text-tertiary" />}
+          placeholder={loginConfig.form.password.placeholder}
+          size="large"
+        />
+      </Form.Item>
+
+      <Form.Item
+        name="confirmPassword"
+        dependencies={["password"]}
+        rules={[
+          { required: true, message: "请确认密码" },
+          ({ getFieldValue }) => ({
+            validator(_, value) {
+              if (!value || getFieldValue("password") === value) {
+                return Promise.resolve();
+              }
+              return Promise.reject(new Error("两次输入的密码不一致"));
+            },
+          }),
+        ]}
+        label={<span className="text-sm font-medium text-text-secondary">确认密码</span>}
+      >
+        <Input.Password
+          prefix={<LockOutlined className="text-text-tertiary" />}
+          placeholder="请再次输入密码"
+          size="large"
+        />
+      </Form.Item>
+
+      <Form.Item className="mb-0">
+        <Button
+          type="primary"
+          htmlType="submit"
+          size="large"
+          block
+          loading={submitting}
+          className="h-11 font-semibold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
+        >
+          注册
+        </Button>
+      </Form.Item>
+    </Form>
+  );
+
+  // 渲染其他登录方式
+  const renderOtherLoginMethods = () => (
+    <>
+      {/* 分隔线 */}
+      <div className="relative my-8">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-bg-secondary px-2 text-text-tertiary">
+            其他登录方式
+          </span>
+        </div>
+      </div>
+
+      {/* 其他登录方式按钮 */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          type="button"
+          className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-bg-tertiary transition-colors text-text-secondary text-sm"
+        >
+          <span className="material-symbols-outlined mr-2 text-lg">
+            qr_code_scanner
+          </span>
+          扫码登录
+        </button>
+        <button
+          type="button"
+          className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-bg-tertiary transition-colors text-text-secondary text-sm"
+        >
+          <span className="material-symbols-outlined mr-2 text-lg">
+            fingerprint
+          </span>
+          指纹登录
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <WAuthLayout
-      title={activeTab === "login" ? loginConfig.title : "注册"}
-      subtitle={loginConfig.subtitle}
+      title={showRegister ? "注册新账号" : "欢迎登录个人工作站"}
+      subtitle={
+        showRegister
+          ? "创建您的账号以开始使用"
+          : "请输入您的凭据以访问您的工作站"
+      }
+      footer={
+        showRegister ? (
+          <>
+            已有账号?{" "}
+            <a
+              onClick={toggleMode}
+              className="text-primary font-medium hover:underline"
+            >
+              立即登录
+            </a>
+          </>
+        ) : (
+          <>
+            还没有账号?{" "}
+            <a
+              onClick={toggleMode}
+              className="text-primary font-medium hover:underline"
+            >
+              立即注册
+            </a>
+          </>
+        )
+      }
     >
-      <Tabs
-        activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as "login" | "register")}
-        centered
-        items={tabItems}
-      />
+      {showRegister ? renderRegisterForm() : (
+        <>
+          {renderLoginForm()}
+          {renderOtherLoginMethods()}
+        </>
+      )}
     </WAuthLayout>
   );
 };

@@ -1,6 +1,7 @@
 /**
  * WHeader 头部组件
  * 包含搜索栏、通知按钮、用户信息
+ * 使用 Tailwind CSS
  */
 import React from 'react';
 
@@ -36,12 +37,12 @@ const WHeader: React.FC<IWHeaderProps> = ({
   };
 
   return (
-    <header className="w-header">
+    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-[#101722]/80 backdrop-blur-xl border-b border-[#1e2939]">
       {/* 搜索栏 */}
-      <div className="w-header__search">
-        <span className="material-symbols-outlined w-header__search-icon">search</span>
+      <div className="relative">
+        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
         <input
-          className="w-header__search-input"
+          className="px-4 py-2 pl-10 bg-[#282e39] border-none rounded-lg text-sm w-80 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
           placeholder={searchPlaceholder}
           type="text"
           onKeyDown={handleSearch}
@@ -49,25 +50,28 @@ const WHeader: React.FC<IWHeaderProps> = ({
       </div>
 
       {/* 右侧操作区 */}
-      <div className="w-header__actions">
+      <div className="flex items-center gap-4">
         {/* 通知按钮 */}
-        <button className="w-header__notification" onClick={onNotificationClick}>
+        <button 
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+          onClick={onNotificationClick}
+        >
           <span className="material-symbols-outlined">notifications</span>
         </button>
 
         {/* 分隔线 */}
-        <div className="w-header__divider" />
+        <div className="w-px h-8 bg-[#1e2939]" />
 
         {/* 用户信息 */}
-        <div className="w-header__user">
-          <div className="w-header__user-info">
-            <p className="w-header__user-name">{userName}</p>
-            <p className="w-header__user-login">最后登录: {lastLogin}</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-sm font-medium text-white">{userName}</p>
+            <p className="text-xs text-slate-500">最后登录: {lastLogin}</p>
           </div>
           {userAvatar ? (
-            <img className="w-header__user-avatar" src={userAvatar} alt={userName} />
+            <img className="w-10 h-10 rounded-full object-cover" src={userAvatar} alt={userName} />
           ) : (
-            <div className="w-header__user-avatar w-header__user-avatar--default">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
               {userName.charAt(0)}
             </div>
           )}

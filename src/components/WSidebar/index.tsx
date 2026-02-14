@@ -1,6 +1,7 @@
 /**
  * WSidebar 侧边栏组件
  * 包含品牌标识、导航菜单、用户操作区
+ * 使用 Tailwind CSS
  */
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -47,53 +48,57 @@ const WSidebar: React.FC<IWSidebarProps> = ({
   };
 
   return (
-    <aside className="w-sidebar">
-      <div className="w-sidebar__container">
+    <aside className="w-64 flex-shrink-0 bg-[#101722] border-r border-[#1e2939] flex flex-col">
+      <div className="p-6 flex flex-col h-full justify-between">
         {/* 上部区域 */}
-        <div className="w-sidebar__top">
+        <div className="flex flex-col gap-8">
           {/* 品牌标识 */}
-          <div className="w-sidebar__brand">
-            <div className="w-sidebar__brand-icon">
+          <div className="flex items-center gap-3 px-2">
+            <div className="bg-primary rounded-lg p-2 text-white flex items-center justify-center">
               <span className="material-symbols-outlined">terminal</span>
             </div>
-            <div className="w-sidebar__brand-info">
-              <h1 className="w-sidebar__brand-name">{brandName}</h1>
-              <p className="w-sidebar__brand-version">{version}</p>
+            <div>
+              <h1 className="text-lg font-bold leading-tight">{brandName}</h1>
+              <p className="text-xs text-slate-500">{version}</p>
             </div>
           </div>
 
           {/* 导航菜单 */}
-          <nav className="w-sidebar__nav">
+          <nav className="flex flex-col gap-1">
             {menuItems.map((item) => (
               <a
                 key={item.key}
-                className={`w-sidebar__nav-item ${selectedKey === item.key ? 'w-sidebar__nav-item--active' : ''}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors cursor-pointer
+                  ${selectedKey === item.key 
+                    ? 'bg-white/5 text-white' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
                 onClick={() => handleMenuClick(item)}
                 href={item.path || '#'}
               >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                <span className="w-sidebar__nav-label">{item.label}</span>
+                <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                <span>{item.label}</span>
               </a>
             ))}
           </nav>
         </div>
 
         {/* 下部区域 */}
-        <div className="w-sidebar__bottom">
+        <div className="flex flex-col gap-4">
           {/* AI 助手按钮 */}
-          <button className="w-sidebar__ai-btn">
+          <button className="flex items-center justify-center gap-2 bg-primary text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors">
             <span className="material-symbols-outlined">smart_toy</span>
             AI 助手
           </button>
 
           {/* 设置和退出 */}
-          <div className="w-sidebar__actions">
-            <a className="w-sidebar__action-item" href="#">
-              <span className="material-symbols-outlined">settings</span>
+          <div className="flex flex-col gap-1">
+            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer" href="#">
+              <span className="material-symbols-outlined text-xl">settings</span>
               <span>设置</span>
             </a>
-            <a className="w-sidebar__action-item w-sidebar__action-item--danger" href="#">
-              <span className="material-symbols-outlined">logout</span>
+            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer" href="#">
+              <span className="material-symbols-outlined text-xl">logout</span>
               <span>退出登录</span>
             </a>
           </div>

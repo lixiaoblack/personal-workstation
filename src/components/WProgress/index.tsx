@@ -1,6 +1,7 @@
 /**
  * WProgress 进度条组件
  * 用于展示系统状态、任务进度等
+ * 使用 Tailwind CSS
  */
 import React from 'react';
 
@@ -23,6 +24,26 @@ export interface IWProgressProps {
   className?: string;
 }
 
+// 状态颜色映射
+const statusColorMap: Record<TProgressStatus, { bar: string; value: string }> = {
+  normal: {
+    bar: 'bg-primary',
+    value: 'text-primary',
+  },
+  success: {
+    bar: 'bg-emerald-500',
+    value: 'text-emerald-500',
+  },
+  warning: {
+    bar: 'bg-amber-500',
+    value: 'text-amber-500',
+  },
+  error: {
+    bar: 'bg-rose-500',
+    value: 'text-rose-500',
+  },
+};
+
 const WProgress: React.FC<IWProgressProps> = ({
   label,
   value,
@@ -33,29 +54,24 @@ const WProgress: React.FC<IWProgressProps> = ({
 }) => {
   // 确保百分比在有效范围内
   const validPercent = Math.min(100, Math.max(0, percent));
-
-  const progressClassName = [
-    'w-progress',
-    `w-progress--${status}`,
-    className,
-  ].filter(Boolean).join(' ');
+  const colorStyles = statusColorMap[status];
 
   return (
-    <div className={progressClassName}>
+    <div className={`${className} [&+&]:mt-3`}>
       {/* 标签和值 */}
-      <div className="w-progress__header">
-        <span className="w-progress__label">{label}</span>
+      <div className="flex justify-between mb-1 text-xs">
+        <span className="text-white">{label}</span>
         {showInfo && (
-          <span className={`w-progress__value w-progress__value--${status}`}>
+          <span className={`font-medium ${colorStyles.value}`}>
             {value || `${validPercent}%`}
           </span>
         )}
       </div>
 
       {/* 进度条轨道 */}
-      <div className="w-progress__track">
+      <div className="h-1.5 bg-[#282e39] rounded-full overflow-hidden">
         <div
-          className="w-progress__bar"
+          className={`h-full rounded-full transition-all duration-300 ${colorStyles.bar}`}
           style={{ width: `${validPercent}%` }}
         />
       </div>

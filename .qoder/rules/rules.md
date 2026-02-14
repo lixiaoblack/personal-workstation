@@ -41,8 +41,21 @@ personal-workstation/
 ├── src/                        # 渲染进程源码
 │   ├── main.tsx                # React 入口
 │   ├── App.tsx                 # 根组件
-│   ├── components/             # 通用组件
-│   ├── pages/                  # 页面组件
+│   ├── components/             # 全局通用组件 (W前缀命名)
+│   │   └── WButton/            # 示例：WButton 组件
+│   │       ├── index.tsx       # 组件逻辑
+│   │       ├── index.sass      # 组件样式
+│   │       └── README.md       # 组件文档
+│   ├── views/                  # 页面视图目录
+│   │   └── Home/               # 首页 (PascalCase 命名)
+│   │       ├── index.tsx       # 页面 DOM 结构
+│   │       ├── index.sass      # 页面样式
+│   │       ├── config.ts       # 数据枚举配置
+│   │       └── components/     # 页面私有组件
+│   │           └── HomeHeader/ # 页面组件 (模块名+功能)
+│   │               ├── index.tsx
+│   │               ├── index.sass
+│   │               └── README.md
 │   ├── hooks/                  # 自定义 Hooks
 │   ├── utils/                  # 工具函数
 │   ├── types/                  # TypeScript 类型定义
@@ -142,7 +155,10 @@ md/
 
 1. **TypeScript**: 所有代码必须使用 TypeScript，禁用 `any` 类型
 2. **组件**: 使用函数组件和 React Hooks
-3. **样式**: 使用 Ant Design 主题系统，自定义样式使用 CSS Modules
+3. **样式规范**:
+   - **简单样式**: 优先使用 Tailwind CSS 原子类
+   - **复杂样式**: 使用 SCSS/SASS 编写
+   - **UI 组件**: 使用 Ant Design 主题系统
 4. **注释**: 复杂逻辑必须添加注释说明
 5. **导入顺序**:
    - React 相关
@@ -243,3 +259,232 @@ pnpm lint
 3. **修改记录**: 功能修改需同步更新 `md/changelog.md`
 4. **代码质量**: 保持代码整洁，遵循 ESLint 规则
 5. **类型安全**: 确保类型定义完整，避免使用 `any`
+
+## 页面开发规范
+
+### 页面目录结构
+
+所有页面文件统一放置在 `src/views` 目录下，每个页面是一个独立的文件夹。
+
+```
+src/views/
+├── Home/                    # 首页
+│   ├── index.tsx            # 页面 DOM 结构
+│   ├── index.sass           # 页面样式
+│   ├── config.ts            # 数据枚举配置
+│   └── components/          # 页面私有组件
+└── Settings/                # 设置页
+    ├── index.tsx
+    ├── index.sass
+    ├── config.ts
+    └── components/
+```
+
+### 页面命名规范
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 页面文件夹 | PascalCase | `Home`, `Settings`, `UserProfile` |
+| 页面入口 | index.tsx | 统一命名为 index.tsx |
+| 样式文件 | index.sass | 统一命名为 index.sass |
+| 配置文件 | config.ts | 统一命名为 config.ts |
+
+### 页面文件职责
+
+| 文件 | 职责 |
+|------|------|
+| index.tsx | 页面 DOM 结构、组件逻辑、事件处理 |
+| index.sass | 页面样式，使用 SASS/SCSS 语法 |
+| config.ts | 数据枚举、常量定义、配置项 |
+
+### 全局组件规范
+
+全局组件放置在 `src/components` 目录下，统一使用 `W` 前缀命名。
+
+```
+src/components/
+├── WButton/
+│   ├── index.tsx        # 组件逻辑
+│   ├── index.sass       # 组件样式
+│   └── README.md        # 组件文档
+├── WTable/
+│   ├── index.tsx
+│   ├── index.sass
+│   └── README.md
+└── WCard/
+    ├── index.tsx
+    ├── index.sass
+    └── README.md
+```
+
+#### 全局组件命名规范
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 组件文件夹 | W + 功能名 (PascalCase) | `WButton`, `WTable`, `WCard` |
+| 入口文件 | index.tsx | 统一命名 |
+| 样式文件 | index.sass | 统一命名 |
+| 文档文件 | README.md | 必须包含组件说明、API、示例 |
+
+#### README.md 文档格式
+
+```markdown
+# W[组件名]
+
+## 功能描述
+组件的功能说明。
+
+## API
+
+| 属性 | 说明 | 类型 | 默认值 | 必填 |
+|------|------|------|--------|------|
+| prop1 | 属性说明 | string | - | 是 |
+
+## 使用示例
+
+\`\`\`tsx
+import { WButton } from '@/components/WButton';
+
+<WButton type="primary">按钮</WButton>
+\`\`\`
+```
+
+### 页面私有组件规范
+
+页面私有组件放置在对应页面的 `components` 目录下，命名为 `页面名 + 功能名`。
+
+```
+src/views/Home/
+└── components/
+    ├── HomeHeader/           # 首页头部
+    │   ├── index.tsx
+    │   ├── index.sass
+    │   └── README.md
+    └── HomeSidebar/          # 首页侧边栏
+        ├── index.tsx
+        ├── index.sass
+        └── README.md
+```
+
+### 页面开发流程
+
+1. **创建页面前**：先生成页面文件夹名称，询问用户确认后继续
+2. **创建组件时**：优先描述组件内容并询问用户，确认后创建
+3. **组件优先**：所有页面的书写优先使用 `src/components` 下的全局组件
+4. **样式隔离**：每个页面/组件的样式使用唯一的类名前缀避免冲突
+
+### 组件导入规范
+
+```typescript
+// 正确示例：优先使用全局组件
+import { WButton } from '@/components/WButton';
+import { WCard } from '@/components/WCard';
+
+// 页面私有组件
+import { HomeHeader } from './components/HomeHeader';
+import { HomeSidebar } from './components/HomeSidebar';
+```
+
+## Tailwind CSS 规范
+
+### 样式优先级
+
+1. **简单样式**: 优先使用 Tailwind CSS 原子类
+   - 布局: `flex`, `grid`, `gap`, `p-*`, `m-*`
+   - 颜色: `text-*`, `bg-*`, `border-*`
+   - 尺寸: `w-*`, `h-*`, `min-*`, `max-*`
+   - 排版: `text-*`, `font-*`, `leading-*`
+
+2. **复杂样式**: 使用 SCSS/SASS 编写
+   - 需要嵌套的样式
+   - 需要变量和计算的样式
+   - 需要动画和过渡效果
+   - 复杂的选择器
+
+### Tailwind 使用示例
+
+```tsx
+// 简单布局 - 使用 Tailwind
+<div className="flex items-center gap-4 p-4 bg-bg-primary rounded-lg">
+  <span className="text-sm font-medium text-text-secondary">标题</span>
+</div>
+
+// 复杂组件 - Tailwind + SCSS
+// index.tsx
+<div className="home-card">
+  <div className="home-card__header flex items-center gap-2">
+    <span className="text-lg font-bold">标题</span>
+  </div>
+</div>
+
+// index.sass
+.home-card
+  @apply bg-bg-primary rounded-xl border border-border-color
+  
+  &__header
+    @apply p-4 border-b border-border-color
+```
+
+### 自定义颜色
+
+项目已定义以下自定义颜色：
+
+| Tailwind 类名 | CSS 变量 | 用途 |
+|---------------|----------|------|
+| `bg-primary` | #101722 | 主背景色 |
+| `bg-secondary` | #101722 | 次背景色 |
+| `bg-tertiary` | #282e39 | 第三背景色 |
+| `primary` | #3c83f6 | 主色调 |
+| `primary-hover` | #2d6ed4 | 主色悬停 |
+| `border-color` | #1e2939 | 边框色 |
+
+## 路由规范
+
+### 路由文件结构
+
+```
+src/router/
+└── index.tsx           # 路由配置文件
+```
+
+### 路由配置
+
+使用 React Router v6+ 的 `createBrowserRouter` 方式配置路由：
+
+```tsx
+// src/router/index.tsx
+import { createBrowserRouter } from 'react-router-dom';
+import Home from '@/views/Home';
+
+export const routes = [
+  {
+    path: '/',
+    element: <Home />,
+  },
+];
+
+const router = createBrowserRouter(routes);
+export default router;
+```
+
+### 添加新路由
+
+1. 在 `src/views` 下创建页面组件
+2. 在 `src/router/index.tsx` 中导入并配置路由
+3. 在侧边栏导航配置中添加菜单项
+
+### 路由跳转
+
+```tsx
+import { useNavigate } from 'react-router-dom';
+
+const MyComponent = () => {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    navigate('/path');
+  };
+  
+  return <button onClick={handleClick}>跳转</button>;
+};
+```

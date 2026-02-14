@@ -3,7 +3,6 @@
  * 包含搜索栏、通知按钮、用户信息
  */
 import React from 'react';
-import './index.sass';
 
 // WHeader 组件属性
 export interface IWHeaderProps {
@@ -78,4 +77,4 @@ const WHeader: React.FC<IWHeaderProps> = ({
   );
 };
 
-export default WHeader;
+export { WHeader };

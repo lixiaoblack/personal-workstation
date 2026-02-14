@@ -15,7 +15,6 @@ import {
   RECENT_LOGS_CONFIG,
   SYSTEM_STATUS_CONFIG,
 } from './config';
-import './index.sass';
 
 const Home: React.FC = () => {
   // 当前日期

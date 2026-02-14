@@ -30,7 +30,7 @@
 
   html,
   body {
-    @apply h-full font-display text-sm leading-relaxed antialiased;
+    @apply h-full text-sm leading-relaxed antialiased;
     font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
   }
 
@@ -68,7 +68,8 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-bg-tertiary rounded-full;
+    background: #282e39;
+    border-radius: 9999px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {

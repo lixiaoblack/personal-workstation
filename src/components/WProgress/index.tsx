@@ -3,7 +3,6 @@
  * 用于展示系统状态、任务进度等
  */
 import React from 'react';
-import './index.sass';
 
 // 进度条状态
 export type TProgressStatus = 'normal' | 'success' | 'warning' | 'error';
@@ -64,4 +63,4 @@ const WProgress: React.FC<IWProgressProps> = ({
   );
 };
 
-export default WProgress;
+export { WProgress };

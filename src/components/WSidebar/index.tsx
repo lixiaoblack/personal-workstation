@@ -4,7 +4,6 @@
  */
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
-import './index.sass';
 
 // 导航菜单项类型
 export interface INavMenuItem {
@@ -107,4 +106,4 @@ const WSidebar: React.FC<IWSidebarProps> = ({
   );
 };
 
-export default WSidebar;
+export { WSidebar };

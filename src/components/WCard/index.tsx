@@ -3,7 +3,6 @@
  * 通用卡片组件，用于模块入口、内容展示
  */
 import React from 'react';
-import './index.sass';
 
 // 预设颜色类型
 export type TCardColor = 'blue' | 'emerald' | 'purple' | 'amber' | 'rose';
@@ -69,4 +68,4 @@ const WCard: React.FC<IWCardProps> = ({
   );
 };
 
-export default WCard;
+export { WCard };

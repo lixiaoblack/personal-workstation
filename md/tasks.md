@@ -14,6 +14,12 @@
 
 ### 已完成
 
+- [x] TASK-003: 集成 Tailwind CSS 和创建路由 | 完成时间: 2026-02-14 22:10
+  - 安装并配置 Tailwind CSS
+  - 创建路由系统 (react-router-dom)
+  - 创建 Home 页面和全局组件
+  - 更新项目规范
+
 - [x] TASK-002: 修复 Electron 启动配置 | 完成时间: 2026-02-13 23:10
   - 添加 vite-plugin-electron 插件解决主进程构建问题
   - 配置 Vite 正确编译 Electron 主进程和预加载脚本

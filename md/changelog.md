@@ -4,6 +4,40 @@
 
 ---
 
+## [0.2.0] - 2026-02-14
+
+### 新增 (Added)
+
+- 集成 Tailwind CSS
+  - 安装 tailwindcss, postcss, autoprefixer
+  - 创建 tailwind.config.js 配置文件
+  - 创建 postcss.config.js 配置文件
+  - 创建 src/styles/global.css 全局样式文件
+
+- 创建路由系统
+  - 安装 react-router-dom
+  - 创建 src/router/index.tsx 路由配置文件
+  - 配置页面路由: /, /developer, /gis, /journal, /notes, /todo
+
+- 创建 Home 页面
+  - 创建 src/views/Home 目录
+  - index.tsx - 页面组件
+  - config.ts - 配置文件
+
+- 创建全局组件 (使用 Tailwind CSS)
+  - WSidebar - 侧边栏导航组件
+  - WHeader - 页面头部组件
+  - WCard - 卡片组件
+  - WProgress - 进度条组件
+  - 每个组件包含 README.md 文档
+
+- 更新项目规范
+  - 添加 Tailwind CSS 使用规范
+  - 添加路由配置规范
+  - 更新样式规范: 简单样式使用 Tailwind, 复杂样式使用 SCSS
+
+---
+
 ## [0.1.1] - 2026-02-13
 
 ### 修复 (Fixed)

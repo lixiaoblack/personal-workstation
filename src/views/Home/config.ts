@@ -2,9 +2,12 @@
  * Home 页面配置文件
  * 包含导航菜单、模块入口、任务数据等配置
  */
+import type { INavMenuItem } from '@/components/WSidebar';
+import type { TCardColor } from '@/components/WCard';
+import type { TProgressStatus } from '@/components/WProgress';
 
 // 导航菜单配置
-export const NAV_MENU_CONFIG = [
+export const NAV_MENU_CONFIG: INavMenuItem[] = [
   {
     key: 'dashboard',
     icon: 'grid_view',
@@ -41,10 +44,17 @@ export const NAV_MENU_CONFIG = [
     label: '待办提醒',
     path: '/todo',
   },
-] as const;
+];
 
 // 核心模块入口配置
-export const MODULE_CARDS_CONFIG = [
+export const MODULE_CARDS_CONFIG: Array<{
+  key: string;
+  icon: string;
+  title: string;
+  description: string;
+  color: TCardColor;
+  path: string;
+}> = [
   {
     key: 'developer',
     icon: 'code',
@@ -85,69 +95,82 @@ export const MODULE_CARDS_CONFIG = [
     color: 'rose',
     path: '/todo',
   },
-] as const;
+];
 
 // 今日焦点任务配置
-export const FOCUS_TASKS_CONFIG = [
+export const FOCUS_TASKS_CONFIG: Array<{
+  id: string;
+  title: string;
+  deadline?: string;
+  priority?: 'high' | 'medium';
+  status: 'in-progress' | 'completed' | 'pending';
+  completedTime?: string;
+}> = [
   {
     id: '1',
     title: '审查 GIS 空间数据集',
     deadline: '今天 14:00',
-    priority: 'high' as const,
-    status: 'in-progress' as const,
+    priority: 'high',
+    status: 'in-progress',
   },
   {
     id: '2',
     title: '更新开发者控制面板主题',
     completedTime: '09:15',
-    status: 'completed' as const,
+    status: 'completed',
   },
   {
     id: '3',
     title: '编写本周工作总结日志',
     deadline: '今天 17:30',
-    priority: 'medium' as const,
-    status: 'pending' as const,
+    priority: 'medium',
+    status: 'pending',
   },
-] as const;
+];
 
 // 最近日志配置
-export const RECENT_LOGS_CONFIG = [
+export const RECENT_LOGS_CONFIG: Array<{
+  id: string;
+  date: { month: string; day: string };
+  title: string;
+  content: string;
+}> = [
   {
     id: '1',
     date: { month: 'Oct', day: '26' },
     title: '上海市三维地形数据处理进展',
-    content: '今天完成了 Lidar 点云数据的初步分类，整体精度满足预期。但在植被覆盖密集区存在地表点密度不足的情况...',
+    content:
+      '今天完成了 Lidar 点云数据的初步分类，整体精度满足预期。但在植被覆盖密集区存在地表点密度不足的情况...',
   },
   {
     id: '2',
     date: { month: 'Oct', day: '25' },
     title: '工作站 UI 框架重构设计笔记',
-    content: '计划将所有核心组件迁移到 Tailwind 体系，以提高响应式开发的效率和样式的统一性。初步完成了侧边栏组件的封装...',
+    content:
+      '计划将所有核心组件迁移到 Tailwind 体系，以提高响应式开发的效率和样式的统一性。初步完成了侧边栏组件的封装...',
   },
-] as const;
+];
 
 // 系统状态配置
-export const SYSTEM_STATUS_CONFIG = [
+export const SYSTEM_STATUS_CONFIG: Array<{
+  key: string;
+  label: string;
+  value: string;
+  percent: number;
+  status: TProgressStatus;
+}> = [
   {
     key: 'sync',
     label: '云端同步',
     value: '已就绪',
     percent: 100,
-    status: 'success' as const,
+    status: 'success',
   },
   {
     key: 'storage',
     label: '存储空间 (256GB)',
     value: '64%',
     percent: 64,
-    status: 'normal' as const,
+    status: 'normal',
   },
-] as const;
-
-// 类型定义
-export type NavMenuItem = (typeof NAV_MENU_CONFIG)[number];
-export type ModuleCard = (typeof MODULE_CARDS_CONFIG)[number];
-export type FocusTask = (typeof FOCUS_TASKS_CONFIG)[number];
-export type RecentLog = (typeof RECENT_LOGS_CONFIG)[number];
-export type SystemStatus = (typeof SYSTEM_STATUS_CONFIG)[number];
+];

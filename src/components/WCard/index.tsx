@@ -1,7 +1,7 @@
 /**
  * WCard 卡片组件
  * 通用卡片组件，用于模块入口、内容展示
- * 使用 Tailwind CSS
+ * 使用 Tailwind CSS + 主题变量
  */
 import React from 'react';
 
@@ -28,7 +28,7 @@ export interface IWCardProps {
   children?: React.ReactNode;
 }
 
-// 颜色映射
+// 颜色映射（使用 Tailwind 内置色）
 const colorMap: Record<TCardColor, { bg: string; text: string; hoverBg: string }> = {
   blue: {
     bg: 'bg-blue-500/10',
@@ -72,7 +72,7 @@ const WCard: React.FC<IWCardProps> = ({
   return (
     <div
       className={`
-        relative bg-[#101722] p-5 rounded-xl border border-[#1e2939] transition-all
+        relative bg-bg-secondary p-5 rounded-xl border border-border transition-all
         ${hoverable ? 'group cursor-pointer hover:border-primary/50 hover:-translate-y-1' : ''}
         ${className}
       `}
@@ -84,10 +84,10 @@ const WCard: React.FC<IWCardProps> = ({
       </div>
 
       {/* 标题 */}
-      <h4 className="font-bold mt-3 text-white">{title}</h4>
+      <h4 className="font-bold mt-3 text-text-primary">{title}</h4>
 
       {/* 描述 */}
-      {description && <p className="text-xs text-slate-500 mt-1">{description}</p>}
+      {description && <p className="text-xs text-text-tertiary mt-1">{description}</p>}
 
       {/* 悬停箭头 */}
       {hoverable && (

@@ -1,7 +1,7 @@
 /**
  * WHeader 头部组件
  * 包含搜索栏、通知按钮、用户信息
- * 使用 Tailwind CSS
+ * 使用 Tailwind CSS + 主题变量
  */
 import React from 'react';
 
@@ -37,12 +37,12 @@ const WHeader: React.FC<IWHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-[#101722]/80 backdrop-blur-xl border-b border-[#1e2939]">
+    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-bg-primary/80 backdrop-blur-xl border-b border-border">
       {/* 搜索栏 */}
       <div className="relative">
-        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
+        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">search</span>
         <input
-          className="px-4 py-2 pl-10 bg-[#282e39] border-none rounded-lg text-sm w-80 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+          className="px-4 py-2 pl-10 bg-bg-tertiary border-none rounded-lg text-sm w-80 text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-primary transition-all"
           placeholder={searchPlaceholder}
           type="text"
           onKeyDown={handleSearch}
@@ -53,20 +53,20 @@ const WHeader: React.FC<IWHeaderProps> = ({
       <div className="flex items-center gap-4">
         {/* 通知按钮 */}
         <button 
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
           onClick={onNotificationClick}
         >
           <span className="material-symbols-outlined">notifications</span>
         </button>
 
         {/* 分隔线 */}
-        <div className="w-px h-8 bg-[#1e2939]" />
+        <div className="w-px h-8 bg-border" />
 
         {/* 用户信息 */}
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-sm font-medium text-white">{userName}</p>
-            <p className="text-xs text-slate-500">最后登录: {lastLogin}</p>
+            <p className="text-sm font-medium text-text-primary">{userName}</p>
+            <p className="text-xs text-text-tertiary">最后登录: {lastLogin}</p>
           </div>
           {userAvatar ? (
             <img className="w-10 h-10 rounded-full object-cover" src={userAvatar} alt={userName} />

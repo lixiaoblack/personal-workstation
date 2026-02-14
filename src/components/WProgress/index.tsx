@@ -1,7 +1,7 @@
 /**
  * WProgress 进度条组件
  * 用于展示系统状态、任务进度等
- * 使用 Tailwind CSS
+ * 使用 Tailwind CSS + 主题变量
  */
 import React from 'react';
 
@@ -31,16 +31,16 @@ const statusColorMap: Record<TProgressStatus, { bar: string; value: string }> = 
     value: 'text-primary',
   },
   success: {
-    bar: 'bg-emerald-500',
-    value: 'text-emerald-500',
+    bar: 'bg-success',
+    value: 'text-success',
   },
   warning: {
-    bar: 'bg-amber-500',
-    value: 'text-amber-500',
+    bar: 'bg-warning',
+    value: 'text-warning',
   },
   error: {
-    bar: 'bg-rose-500',
-    value: 'text-rose-500',
+    bar: 'bg-error',
+    value: 'text-error',
   },
 };
 
@@ -60,7 +60,7 @@ const WProgress: React.FC<IWProgressProps> = ({
     <div className={`${className} [&+&]:mt-3`}>
       {/* 标签和值 */}
       <div className="flex justify-between mb-1 text-xs">
-        <span className="text-white">{label}</span>
+        <span className="text-text-primary">{label}</span>
         {showInfo && (
           <span className={`font-medium ${colorStyles.value}`}>
             {value || `${validPercent}%`}
@@ -69,7 +69,7 @@ const WProgress: React.FC<IWProgressProps> = ({
       </div>
 
       {/* 进度条轨道 */}
-      <div className="h-1.5 bg-[#282e39] rounded-full overflow-hidden">
+      <div className="h-1.5 bg-bg-tertiary rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-300 ${colorStyles.bar}`}
           style={{ width: `${validPercent}%` }}

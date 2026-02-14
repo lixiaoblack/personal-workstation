@@ -259,6 +259,7 @@ pnpm lint
 3. **修改记录**: 功能修改需同步更新 `md/changelog.md`
 4. **代码质量**: 保持代码整洁，遵循 ESLint 规则
 5. **类型安全**: 确保类型定义完整，避免使用 `any`
+6. **提交前检查**: 每次提交前必须运行 `pnpm lint` 检查 TypeScript 错误，有错误必须修复后再提交
 
 ## 页面开发规范
 
@@ -487,4 +488,94 @@ const MyComponent = () => {
   
   return <button onClick={handleClick}>跳转</button>;
 };
+```
+
+## 主题规范
+
+### 主题模式
+
+项目支持三种主题模式：
+- `light`: 浅色模式
+- `dark`: 深色模式（默认）
+- `system`: 跟随系统主题
+
+### 使用主题
+
+```tsx
+import { useTheme } from '@/contexts';
+
+const MyComponent = () => {
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+  
+  // theme: 用户选择的主题模式 ('light' | 'dark' | 'system')
+  // resolvedTheme: 实际生效的主题 ('light' | 'dark')
+  // setTheme: 设置主题
+  // toggleTheme: 切换主题
+  
+  return (
+    <button onClick={toggleTheme}>
+      当前主题: {resolvedTheme}
+    </button>
+  );
+};
+```
+
+### 颜色使用规范
+
+#### 必须使用主题变量
+
+所有颜色必须使用 CSS 变量或 Tailwind 主题色，**禁止硬编码颜色值**。
+
+```tsx
+// ✅ 正确 - 使用 Tailwind 主题色
+<div className="bg-bg-primary text-text-primary border-border">
+  内容
+</div>
+
+// ✅ 正确 - 使用 CSS 变量
+<div style={{ color: 'var(--color-primary)' }}>
+  内容
+</div>
+
+// ❌ 错误 - 硬编码颜色
+<div className="bg-[#101722] text-[#ffffff]">
+  内容
+</div>
+```
+
+### 主题变量对照表
+
+| Tailwind 类名 | CSS 变量 | 深色值 | 浅色值 |
+|---------------|----------|--------|--------|
+| `bg-primary` | --color-bg-primary | #0F172A | #F8FAFC |
+| `bg-secondary` | --color-bg-secondary | #1E293B | #FFFFFF |
+| `bg-tertiary` | --color-bg-tertiary | #334155 | #F1F5F9 |
+| `text-primary` | --color-text-primary | #FFFFFF | #0F172A |
+| `text-secondary` | --color-text-secondary | #CBD5E1 | #475569 |
+| `text-tertiary` | --color-text-tertiary | #64748B | #94A3B8 |
+| `border-color` | --color-border | #334155 | #E2E8F0 |
+| `primary` | --color-primary | #3C83F6 | #3C83F6 |
+| `success` | --color-success | #10B981 | #10B981 |
+| `warning` | --color-warning | #F59E0B | #F59E0B |
+| `error` | --color-error | #EF4444 | #EF4444 |
+
+### 组件开发规范
+
+1. 新组件必须同时适配深色和浅色模式
+2. 使用主题变量而非硬编码颜色
+3. 测试两种主题模式下的显示效果
+
+### 主题文件结构
+
+```
+src/
+├── contexts/
+│   ├── ThemeContext.tsx    # 主题上下文
+│   └── theme.types.ts       # 主题类型定义
+├── hooks/
+│   └── useTheme.ts          # 主题 Hook
+└── styles/
+    └── themes/
+        ├── variables.css    # CSS 变量定义
+        └── antd-theme.ts    # Ant Design 主题配置
 ```

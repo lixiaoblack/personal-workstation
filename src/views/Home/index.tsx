@@ -1,7 +1,7 @@
 /**
  * Home 页面入口
  * 个人工作站首页/仪表盘
- * 使用 Tailwind CSS 完成样式
+ * 使用 Tailwind CSS + 主题变量
  */
 import React from 'react';
 import { WSidebar } from '@/components/WSidebar';
@@ -41,31 +41,31 @@ const Home: React.FC = () => {
 
   // 渲染焦点任务
   const renderFocusTasks = () => (
-    <div className="bg-[#111418] rounded-xl border border-[#1e2939] divide-y divide-[#1e2939]">
+    <div className="bg-bg-secondary rounded-xl border border-border divide-y divide-border">
       {FOCUS_TASKS_CONFIG.map((task) => (
         <div key={task.id} className="flex items-center gap-4 p-5 group">
           <div
             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors
               ${task.status === 'completed'
-                ? 'border-emerald-500'
+                ? 'border-success'
                 : 'border-primary/40 group-hover:border-primary'
               }`}
           >
             {task.status === 'completed' && (
-              <span className="material-symbols-outlined text-[16px] text-emerald-500">check</span>
+              <span className="material-symbols-outlined text-[16px] text-success">check</span>
             )}
           </div>
           <div className={`flex-1 ${task.status === 'completed' ? 'opacity-50' : ''}`}>
-            <p className={`font-medium ${task.status === 'completed' ? 'line-through' : ''}`}>
+            <p className={`font-medium text-text-primary ${task.status === 'completed' ? 'line-through' : ''}`}>
               {task.title}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-text-tertiary">
               {task.status === 'completed' ? (
                 `已于 ${task.completedTime} 完成`
               ) : (
                 <>
                   截止日期：{task.deadline} · 优先级：
-                  <span className={task.priority === 'high' ? 'text-rose-500' : ''}>
+                  <span className={task.priority === 'high' ? 'text-error' : ''}>
                     {task.priority === 'high' ? '高' : '中'}
                   </span>
                 </>
@@ -74,9 +74,9 @@ const Home: React.FC = () => {
           </div>
           <div
             className={`px-3 py-1 rounded text-[10px] font-bold
-              ${task.status === 'in-progress' ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : ''}
-              ${task.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : ''}
-              ${task.status === 'pending' ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : ''}
+              ${task.status === 'in-progress' ? 'bg-bg-tertiary text-text-secondary' : ''}
+              ${task.status === 'completed' ? 'bg-success-light text-success' : ''}
+              ${task.status === 'pending' ? 'bg-bg-tertiary text-text-secondary' : ''}
             `}
           >
             {task.status === 'in-progress' && '进行中'}
@@ -86,7 +86,7 @@ const Home: React.FC = () => {
         </div>
       ))}
       <div className="flex items-center justify-center p-5">
-        <button className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors">
+        <button className="flex items-center gap-2 text-sm text-text-tertiary hover:text-primary transition-colors">
           <span className="material-symbols-outlined text-sm">add</span>
           添加新任务
         </button>
@@ -96,7 +96,7 @@ const Home: React.FC = () => {
 
   // 渲染 AI 总结
   const renderAiSummary = () => (
-    <div className="home__ai-summary relative bg-[#111418] rounded-xl border border-primary/30 p-6 overflow-hidden shadow-lg shadow-primary/5">
+    <div className="relative bg-bg-secondary rounded-xl border border-primary/30 p-6 overflow-hidden shadow-lg shadow-primary/5">
       {/* 背景光晕 */}
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 blur-[60px] rounded-full" />
       
@@ -108,7 +108,7 @@ const Home: React.FC = () => {
       </div>
       
       <div className="relative z-10">
-        <p className="text-sm leading-relaxed text-slate-400">
+        <p className="text-sm leading-relaxed text-text-secondary">
           本周您完成了
           <span className="text-primary font-bold">12</span>
           项任务，主要集中在
@@ -120,7 +120,7 @@ const Home: React.FC = () => {
         
         <div className="mt-4 p-3 bg-primary/5 rounded-lg border-l-4 border-primary">
           <p className="text-xs font-semibold text-primary mb-1 italic">智能建议：</p>
-          <p className="text-xs text-slate-500 leading-relaxed">
+          <p className="text-xs text-text-tertiary leading-relaxed">
             基于您的任务进度，下周一将有 3 个 GIS 分析报告到期。建议今天下午完成数据初步审查。
           </p>
         </div>
@@ -130,8 +130,8 @@ const Home: React.FC = () => {
 
   // 渲染系统状态
   const renderSystemStatus = () => (
-    <div className="mt-4 bg-[#111418] p-5 rounded-xl border border-[#1e2939]">
-      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">系统状态</p>
+    <div className="mt-4 bg-bg-secondary p-5 rounded-xl border border-border">
+      <p className="text-xs font-bold text-text-tertiary uppercase tracking-widest mb-4">系统状态</p>
       {SYSTEM_STATUS_CONFIG.map((status) => (
         <WProgress
           key={status.key}
@@ -150,15 +150,15 @@ const Home: React.FC = () => {
       {RECENT_LOGS_CONFIG.map((log) => (
         <div
           key={log.id}
-          className="flex gap-4 p-4 bg-[#111418] rounded-xl border border-[#1e2939] items-start"
+          className="flex gap-4 p-4 bg-bg-secondary rounded-xl border border-border items-start"
         >
-          <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center flex-shrink-0">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">{log.date.month}</span>
+          <div className="w-12 h-12 rounded-lg bg-bg-tertiary flex flex-col items-center justify-center flex-shrink-0">
+            <span className="text-[10px] font-bold text-text-tertiary uppercase">{log.date.month}</span>
             <span className="text-lg font-black text-primary">{log.date.day}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-bold truncate">{log.title}</h4>
-            <p className="text-sm text-slate-500 mt-1 line-clamp-2">{log.content}</p>
+            <h4 className="font-bold truncate text-text-primary">{log.title}</h4>
+            <p className="text-sm text-text-tertiary mt-1 line-clamp-2">{log.content}</p>
           </div>
         </div>
       ))}
@@ -166,37 +166,37 @@ const Home: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#101722]">
+    <div className="flex h-screen overflow-hidden bg-bg-primary">
       {/* 侧边栏 */}
       <WSidebar menuItems={NAV_MENU_CONFIG} />
 
       {/* 主内容区域 */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#101722]">
+      <main className="flex-1 overflow-y-auto custom-scrollbar bg-bg-primary">
         {/* 头部 */}
         <WHeader />
 
         {/* 内容区域 */}
         <div className="max-w-[1400px] mx-auto p-8 flex flex-col gap-8">
           {/* 欢迎区域 */}
-          <section className="home__welcome relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-[#101722] to-[#101722] border border-[#1e2939] p-8">
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-bg-primary to-bg-primary border border-border p-8">
             <div className="relative z-10 flex justify-between items-end">
               <div>
-                <h2 className="text-4xl font-black tracking-tight text-white mb-2">
+                <h2 className="text-4xl font-black tracking-tight text-text-primary mb-2">
                   欢迎回来，管理员
                   <span className="text-primary inline-block animate-pulse">_</span>
                 </h2>
-                <p className="text-slate-500 text-lg">
+                <p className="text-text-secondary text-lg">
                   今天是 {dateStr}，{weekDay}。您有 5 个待处理任务。
                 </p>
               </div>
               <div className="flex gap-2">
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center min-w-[100px]">
-                  <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">今日效率</p>
+                <div className="bg-bg-hover backdrop-blur-sm border border-border p-4 rounded-xl text-center min-w-[100px]">
+                  <p className="text-xs text-text-tertiary uppercase tracking-widest mb-1">今日效率</p>
                   <p className="text-2xl font-bold text-primary">85%</p>
                 </div>
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center min-w-[100px]">
-                  <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">活跃时长</p>
-                  <p className="text-2xl font-bold text-white">4.2h</p>
+                <div className="bg-bg-hover backdrop-blur-sm border border-border p-4 rounded-xl text-center min-w-[100px]">
+                  <p className="text-xs text-text-tertiary uppercase tracking-widest mb-1">活跃时长</p>
+                  <p className="text-2xl font-bold text-text-primary">4.2h</p>
                 </div>
               </div>
             </div>
@@ -208,7 +208,7 @@ const Home: React.FC = () => {
 
           {/* 核心模块入口 */}
           <section>
-            <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+            <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
               <span className="w-1.5 h-6 bg-primary rounded-full" />
               核心模块入口
             </h3>
@@ -219,7 +219,7 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-[2fr_1fr] gap-8 max-lg:grid-cols-1">
             {/* 今日焦点 */}
             <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
                 <span className="w-1.5 h-6 bg-primary rounded-full" />
                 今日焦点
               </h3>
@@ -228,7 +228,7 @@ const Home: React.FC = () => {
 
             {/* AI 总结 */}
             <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
                 <span className="w-1.5 h-6 bg-primary rounded-full" />
                 AI 智能总结
               </h3>
@@ -239,7 +239,7 @@ const Home: React.FC = () => {
 
           {/* 最近日志 */}
           <section>
-            <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+            <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
               <span className="w-1.5 h-6 bg-primary rounded-full" />
               最近日志
             </h3>

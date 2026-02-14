@@ -1,26 +1,15 @@
 /**
  * 全局样式文件
- * 引入 Tailwind CSS 和自定义样式
+ * 引入 Tailwind CSS、主题变量和自定义样式
  */
+
+/* 引入主题变量 */
+@import './themes/variables.css';
 
 /* Tailwind CSS 基础层 */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* 自定义 CSS 变量 */
-:root {
-  --primary-color: #3c83f6;
-  --primary-hover: #2d6ed4;
-  --bg-primary: #101722;
-  --bg-secondary: #101722;
-  --bg-tertiary: #282e39;
-  --bg-hover: rgba(255, 255, 255, 0.05);
-  --border-color: #1e2939;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-}
 
 /* 全局基础样式 */
 @layer base {
@@ -32,6 +21,8 @@
   body {
     @apply h-full text-sm leading-relaxed antialiased;
     font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
   }
 
   #root {
@@ -64,16 +55,16 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--scrollbar-bg);
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #282e39;
+    background: var(--scrollbar-thumb);
     border-radius: 9999px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-600;
+    background: var(--scrollbar-thumb-hover);
   }
 }
 

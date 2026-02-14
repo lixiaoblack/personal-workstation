@@ -1,7 +1,7 @@
 /**
  * WSidebar 侧边栏组件
  * 包含品牌标识、导航菜单、用户操作区
- * 使用 Tailwind CSS
+ * 使用 Tailwind CSS + 主题变量
  */
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -48,7 +48,7 @@ const WSidebar: React.FC<IWSidebarProps> = ({
   };
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-[#101722] border-r border-[#1e2939] flex flex-col">
+    <aside className="w-64 flex-shrink-0 bg-bg-secondary border-r border-border">
       <div className="p-6 flex flex-col h-full justify-between">
         {/* 上部区域 */}
         <div className="flex flex-col gap-8">
@@ -58,8 +58,8 @@ const WSidebar: React.FC<IWSidebarProps> = ({
               <span className="material-symbols-outlined">terminal</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight">{brandName}</h1>
-              <p className="text-xs text-slate-500">{version}</p>
+              <h1 className="text-lg font-bold leading-tight text-text-primary">{brandName}</h1>
+              <p className="text-xs text-text-tertiary">{version}</p>
             </div>
           </div>
 
@@ -70,8 +70,8 @@ const WSidebar: React.FC<IWSidebarProps> = ({
                 key={item.key}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors cursor-pointer
                   ${selectedKey === item.key 
-                    ? 'bg-white/5 text-white' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-bg-hover text-text-primary' 
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
                   }`}
                 onClick={() => handleMenuClick(item)}
                 href={item.path || '#'}
@@ -93,11 +93,11 @@ const WSidebar: React.FC<IWSidebarProps> = ({
 
           {/* 设置和退出 */}
           <div className="flex flex-col gap-1">
-            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer" href="#">
+            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer" href="#">
               <span className="material-symbols-outlined text-xl">settings</span>
               <span>设置</span>
             </a>
-            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer" href="#">
+            <a className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-error hover:bg-error-light transition-colors cursor-pointer" href="#">
               <span className="material-symbols-outlined text-xl">logout</span>
               <span>退出登录</span>
             </a>

@@ -23,6 +23,19 @@
 
 ### 已完成
 
+- [x] TASK-014: 优化侧边栏导航和页面切换体验 | 完成时间: 2026-02-15 15:30
+  - 使用 useNavigate 替代 href 进行路由跳转
+  - 使用 useLocation 自动判断选中状态
+  - 添加页面切换 fadeIn 动画效果
+  - 退出登录调用 logout 方法
+  - 优化选中状态样式为 primary 高亮
+
+- [x] TASK-013: 优化页面高度自适应和布局结构 | 完成时间: 2026-02-15 15:10
+  - WLayout 使用 flex 布局，内容区自适应高度
+  - Home 页面添加 max-w 限制和内边距
+  - Developer 布局优化标签页样式
+  - 所有开发者工具子页面添加 min-h-full 确保填充满父元素高度
+
 - [x] TASK-012: 创建开发者工具页面 | 完成时间: 2026-02-15 14:45
   - 创建 Developer 布局组件和 config 配置文件
   - 创建 JSON 美化页面 JsonBeautify

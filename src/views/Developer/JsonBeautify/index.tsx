@@ -27,16 +27,9 @@ const JsonBeautify: React.FC = () => {
   const rightDecorationsRef = useRef<string[]>([]);
 
   // 编辑器挂载处理
-  const handleEditorMount: OnMount = (editor, monaco) => {
+  const handleLeftEditorMount: OnMount = (editor, monaco) => {
+    leftEditorRef.current = editor;
     monacoRef.current = monaco;
-
-    // 根据编辑器 ID 判断是左还是右
-    const editorId = editor.getId();
-    if (editorId.includes("left") || !rightEditorRef.current) {
-      leftEditorRef.current = editor;
-    } else {
-      rightEditorRef.current = editor;
-    }
 
     // 配置 JSON 语言特性
     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -46,6 +39,13 @@ const JsonBeautify: React.FC = () => {
       allowComments: false,
       trailingCommas: "error",
     });
+  };
+
+  const handleRightEditorMount: OnMount = (editor, monaco) => {
+    rightEditorRef.current = editor;
+    if (!monacoRef.current) {
+      monacoRef.current = monaco;
+    }
   };
 
   // 清除差异高亮
@@ -313,7 +313,7 @@ const JsonBeautify: React.FC = () => {
               language="json"
               value={leftJson}
               onChange={handleLeftChange}
-              onMount={handleEditorMount}
+              onMount={handleLeftEditorMount}
               theme="vs-dark"
               options={{
                 minimap: { enabled: false },
@@ -362,7 +362,7 @@ const JsonBeautify: React.FC = () => {
               language="json"
               value={rightJson}
               onChange={handleRightChange}
-              onMount={handleEditorMount}
+              onMount={handleRightEditorMount}
               theme="vs-dark"
               options={{
                 minimap: { enabled: false },

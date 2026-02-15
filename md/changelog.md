@@ -4,6 +4,28 @@
 
 ---
 
+## [0.4.0] - 2026-02-15
+
+### 新增 (Added)
+
+- 开发者工具模块
+  - 创建 Developer 布局组件，包含顶部菜单栏
+  - JSON 美化工具：支持双栏对比、美化、差异检测
+  - 图片 Base64 转换工具：图片与 Base64 双向转换
+  - 颜色转换工具：HEX/RGB/HSL 颜色格式转换
+  - Excel 转 JSON 工具：CSV 文件转 JSON 格式
+  - 简易 Postman：支持 GET/POST/PUT/DELETE 等请求
+  - OCR 功能：图片文字识别（模拟模式）
+
+### 修改 (Changed)
+
+- 按照 rules.md 规范重组文件结构
+  - 每个页面放入独立的 PascalCase 文件夹
+  - 入口文件统一命名为 index.tsx
+  - 配置文件统一命名为 config.ts
+
+---
+
 ## [0.3.6] - 2026-02-15
 
 ### 修改 (Changed)

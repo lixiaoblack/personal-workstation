@@ -1,3 +1,12 @@
+/*
+ * @Author: wanglx
+ * @Date: 2026-02-15 14:00:53
+ * @LastEditors: wanglx
+ * @LastEditTime: 2026-02-15 14:04:06
+ * @Description:
+ *
+ * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved.
+ */
 /**
  * WLayout 主布局组件
  * 包含侧边栏、头部和内容区域
@@ -16,7 +25,7 @@ const WLayout: React.FC = () => {
       <WSidebar menuItems={NAV_MENU_CONFIG} />
 
       {/* 主内容区域 */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar bg-bg-primary">
+      <main className="flex-1 z-20 overflow-y-auto custom-scrollbar bg-bg-primary">
         {/* 头部 */}
         <WHeader />
 

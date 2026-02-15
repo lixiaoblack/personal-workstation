@@ -223,13 +223,11 @@ const Home: React.FC = () => {
     <>
       {/* 欢迎区域 */}
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-bg-primary to-bg-primary border border-border p-8">
-        <div className="relative z-20 flex justify-between items-end">
+        <div className="relative z-1 flex justify-between items-end">
           <div>
             <h2 className="text-4xl font-black tracking-tight text-text-primary mb-2">
               欢迎回来，{user?.nickname || user?.username || "用户"}
-              <span className="text-primary inline-block animate-pulse">
-                _
-              </span>
+              <span className="text-primary inline-block animate-pulse">_</span>
             </h2>
             <p className="text-text-secondary text-lg">
               今天是 {dateStr}，{weekDay}。您有 5 个待处理任务。

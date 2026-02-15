@@ -13,6 +13,15 @@ import Home from "@/views/Home";
 import Login from "@/views/Login";
 import ForgotPassword from "@/views/ForgotPassword";
 
+// 开发者工具页面
+import Developer from "@/views/Developer";
+import JsonBeautify from "@/views/Developer/JsonBeautify";
+import ImageBase64 from "@/views/Developer/ImageBase64";
+import ColorConvert from "@/views/Developer/ColorConvert";
+import ExcelToJson from "@/views/Developer/ExcelToJson";
+import SimplePostman from "@/views/Developer/SimplePostman";
+import OcrTool from "@/views/Developer/OcrTool";
+
 // 路由守卫
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -44,14 +53,40 @@ const protectedRoutes: RouteObject[] = [
             path: "/dashboard",
             element: <Navigate to="/" replace />,
           },
-          // 开发者工具
+          // 开发者工具 - 嵌套路由
           {
             path: "/developer",
-            element: (
-              <div className="flex items-center justify-center h-full text-text-secondary">
-                开发者工具 - 开发中
-              </div>
-            ),
+            element: <Developer />,
+            children: [
+              {
+                index: true,
+                element: <Navigate to="/developer/json-beautify" replace />,
+              },
+              {
+                path: "json-beautify",
+                element: <JsonBeautify />,
+              },
+              {
+                path: "image-base64",
+                element: <ImageBase64 />,
+              },
+              {
+                path: "color-convert",
+                element: <ColorConvert />,
+              },
+              {
+                path: "excel-json",
+                element: <ExcelToJson />,
+              },
+              {
+                path: "postman",
+                element: <SimplePostman />,
+              },
+              {
+                path: "ocr",
+                element: <OcrTool />,
+              },
+            ],
           },
           // GIS 专业工具
           {

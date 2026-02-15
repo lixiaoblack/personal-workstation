@@ -23,6 +23,13 @@
 
 ### 已完成
 
+- [x] TASK-016: 支持 JavaScript 对象格式美化 | 完成时间: 2026-02-15 16:30
+  - 支持键名无引号的 JS 对象格式
+  - 支持单引号字符串转换
+  - 支持移除尾随逗号
+  - 支持移除单行/多行注释
+  - 支持 undefined 转 null
+
 - [x] TASK-015: 升级 JSON 编辑器为 Monaco Editor | 完成时间: 2026-02-15 16:00
   - 安装 @monaco-editor/react 和 monaco-editor 依赖
   - 实现自动换行对齐

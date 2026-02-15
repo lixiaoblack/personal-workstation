@@ -67,7 +67,11 @@ const JsonBeautify: React.FC = () => {
   // 高亮差异行
   const highlightDifferences = useCallback(
     (leftLines: string[], rightLines: string[]) => {
-      if (!leftEditorRef.current || !rightEditorRef.current || !monacoRef.current) {
+      if (
+        !leftEditorRef.current ||
+        !rightEditorRef.current ||
+        !monacoRef.current
+      ) {
         return;
       }
 
@@ -122,25 +126,120 @@ const JsonBeautify: React.FC = () => {
     []
   );
 
+  /**
+   * 将 JavaScript 对象格式转换为标准 JSON
+   * 支持：无引号键名、单引号字符串、尾随逗号、注释
+   */
+  const convertJsToJson = useCallback((input: string): string => {
+    let result = input;
+
+    // 1. 移除单行注释 // ...
+    result = result.replace(/\/\/[^\n]*/g, '');
+
+    // 2. 移除多行注释 /* ... */
+    result = result.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // 3. 处理单引号字符串 -> 双引号字符串
+    // 匹配单引号内的内容（考虑转义）
+    result = result.replace(
+      /'((?:\\'|[^'])*)'/g,
+      (_, content) => `"${content.replace(/\\'/g, "'").replace(/\\/g, '\\\\')}"`
+    );
+
+    // 4. 给无引号的键名添加双引号
+    // 匹配模式：标识符后面跟着冒号，且前面不是引号或已有引号
+    // 排除已经带双引号的键名
+    result = result.replace(
+      /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g,
+      '$1"$2"$3'
+    );
+
+    // 5. 移除尾随逗号（对象和数组中的）
+    result = result.replace(/,\s*([}\]])/g, '$1');
+
+    // 6. 处理 undefined -> null
+    result = result.replace(/:\s*undefined\s*([,}\]])/g, ': null$1');
+
+    return result;
+  }, []);
+
+  /**
+   * 尝试解析并美化 JSON/JS 对象
+   */
+  const parseAndBeautify = useCallback(
+    (input: string): { success: boolean; result?: string; error?: string } => {
+      if (!input.trim()) {
+        return { success: true, result: "" };
+      }
+
+      // 方案1：直接尝试 JSON.parse
+      try {
+        const parsed = JSON.parse(input);
+        return { success: true, result: JSON.stringify(parsed, null, 2) };
+      } catch {
+        // 继续尝试其他方案
+      }
+
+      // 方案2：转换为 JSON 后尝试解析
+      try {
+        const converted = convertJsToJson(input);
+        const parsed = JSON.parse(converted);
+        return { success: true, result: JSON.stringify(parsed, null, 2) };
+      } catch {
+        // 继续尝试其他方案
+      }
+
+      // 方案3：使用 Function 构造函数（注意：仅用于开发工具场景）
+      try {
+        // 移除注释并尝试作为 JS 对象解析
+        const sanitized = input.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
+        // 尝试作为 JavaScript 表达式解析
+        // eslint-disable-next-line no-new-func
+        const parsed = new Function(`return (${sanitized})`)();
+        return { success: true, result: JSON.stringify(parsed, null, 2) };
+      } catch (e) {
+        return {
+          success: false,
+          error: e instanceof Error ? e.message : '解析失败',
+        };
+      }
+    },
+    [convertJsToJson]
+  );
+
   // 美化JSON
   const handleBeautify = useCallback(() => {
-    try {
-      if (leftJson) {
-        const parsed = JSON.parse(leftJson);
-        const beautified = JSON.stringify(parsed, null, 2);
-        setLeftJson(beautified);
+    let hasError = false;
+    let errorMsg = "";
+
+    if (leftJson) {
+      const result = parseAndBeautify(leftJson);
+      if (result.success) {
+        setLeftJson(result.result || "");
+      } else {
+        hasError = true;
+        errorMsg = `左侧: ${result.error}`;
       }
-      if (rightJson) {
-        const parsed = JSON.parse(rightJson);
-        const beautified = JSON.stringify(parsed, null, 2);
-        setRightJson(beautified);
+    }
+
+    if (rightJson) {
+      const result = parseAndBeautify(rightJson);
+      if (result.success) {
+        setRightJson(result.result || "");
+      } else {
+        hasError = true;
+        errorMsg = errorMsg ? `${errorMsg} | 右侧: ${result.error}` : `右侧: ${result.error}`;
       }
+    }
+
+    if (hasError) {
+      message.error(`格式化失败: ${errorMsg}`);
+    } else {
       clearDiffHighlights();
       message.success("美化完成");
-    } catch {
-      message.error("JSON 格式错误");
     }
-  }, [leftJson, rightJson, clearDiffHighlights, message]);
+  }, [leftJson, rightJson, clearDiffHighlights, message, parseAndBeautify]);
 
   // 左右互换
   const handleSwap = useCallback(() => {
@@ -209,24 +308,31 @@ const JsonBeautify: React.FC = () => {
 
   // 格式化文档
   const handleFormat = useCallback((side: "left" | "right") => {
-    const editor = side === "left" ? leftEditorRef.current : rightEditorRef.current;
+    const editor =
+      side === "left" ? leftEditorRef.current : rightEditorRef.current;
     if (editor) {
       editor.getAction("editor.action.formatDocument")?.run();
     }
   }, []);
 
   // 编辑器内容变化处理
-  const handleLeftChange = useCallback((value: string | undefined) => {
-    setLeftJson(value || "");
-    clearDiffHighlights();
-    setDiffCount(0);
-  }, [clearDiffHighlights]);
+  const handleLeftChange = useCallback(
+    (value: string | undefined) => {
+      setLeftJson(value || "");
+      clearDiffHighlights();
+      setDiffCount(0);
+    },
+    [clearDiffHighlights]
+  );
 
-  const handleRightChange = useCallback((value: string | undefined) => {
-    setRightJson(value || "");
-    clearDiffHighlights();
-    setDiffCount(0);
-  }, [clearDiffHighlights]);
+  const handleRightChange = useCallback(
+    (value: string | undefined) => {
+      setRightJson(value || "");
+      clearDiffHighlights();
+      setDiffCount(0);
+    },
+    [clearDiffHighlights]
+  );
 
   // 组件卸载时清理
   useEffect(() => {
@@ -274,7 +380,9 @@ const JsonBeautify: React.FC = () => {
               onClick={handleClear}
               className="px-3 py-1.5 text-text-secondary hover:bg-bg-tertiary rounded-md transition-colors flex items-center gap-1.5 text-sm hover:text-error"
             >
-              <span className="material-symbols-outlined text-base">delete</span>
+              <span className="material-symbols-outlined text-base">
+                delete
+              </span>
               清空
             </button>
           </div>
@@ -284,9 +392,7 @@ const JsonBeautify: React.FC = () => {
             onClick={handleCompare}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors"
           >
-            <span className="material-symbols-outlined text-base">
-              compare
-            </span>
+            <span className="material-symbols-outlined text-base">compare</span>
             对比差异
           </button>
         </div>

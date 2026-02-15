@@ -46,56 +46,6 @@ const JsonBeautify: React.FC = () => {
       allowComments: false,
       trailingCommas: "error",
     });
-
-    // 自定义按键绑定：冒号后自动添加引号
-    editor.addCommand(monaco.KeyCode.Colon, () => {
-      const position = editor.getPosition();
-      if (!position) return;
-
-      const model = editor.getModel();
-      if (!model) return;
-
-      const lineContent = model.getLineContent(position.lineNumber);
-      const beforeCursor = lineContent.substring(0, position.column - 1);
-      const afterCursor = lineContent.substring(position.column - 1);
-
-      // 检查是否在键值对位置（键名后）
-      const lastQuote = beforeCursor.lastIndexOf('"');
-      const lastColon = beforeCursor.lastIndexOf(":");
-
-      // 如果冒号后面没有内容或者只有空白，自动添加引号
-      if (lastQuote > lastColon && lastColon === -1 && afterCursor.trim() === "") {
-        const op = {
-          range: new monaco.Range(
-            position.lineNumber,
-            position.column,
-            position.lineNumber,
-            position.column
-          ),
-          text: ': ""',
-          forceMoveMarkers: true,
-        };
-        editor.executeEdits("auto-quote", [op]);
-        // 将光标移动到引号内
-        editor.setPosition({
-          lineNumber: position.lineNumber,
-          column: position.column + 2,
-        });
-      } else {
-        // 正常输入冒号
-        const op = {
-          range: new monaco.Range(
-            position.lineNumber,
-            position.column,
-            position.lineNumber,
-            position.column
-          ),
-          text: ":",
-          forceMoveMarkers: true,
-        };
-        editor.executeEdits("type", [op]);
-      }
-    });
   };
 
   // 清除差异高亮

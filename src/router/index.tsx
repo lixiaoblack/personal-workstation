@@ -12,6 +12,8 @@ import { WLayout } from "@/components/WLayout";
 import Home from "@/views/Home";
 import Login from "@/views/Login";
 import ForgotPassword from "@/views/ForgotPassword";
+import { Settings } from "@/views/Settings";
+import { AISettings } from "@/views/Settings/AISettings";
 
 // 开发者工具页面
 import Developer from "@/views/Developer";
@@ -123,6 +125,15 @@ const protectedRoutes: RouteObject[] = [
                 待办提醒 - 开发中
               </div>
             ),
+          },
+          // 设置页面
+          {
+            path: "/settings",
+            element: <Settings />,
+          },
+          {
+            path: "/settings/ai",
+            element: <AISettings />,
           },
         ],
       },

@@ -73,12 +73,16 @@ export interface ElectronAPI {
   logout: () => Promise<boolean>;
   getCurrentUser: () => Promise<User | null>;
   validateToken: (token: string) => Promise<User | null>;
-  
+
   // 用户信息管理
   updateProfile: (data: UpdateProfileData) => Promise<User | null>;
-  updatePassword: (data: UpdatePasswordData) => Promise<{ success: boolean; error?: string }>;
-  resetPassword: (data: ResetPasswordData) => Promise<{ success: boolean; error?: string }>;
-  
+  updatePassword: (
+    data: UpdatePasswordData
+  ) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (
+    data: ResetPasswordData
+  ) => Promise<{ success: boolean; error?: string }>;
+
   // 检查状态
   isInitialized: () => Promise<boolean>;
   checkUsername: (username: string) => Promise<boolean>;

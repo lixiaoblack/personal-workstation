@@ -5,7 +5,7 @@ export const forgotPasswordConfig = {
   // 页面标题
   title: "重置密码",
   subtitle: "输入您的用户名和新密码",
-  
+
   // 表单字段配置
   form: {
     username: {
@@ -27,12 +27,10 @@ export const forgotPasswordConfig = {
     confirmPassword: {
       label: "确认密码",
       placeholder: "请再次输入新密码",
-      rules: [
-        { required: true, message: "请确认新密码" },
-      ],
+      rules: [{ required: true, message: "请确认新密码" }],
     },
   },
-  
+
   // 链接
   links: {
     login: "/login",

@@ -46,12 +46,8 @@ const WAuthLayout: React.FC<IWAuthLayoutProps> = ({
               {logoIcon}
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary mb-2">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-text-tertiary text-sm">{subtitle}</p>
-          )}
+          <h1 className="text-2xl font-bold text-text-primary mb-2">{title}</h1>
+          {subtitle && <p className="text-text-tertiary text-sm">{subtitle}</p>}
         </div>
 
         {/* 表单卡片 */}

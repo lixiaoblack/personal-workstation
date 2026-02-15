@@ -25,7 +25,8 @@ interface RegisterFormValues {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, register, isInitialized, isAuthenticated, isLoading } = useAuth();
+  const { login, register, isInitialized, isAuthenticated, isLoading } =
+    useAuth();
   const [loginForm] = Form.useForm<LoginFormValues>();
   const [registerForm] = Form.useForm<RegisterFormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -226,7 +227,11 @@ const Login: React.FC = () => {
       <Form.Item
         name="username"
         rules={loginConfig.form.username.rules}
-        label={<span className="text-sm font-medium text-text-secondary">用户名</span>}
+        label={
+          <span className="text-sm font-medium text-text-secondary">
+            用户名
+          </span>
+        }
       >
         <Input
           prefix={<UserOutlined className="text-text-tertiary" />}
@@ -237,7 +242,9 @@ const Login: React.FC = () => {
 
       <Form.Item
         name="nickname"
-        label={<span className="text-sm font-medium text-text-secondary">昵称</span>}
+        label={
+          <span className="text-sm font-medium text-text-secondary">昵称</span>
+        }
       >
         <Input
           prefix={<UserOutlined className="text-text-tertiary" />}
@@ -249,7 +256,9 @@ const Login: React.FC = () => {
       <Form.Item
         name="password"
         rules={loginConfig.form.password.rules}
-        label={<span className="text-sm font-medium text-text-secondary">密码</span>}
+        label={
+          <span className="text-sm font-medium text-text-secondary">密码</span>
+        }
       >
         <Input.Password
           prefix={<LockOutlined className="text-text-tertiary" />}
@@ -272,7 +281,11 @@ const Login: React.FC = () => {
             },
           }),
         ]}
-        label={<span className="text-sm font-medium text-text-secondary">确认密码</span>}
+        label={
+          <span className="text-sm font-medium text-text-secondary">
+            确认密码
+          </span>
+        }
       >
         <Input.Password
           prefix={<LockOutlined className="text-text-tertiary" />}
@@ -367,7 +380,9 @@ const Login: React.FC = () => {
         )
       }
     >
-      {showRegister ? renderRegisterForm() : (
+      {showRegister ? (
+        renderRegisterForm()
+      ) : (
         <>
           {renderLoginForm()}
           {renderOtherLoginMethods()}

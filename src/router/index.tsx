@@ -14,9 +14,9 @@ import ForgotPassword from "@/views/ForgotPassword";
 import ProtectedRoute from "./ProtectedRoute";
 
 // 受保护的路由包装器
-const ProtectedWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ProtectedRoute>{children}</ProtectedRoute>
-);
+const ProtectedWrapper: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => <ProtectedRoute>{children}</ProtectedRoute>;
 
 // 公开路由（无需登录）
 const publicRoutes: RouteObject[] = [
@@ -109,7 +109,10 @@ const notFoundRoute: RouteObject = {
       <div className="text-center">
         <h1 className="text-6xl font-bold text-text-primary">404</h1>
         <p className="mt-4 text-text-secondary">页面不存在</p>
-        <a href="/login" className="mt-6 inline-block text-primary hover:text-primary/80">
+        <a
+          href="/login"
+          className="mt-6 inline-block text-primary hover:text-primary/80"
+        >
           返回登录
         </a>
       </div>

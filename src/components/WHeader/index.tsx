@@ -51,12 +51,16 @@ const WHeader: React.FC<IWHeaderProps> = ({
     {
       key: "profile",
       label: "个人资料",
-      icon: <span className="material-symbols-outlined text-[18px]">person</span>,
+      icon: (
+        <span className="material-symbols-outlined text-[18px]">person</span>
+      ),
     },
     {
       key: "settings",
       label: "设置",
-      icon: <span className="material-symbols-outlined text-[18px]">settings</span>,
+      icon: (
+        <span className="material-symbols-outlined text-[18px]">settings</span>
+      ),
     },
     {
       type: "divider",
@@ -64,7 +68,9 @@ const WHeader: React.FC<IWHeaderProps> = ({
     {
       key: "logout",
       label: "退出登录",
-      icon: <span className="material-symbols-outlined text-[18px]">logout</span>,
+      icon: (
+        <span className="material-symbols-outlined text-[18px]">logout</span>
+      ),
       danger: true,
     },
   ];
@@ -131,8 +137,12 @@ const WHeader: React.FC<IWHeaderProps> = ({
         >
           <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="text-right">
-              <p className="text-sm font-medium text-text-primary">{displayName}</p>
-              <p className="text-xs text-text-tertiary">最后登录: {lastLoginTime}</p>
+              <p className="text-sm font-medium text-text-primary">
+                {displayName}
+              </p>
+              <p className="text-xs text-text-tertiary">
+                最后登录: {lastLoginTime}
+              </p>
             </div>
             {user?.avatar ? (
               <img

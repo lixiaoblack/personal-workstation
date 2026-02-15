@@ -4,7 +4,11 @@
  */
 import React, { useState } from "react";
 import { Form, Input, Button, message, Steps } from "antd";
-import { UserOutlined, LockOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import {
+  UserOutlined,
+  LockOutlined,
+  CheckCircleOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { WAuthLayout } from "@/components/WAuthLayout";
 import { useAuth } from "@/contexts";
@@ -35,7 +39,7 @@ const ForgotPassword: React.FC = () => {
 
       setSubmitting(true);
       const exists = await checkUsername(username);
-      
+
       if (exists) {
         setVerifiedUsername(username);
         setCurrentStep(1);
@@ -110,11 +114,7 @@ const ForgotPassword: React.FC = () => {
     switch (currentStep) {
       case 0:
         return (
-          <Form
-            form={form}
-            layout="vertical"
-            autoComplete="off"
-          >
+          <Form form={form} layout="vertical" autoComplete="off">
             <Form.Item
               name="username"
               rules={forgotPasswordConfig.form.username.rules}
@@ -161,7 +161,9 @@ const ForgotPassword: React.FC = () => {
           >
             <div className="mb-4 p-3 bg-primary/10 rounded-lg text-center">
               <span className="text-text-secondary">用户名: </span>
-              <span className="font-medium text-text-primary">{verifiedUsername}</span>
+              <span className="font-medium text-text-primary">
+                {verifiedUsername}
+              </span>
             </div>
 
             <Form.Item
@@ -192,7 +194,9 @@ const ForgotPassword: React.FC = () => {
             >
               <Input.Password
                 prefix={<LockOutlined className="text-text-tertiary" />}
-                placeholder={forgotPasswordConfig.form.confirmPassword.placeholder}
+                placeholder={
+                  forgotPasswordConfig.form.confirmPassword.placeholder
+                }
                 size="large"
               />
             </Form.Item>
@@ -234,11 +238,7 @@ const ForgotPassword: React.FC = () => {
             <p className="text-text-tertiary mb-6">
               您的密码已成功重置，请使用新密码登录
             </p>
-            <Button
-              type="primary"
-              size="large"
-              onClick={handleBackToLogin}
-            >
+            <Button type="primary" size="large" onClick={handleBackToLogin}>
               返回登录
             </Button>
           </div>

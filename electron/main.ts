@@ -53,7 +53,7 @@ function createWindow() {
  */
 function registerIpcHandlers() {
   // 用户登录
-  ipcMain.handle('user:login', async (_event, credentials) => {
+  ipcMain.handle("user:login", async (_event, credentials) => {
     const result = userService.login(credentials);
     if (result.success && result.token) {
       currentToken = result.token;
@@ -62,7 +62,7 @@ function registerIpcHandlers() {
   });
 
   // 用户注册
-  ipcMain.handle('user:register', async (_event, data) => {
+  ipcMain.handle("user:register", async (_event, data) => {
     const result = userService.register(data);
     if (result.success && result.token) {
       currentToken = result.token;
@@ -71,7 +71,7 @@ function registerIpcHandlers() {
   });
 
   // 用户登出
-  ipcMain.handle('user:logout', async () => {
+  ipcMain.handle("user:logout", async () => {
     if (currentToken) {
       const success = userService.logout(currentToken);
       currentToken = null;
@@ -81,7 +81,7 @@ function registerIpcHandlers() {
   });
 
   // 获取当前用户
-  ipcMain.handle('user:getCurrent', async () => {
+  ipcMain.handle("user:getCurrent", async () => {
     if (!currentToken) {
       return null;
     }
@@ -89,7 +89,7 @@ function registerIpcHandlers() {
   });
 
   // 验证 Token
-  ipcMain.handle('user:validateToken', async (_event, token: string) => {
+  ipcMain.handle("user:validateToken", async (_event, token: string) => {
     const user = userService.validateToken(token);
     if (user) {
       currentToken = token;
@@ -98,7 +98,7 @@ function registerIpcHandlers() {
   });
 
   // 更新用户资料
-  ipcMain.handle('user:updateProfile', async (_event, data) => {
+  ipcMain.handle("user:updateProfile", async (_event, data) => {
     if (!currentToken) {
       return null;
     }
@@ -110,13 +110,13 @@ function registerIpcHandlers() {
   });
 
   // 更新密码
-  ipcMain.handle('user:updatePassword', async (_event, data) => {
+  ipcMain.handle("user:updatePassword", async (_event, data) => {
     if (!currentToken) {
-      return { success: false, error: '未登录' };
+      return { success: false, error: "未登录" };
     }
     const user = userService.validateToken(currentToken);
     if (!user) {
-      return { success: false, error: '用户不存在' };
+      return { success: false, error: "用户不存在" };
     }
     const result = userService.updatePassword(user.id, data);
     if (result.success) {
@@ -126,17 +126,17 @@ function registerIpcHandlers() {
   });
 
   // 重置密码
-  ipcMain.handle('user:resetPassword', async (_event, data) => {
+  ipcMain.handle("user:resetPassword", async (_event, data) => {
     return userService.resetPassword(data);
   });
 
   // 检查是否已初始化
-  ipcMain.handle('user:isInitialized', async () => {
+  ipcMain.handle("user:isInitialized", async () => {
     return userService.isInitialized();
   });
 
   // 检查用户名是否存在
-  ipcMain.handle('user:checkUsername', async (_event, username: string) => {
+  ipcMain.handle("user:checkUsername", async (_event, username: string) => {
     return userService.checkUsernameExists(username);
   });
 }
@@ -145,10 +145,10 @@ function registerIpcHandlers() {
 app.whenReady().then(() => {
   // 初始化数据库
   initDatabase();
-  
+
   // 注册 IPC 处理器
   registerIpcHandlers();
-  
+
   createWindow();
 
   app.on("activate", () => {
@@ -161,7 +161,7 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   // 关闭数据库连接
   closeDatabase();
-  
+
   if (process.platform !== "darwin") {
     app.quit();
   }

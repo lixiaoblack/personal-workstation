@@ -5,7 +5,7 @@ export const loginConfig = {
   // 页面标题
   title: "登录",
   subtitle: "欢迎使用 Personal Workstation",
-  
+
   // 表单字段配置
   form: {
     username: {
@@ -25,7 +25,7 @@ export const loginConfig = {
       ],
     },
   },
-  
+
   // 其他链接
   links: {
     forgotPassword: "/forgot-password",

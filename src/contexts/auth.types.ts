@@ -63,17 +63,27 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean;
-  
+
   // 方法
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string }>;
-  register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    credentials: LoginCredentials
+  ) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    data: RegisterData
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<{ success: boolean; error?: string }>;
-  updatePassword: (data: UpdatePasswordData) => Promise<{ success: boolean; error?: string }>;
-  resetPassword: (data: ResetPasswordData) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (
+    data: UpdateProfileData
+  ) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (
+    data: UpdatePasswordData
+  ) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (
+    data: ResetPasswordData
+  ) => Promise<{ success: boolean; error?: string }>;
   checkUsername: (username: string) => Promise<boolean>;
   refreshUser: () => Promise<void>;
 }
 
 // Token 存储键
-export const AUTH_TOKEN_KEY = 'auth_token';
+export const AUTH_TOKEN_KEY = "auth_token";

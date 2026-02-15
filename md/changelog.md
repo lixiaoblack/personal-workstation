@@ -4,6 +4,17 @@
 
 ---
 
+## [0.3.4] - 2026-02-15
+
+### 修复 (Fixed)
+
+- 修复 SQLite datetime 函数语法错误
+  - 将 `datetime("now", "localtime")` 改为 `datetime('now', 'localtime')`
+  - SQLite 要求字符串字面量使用单引号
+  - 使用反引号包裹 SQL 语句避免 JavaScript 嵌套引号问题
+
+---
+
 ## [0.3.3] - 2026-02-14
 
 ### 修改 (Changed)

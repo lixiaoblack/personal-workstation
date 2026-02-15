@@ -2,10 +2,10 @@
  * 数据库初始化
  * 使用 better-sqlite3 管理本地数据库
  */
-import Database from 'better-sqlite3';
-import { app } from 'electron';
-import path from 'path';
-import fs from 'fs';
+import Database from "better-sqlite3";
+import { app } from "electron";
+import path from "path";
+import fs from "fs";
 
 let db: Database.Database | null = null;
 
@@ -14,15 +14,15 @@ let db: Database.Database | null = null;
  * 数据库存储在用户数据目录下
  */
 export function getDatabasePath(): string {
-  const userDataPath = app.getPath('userData');
-  const dataDir = path.join(userDataPath, 'data');
-  
+  const userDataPath = app.getPath("userData");
+  const dataDir = path.join(userDataPath, "data");
+
   // 确保数据目录存在
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-  
-  return path.join(dataDir, 'workstation.db');
+
+  return path.join(dataDir, "workstation.db");
 }
 
 /**
@@ -35,14 +35,14 @@ export function initDatabase(): Database.Database {
 
   const dbPath = getDatabasePath();
   db = new Database(dbPath);
-  
+
   // 启用外键约束
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+
   // 运行迁移
   runMigrations(db);
-  
+
   return db;
 }
 

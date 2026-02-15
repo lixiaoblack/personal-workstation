@@ -65,30 +65,33 @@ export interface ResetPasswordData {
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld("electronAPI", {
   // 用户认证
-  login: (credentials: LoginCredentials): Promise<LoginResult> => 
-    ipcRenderer.invoke('user:login', credentials),
-  register: (data: RegisterData): Promise<LoginResult> => 
-    ipcRenderer.invoke('user:register', data),
-  logout: (): Promise<boolean> => 
-    ipcRenderer.invoke('user:logout'),
-  getCurrentUser: (): Promise<User | null> => 
-    ipcRenderer.invoke('user:getCurrent'),
-  validateToken: (token: string): Promise<User | null> => 
-    ipcRenderer.invoke('user:validateToken', token),
-  
+  login: (credentials: LoginCredentials): Promise<LoginResult> =>
+    ipcRenderer.invoke("user:login", credentials),
+  register: (data: RegisterData): Promise<LoginResult> =>
+    ipcRenderer.invoke("user:register", data),
+  logout: (): Promise<boolean> => ipcRenderer.invoke("user:logout"),
+  getCurrentUser: (): Promise<User | null> =>
+    ipcRenderer.invoke("user:getCurrent"),
+  validateToken: (token: string): Promise<User | null> =>
+    ipcRenderer.invoke("user:validateToken", token),
+
   // 用户信息管理
-  updateProfile: (data: UpdateProfileData): Promise<User | null> => 
-    ipcRenderer.invoke('user:updateProfile', data),
-  updatePassword: (data: UpdatePasswordData): Promise<{ success: boolean; error?: string }> => 
-    ipcRenderer.invoke('user:updatePassword', data),
-  resetPassword: (data: ResetPasswordData): Promise<{ success: boolean; error?: string }> => 
-    ipcRenderer.invoke('user:resetPassword', data),
-  
+  updateProfile: (data: UpdateProfileData): Promise<User | null> =>
+    ipcRenderer.invoke("user:updateProfile", data),
+  updatePassword: (
+    data: UpdatePasswordData
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("user:updatePassword", data),
+  resetPassword: (
+    data: ResetPasswordData
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("user:resetPassword", data),
+
   // 检查状态
-  isInitialized: (): Promise<boolean> => 
-    ipcRenderer.invoke('user:isInitialized'),
-  checkUsername: (username: string): Promise<boolean> => 
-    ipcRenderer.invoke('user:checkUsername', username),
+  isInitialized: (): Promise<boolean> =>
+    ipcRenderer.invoke("user:isInitialized"),
+  checkUsername: (username: string): Promise<boolean> =>
+    ipcRenderer.invoke("user:checkUsername", username),
 });
 
 // 类型声明
@@ -99,12 +102,16 @@ export interface ElectronAPI {
   logout: () => Promise<boolean>;
   getCurrentUser: () => Promise<User | null>;
   validateToken: (token: string) => Promise<User | null>;
-  
+
   // 用户信息管理
   updateProfile: (data: UpdateProfileData) => Promise<User | null>;
-  updatePassword: (data: UpdatePasswordData) => Promise<{ success: boolean; error?: string }>;
-  resetPassword: (data: ResetPasswordData) => Promise<{ success: boolean; error?: string }>;
-  
+  updatePassword: (
+    data: UpdatePasswordData
+  ) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (
+    data: ResetPasswordData
+  ) => Promise<{ success: boolean; error?: string }>;
+
   // 检查状态
   isInitialized: () => Promise<boolean>;
   checkUsername: (username: string) => Promise<boolean>;

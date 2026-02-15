@@ -1,3 +1,12 @@
+<!--
+ * @Author: wanglx
+ * @Date: 2026-02-13 23:03:14
+ * @LastEditors: wanglx
+ * @LastEditTime: 2026-02-14 23:58:22
+ * @Description: 
+ * 
+ * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved. 
+-->
 # 任务情况记录
 
 本文档记录项目的所有任务状态，包括进行中、已完成和待处理的任务。
@@ -13,6 +22,10 @@
 ---
 
 ### 已完成
+
+- [x] TASK-009: 修复 SQLite datetime 语法错误 | 完成时间: 2026-02-15 13:50
+  - 将 SQL 语句中的双引号改为单引号
+  - 使用反引号包裹 SQL 语句避免嵌套引号问题
 
 - [x] TASK-008: 重新设计登录页面布局 | 完成时间: 2026-02-14 23:58
   - 按照 login.html 设计更新 WAuthLayout 组件

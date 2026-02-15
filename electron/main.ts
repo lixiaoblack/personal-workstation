@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { initDatabase, closeDatabase } from "./database/index";
 import * as userService from "./services/userService";
+import * as storageService from "./services/storageService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -138,6 +139,15 @@ function registerIpcHandlers() {
   // 检查用户名是否存在
   ipcMain.handle("user:checkUsername", async (_event, username: string) => {
     return userService.checkUsernameExists(username);
+  });
+
+  // 存储管理
+  ipcMain.handle("storage:getInfo", async () => {
+    return storageService.getStorageInfo();
+  });
+
+  ipcMain.handle("storage:clearCache", async () => {
+    return storageService.clearCache();
   });
 }
 

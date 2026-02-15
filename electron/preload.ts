@@ -62,6 +62,22 @@ export interface ResetPasswordData {
   newPassword: string;
 }
 
+// 存储信息接口
+export interface StorageInfo {
+  cacheSize: number;
+  totalSize: number;
+  cachePath: string;
+  dataSize: number;
+  logsSize: number;
+}
+
+// 清理缓存结果
+export interface ClearCacheResult {
+  success: boolean;
+  clearedSize: number;
+  error?: string;
+}
+
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld("electronAPI", {
   // 用户认证
@@ -92,6 +108,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("user:isInitialized"),
   checkUsername: (username: string): Promise<boolean> =>
     ipcRenderer.invoke("user:checkUsername", username),
+
+  // 存储管理
+  getStorageInfo: (): Promise<StorageInfo> =>
+    ipcRenderer.invoke("storage:getInfo"),
+  clearCache: (): Promise<ClearCacheResult> =>
+    ipcRenderer.invoke("storage:clearCache"),
 });
 
 // 类型声明
@@ -115,6 +137,10 @@ export interface ElectronAPI {
   // 检查状态
   isInitialized: () => Promise<boolean>;
   checkUsername: (username: string) => Promise<boolean>;
+
+  // 存储管理
+  getStorageInfo: () => Promise<StorageInfo>;
+  clearCache: () => Promise<ClearCacheResult>;
 }
 
 declare global {

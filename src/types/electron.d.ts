@@ -65,6 +65,22 @@ export interface ResetPasswordData {
   newPassword: string;
 }
 
+// 存储信息接口
+export interface StorageInfo {
+  cacheSize: number;
+  totalSize: number;
+  cachePath: string;
+  dataSize: number;
+  logsSize: number;
+}
+
+// 清理缓存结果
+export interface ClearCacheResult {
+  success: boolean;
+  clearedSize: number;
+  error?: string;
+}
+
 // Electron API 接口
 export interface ElectronAPI {
   // 用户认证
@@ -86,6 +102,10 @@ export interface ElectronAPI {
   // 检查状态
   isInitialized: () => Promise<boolean>;
   checkUsername: (username: string) => Promise<boolean>;
+
+  // 存储管理
+  getStorageInfo: () => Promise<StorageInfo>;
+  clearCache: () => Promise<ClearCacheResult>;
 }
 
 declare global {

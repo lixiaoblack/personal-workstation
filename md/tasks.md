@@ -23,6 +23,11 @@
 
 ### 已完成
 
+- [x] TASK-010: 修复 antd message 静态方法警告 | 完成时间: 2026-02-15 14:00
+  - 在 App.tsx 中添加 AntdApp 组件包裹
+  - 使用 App.useApp() hook 获取 message
+  - 更新 Login、ForgotPassword、WHeader 组件
+
 - [x] TASK-009: 修复 SQLite datetime 语法错误 | 完成时间: 2026-02-15 13:50
   - 将 SQL 语句中的双引号改为单引号
   - 使用反引号包裹 SQL 语句避免嵌套引号问题

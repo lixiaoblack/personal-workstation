@@ -4,7 +4,7 @@
  * 使用 Tailwind CSS + 主题变量
  */
 import React, { useState } from "react";
-import { Dropdown, message } from "antd";
+import { Dropdown, App } from "antd";
 import { useNavigate } from "react-router-dom";
 import type { MenuProps } from "antd";
 import { useAuth } from "@/contexts";
@@ -25,6 +25,7 @@ const WHeader: React.FC<IWHeaderProps> = ({
   onNotificationClick,
 }) => {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 

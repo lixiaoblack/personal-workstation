@@ -3,7 +3,7 @@
  * 支持账号密码登录、首次启动注册、忘记密码跳转
  */
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, message, Checkbox } from "antd";
+import { Form, Input, Button, Checkbox, App } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { WAuthLayout } from "@/components/WAuthLayout";
@@ -25,6 +25,7 @@ interface RegisterFormValues {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const { login, register, isInitialized, isAuthenticated, isLoading } =
     useAuth();
   const [loginForm] = Form.useForm<LoginFormValues>();

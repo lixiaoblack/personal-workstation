@@ -3,7 +3,7 @@
  * 支持用户通过用户名重置密码
  */
 import React, { useState } from "react";
-import { Form, Input, Button, message, Steps } from "antd";
+import { Form, Input, Button, Steps, App } from "antd";
 import {
   UserOutlined,
   LockOutlined,
@@ -22,6 +22,7 @@ interface ForgotPasswordFormValues {
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const { resetPassword, checkUsername } = useAuth();
   const [form] = Form.useForm<ForgotPasswordFormValues>();
   const [submitting, setSubmitting] = useState(false);

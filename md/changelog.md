@@ -4,6 +4,17 @@
 
 ---
 
+## [0.3.5] - 2026-02-15
+
+### 修复 (Fixed)
+
+- 修复 antd message 静态方法警告
+  - 在 App.tsx 中添加 AntdApp 组件包裹
+  - 使用 App.useApp() hook 获取 message 实例
+  - 更新 Login、ForgotPassword、WHeader 组件使用动态主题上下文
+
+---
+
 ## [0.3.4] - 2026-02-15
 
 ### 修复 (Fixed)

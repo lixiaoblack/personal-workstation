@@ -3,7 +3,7 @@
  * 配置主题提供者、认证提供者和路由
  */
 import { RouterProvider } from "react-router-dom";
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import { ThemeProvider, AuthProvider, useTheme } from "@/contexts";
 import { getAntdTheme } from "@/styles/themes/antd-theme";
 import router from "@/router";
@@ -18,7 +18,9 @@ const ThemeWrapper: React.FC = () => {
 
   return (
     <ConfigProvider theme={antdTheme}>
-      <RouterProvider router={router} />
+      <AntdApp>
+        <RouterProvider router={router} />
+      </AntdApp>
     </ConfigProvider>
   );
 };

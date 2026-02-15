@@ -10,11 +10,8 @@
 
 - JSON 美化工具支持 JavaScript 对象格式
   - 支持键名无引号的 JS 对象格式
-  - 支持单引号字符串转换
-  - 支持移除尾随逗号
-  - 支持移除单行/多行注释
-  - 支持 undefined 转 null
-  - 多重解析策略：JSON.parse → 正则转换 → Function 构造函数
+  - 智能移除注释（正确处理字符串内的 `//`，如 URL）
+  - 多重解析策略：JSON.parse → Function 直接解析 → 移除注释后解析
 
 ---
 

@@ -123,42 +123,121 @@ const JsonBeautify: React.FC = () => {
         rightDecorations
       );
     },
-    []
+    [],
   );
 
   /**
-   * 将 JavaScript 对象格式转换为标准 JSON
-   * 支持：无引号键名、单引号字符串、尾随逗号、注释
+   * 智能移除注释（避免误处理字符串内的内容）
    */
-  const convertJsToJson = useCallback((input: string): string => {
-    let result = input;
+  const removeComments = useCallback((code: string): string => {
+    let result = '';
+    let i = 0;
+    const len = code.length;
 
-    // 1. 移除单行注释 // ...
-    result = result.replace(/\/\/[^\n]*/g, '');
+    while (i < len) {
+      const char = code[i];
+      const nextChar = code[i + 1];
 
-    // 2. 移除多行注释 /* ... */
-    result = result.replace(/\/\*[\s\S]*?\*\//g, '');
+      // 处理字符串（单引号或双引号）
+      if (char === '"' || char === "'") {
+        const quote = char;
+        result += char;
+        i++;
+        // 找到字符串结束
+        while (i < len) {
+          if (code[i] === '\\' && i + 1 < len) {
+            // 转义字符
+            result += code[i] + code[i + 1];
+            i += 2;
+          } else if (code[i] === quote) {
+            result += code[i];
+            i++;
+            break;
+          } else {
+            result += code[i];
+            i++;
+          }
+        }
+        continue;
+      }
 
-    // 3. 处理单引号字符串 -> 双引号字符串
-    // 匹配单引号内的内容（考虑转义）
-    result = result.replace(
-      /'((?:\\'|[^'])*)'/g,
-      (_, content) => `"${content.replace(/\\'/g, "'").replace(/\\/g, '\\\\')}"`
-    );
+      // 处理模板字符串
+      if (char === '`') {
+        result += char;
+        i++;
+        while (i < len) {
+          if (code[i] === '\\' && i + 1 < len) {
+            result += code[i] + code[i + 1];
+            i += 2;
+          } else if (code[i] === '`') {
+            result += code[i];
+            i++;
+            break;
+          } else {
+            result += code[i];
+            i++;
+          }
+        }
+        continue;
+      }
 
-    // 4. 给无引号的键名添加双引号
-    // 匹配模式：标识符后面跟着冒号，且前面不是引号或已有引号
-    // 排除已经带双引号的键名
-    result = result.replace(
-      /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g,
-      '$1"$2"$3'
-    );
+      // 处理单行注释 //
+      if (char === '/' && nextChar === '/') {
+        // 跳过直到换行
+        i += 2;
+        while (i < len && code[i] !== '\n') {
+          i++;
+        }
+        // 保留换行符
+        if (i < len) {
+          result += '\n';
+          i++;
+        }
+        continue;
+      }
 
-    // 5. 移除尾随逗号（对象和数组中的）
-    result = result.replace(/,\s*([}\]])/g, '$1');
+      // 处理多行注释 /* */
+      if (char === '/' && nextChar === '*') {
+        i += 2;
+        while (i < len - 1) {
+          if (code[i] === '*' && code[i + 1] === '/') {
+            i += 2;
+            break;
+          }
+          i++;
+        }
+        continue;
+      }
 
-    // 6. 处理 undefined -> null
-    result = result.replace(/:\s*undefined\s*([,}\]])/g, ': null$1');
+      // 处理正则表达式（简单情况）
+      if (char === '/') {
+        // 检查是否可能是正则（前面是 =, (, [, ,, :, !, &, |, ;, {, }, \n 等）
+        const prevNonSpace = result.trimEnd().slice(-1);
+        const couldBeRegex = /[=(,:!&|;{}[\n\s]$/.test(prevNonSpace + ' ');
+        if (couldBeRegex && i + 1 < len && code[i + 1] !== '/') {
+          result += char;
+          i++;
+          while (i < len) {
+            if (code[i] === '\\' && i + 1 < len) {
+              result += code[i] + code[i + 1];
+              i += 2;
+            } else if (code[i] === '/') {
+              result += code[i];
+              i++;
+              break;
+            } else {
+              result += code[i];
+              i++;
+            }
+          }
+          continue;
+        }
+      }
+
+      // 普通字符
+      result += char;
+      i++;
+    }
 
     return result;
   }, []);
@@ -180,21 +259,19 @@ const JsonBeautify: React.FC = () => {
         // 继续尝试其他方案
       }
 
-      // 方案2：转换为 JSON 后尝试解析
+      // 方案2：使用 Function 构造函数直接解析（JavaScript 引擎可以处理注释）
       try {
-        const converted = convertJsToJson(input);
-        const parsed = JSON.parse(converted);
+        // eslint-disable-next-line no-new-func
+        const parsed = new Function(`return (${input})`)();
         return { success: true, result: JSON.stringify(parsed, null, 2) };
       } catch {
         // 继续尝试其他方案
       }
 
-      // 方案3：使用 Function 构造函数（注意：仅用于开发工具场景）
+      // 方案3：移除注释后再尝试
       try {
-        // 移除注释并尝试作为 JS 对象解析
-        const sanitized = input.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-
-        // 尝试作为 JavaScript 表达式解析
+        // 智能移除注释（避免误处理字符串内的 //）
+        const sanitized = removeComments(input);
         // eslint-disable-next-line no-new-func
         const parsed = new Function(`return (${sanitized})`)();
         return { success: true, result: JSON.stringify(parsed, null, 2) };
@@ -205,7 +282,7 @@ const JsonBeautify: React.FC = () => {
         };
       }
     },
-    [convertJsToJson]
+    [removeComments]
   );
 
   // 美化JSON

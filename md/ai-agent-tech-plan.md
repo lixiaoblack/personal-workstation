@@ -91,11 +91,11 @@
 
 | 库 | 版本要求 | 用途 |
 |---|---|---|
-| `langchain` | >=0.2.0 | LLM 应用框架 |
-| `langchain-community` | >=0.2.0 | 社区集成 |
-| `langchain-openai` | >=0.1.0 | OpenAI 兼容接口 |
-| `langgraph` | >=0.2.0 | 智能体编排 |
-| `langgraph-deep-agents` | >=0.1.0 | 高级智能体模式 |
+| `langchain` | >=1.0.0 | LLM 应用框架 |
+| `langchain-community` | >=1.0.0 | 社区集成 |
+| `langchain-openai` | >=1.0.0 | OpenAI 兼容接口 |
+| `langgraph` | >=1.0.0 | 智能体编排 |
+| `langgraph-deep-agents` | >=1.0.0 | 高级智能体模式 |
 
 ### 3.2 向量数据库
 
@@ -250,11 +250,11 @@ uvicorn>=0.27.0
 websockets>=12.0
 
 # LangChain 生态
-langchain>=0.2.0
-langchain-community>=0.2.0
-langchain-openai>=0.1.0
-langgraph>=0.2.0
-langgraph-deep-agents>=0.1.0
+langchain>=1.0.0
+langchain-community>=1.0.0
+langchain-openai>=1.0.0
+langgraph>=1.0.0
+langgraph-deep-agents>=1.0.0
 
 # MCP
 mcp>=1.0.0

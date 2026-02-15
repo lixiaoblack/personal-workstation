@@ -16,6 +16,11 @@
 
 ### 新增 (Added)
 
+- 设置页面基础框架
+  - Settings 主设置页面（常规设置、个人信息、存储管理、关于）
+  - AISettings AI 模型配置页面
+  - 在线 API 配置 UI（OpenAI、百炼、智谱）
+  - 本地 Ollama 配置 UI
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`

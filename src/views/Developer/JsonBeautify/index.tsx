@@ -101,7 +101,7 @@ const JsonBeautify: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-bg-primary overflow-hidden">
+    <div className="flex flex-col h-full min-h-full bg-bg-primary overflow-hidden">
       {/* 工具栏 */}
       <header className="h-16 flex-shrink-0 border-b border-border flex items-center justify-between px-6">
         <div className="flex items-center gap-6">
@@ -165,7 +165,9 @@ const JsonBeautify: React.FC = () => {
             <span className="text-[11px] font-bold text-text-tertiary uppercase tracking-widest">
               原始 JSON
             </span>
-            <span className="text-[11px] text-text-tertiary">{leftLines} Lines</span>
+            <span className="text-[11px] text-text-tertiary">
+              {leftLines} Lines
+            </span>
           </div>
           <div className="flex-1 flex overflow-hidden">
             {/* 行号 */}

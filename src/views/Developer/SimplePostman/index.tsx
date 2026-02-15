@@ -82,7 +82,7 @@ const SimplePostman: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-bg-primary overflow-hidden">
+    <div className="flex flex-col h-full min-h-full bg-bg-primary overflow-hidden">
       {/* URL输入栏 */}
       <header className="h-16 flex-shrink-0 border-b border-border flex items-center px-6 gap-4">
         <Select

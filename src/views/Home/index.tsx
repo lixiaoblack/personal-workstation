@@ -220,7 +220,7 @@ const Home: React.FC = () => {
   );
 
   return (
-    <>
+    <div className="max-w-[1400px] mx-auto p-8 flex flex-col gap-8">
       {/* 欢迎区域 */}
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-bg-primary to-bg-primary border border-border p-8">
         <div className="relative z-1 flex justify-between items-end">
@@ -293,7 +293,7 @@ const Home: React.FC = () => {
         </h3>
         {renderRecentLogs()}
       </section>
-    </>
+    </div>
   );
 };
 

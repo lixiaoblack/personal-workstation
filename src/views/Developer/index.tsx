@@ -19,23 +19,27 @@ const Developer: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-bg-primary">
+    <div className="flex flex-col h-full min-h-full bg-bg-primary">
       {/* 顶部菜单栏 */}
-      <header className="h-16 flex-shrink-0 bg-bg-secondary border-b border-border flex items-center px-8 justify-between">
-        <div className="flex gap-8 h-full">
+      <header className="h-12 flex-shrink-0 bg-bg-secondary border-b border-border flex items-stretch">
+        <div className="flex h-full">
           {TOOL_MENU_CONFIG.map((menu) => {
             const isActive = currentPath === menu.path;
             return (
               <button
                 key={menu.key}
                 onClick={() => navigate(menu.path)}
-                className={`border-b-2 px-1 h-full flex items-center font-medium text-sm transition-colors ${
+                className={`relative px-4 h-full flex items-center text-sm transition-all duration-200 ${
                   isActive
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-text-tertiary hover:text-text-primary"
+                    ? "text-primary bg-bg-primary/50"
+                    : "text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary/50"
                 }`}
               >
-                {menu.label}
+                <span className="relative z-10">{menu.label}</span>
+                {/* 激活指示器 */}
+                {isActive && (
+                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-t-full" />
+                )}
               </button>
             );
           })}
@@ -43,7 +47,7 @@ const Developer: React.FC = () => {
       </header>
 
       {/* 内容区域 */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <Outlet />
       </div>
     </div>

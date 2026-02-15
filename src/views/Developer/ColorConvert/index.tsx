@@ -74,7 +74,7 @@ const ColorConvert: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-bg-primary overflow-hidden p-6">
+    <div className="flex flex-col h-full min-h-full bg-bg-primary overflow-hidden p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         {/* 颜色预览 */}
         <div className="bg-bg-secondary rounded-xl border border-border p-6">
@@ -84,7 +84,9 @@ const ColorConvert: React.FC = () => {
               style={{ backgroundColor: previewColor }}
             />
             <div className="flex-1 space-y-4">
-              <div className="text-lg font-bold text-text-primary">颜色预览</div>
+              <div className="text-lg font-bold text-text-primary">
+                颜色预览
+              </div>
               <div className="text-sm text-text-secondary">
                 点击下方颜色值可复制
               </div>
@@ -113,10 +115,14 @@ const ColorConvert: React.FC = () => {
             onClick={() => handleCopy(hex)}
           >
             <div>
-              <div className="text-xs text-text-tertiary uppercase tracking-widest">HEX</div>
+              <div className="text-xs text-text-tertiary uppercase tracking-widest">
+                HEX
+              </div>
               <div className="text-lg font-mono text-text-primary">{hex}</div>
             </div>
-            <span className="material-symbols-outlined text-text-tertiary">content_copy</span>
+            <span className="material-symbols-outlined text-text-tertiary">
+              content_copy
+            </span>
           </div>
 
           {/* RGB */}
@@ -125,10 +131,14 @@ const ColorConvert: React.FC = () => {
             onClick={() => handleCopy(rgb)}
           >
             <div>
-              <div className="text-xs text-text-tertiary uppercase tracking-widest">RGB</div>
+              <div className="text-xs text-text-tertiary uppercase tracking-widest">
+                RGB
+              </div>
               <div className="text-lg font-mono text-text-primary">{rgb}</div>
             </div>
-            <span className="material-symbols-outlined text-text-tertiary">content_copy</span>
+            <span className="material-symbols-outlined text-text-tertiary">
+              content_copy
+            </span>
           </div>
 
           {/* HSL */}
@@ -137,21 +147,42 @@ const ColorConvert: React.FC = () => {
             onClick={() => handleCopy(hsl)}
           >
             <div>
-              <div className="text-xs text-text-tertiary uppercase tracking-widest">HSL</div>
+              <div className="text-xs text-text-tertiary uppercase tracking-widest">
+                HSL
+              </div>
               <div className="text-lg font-mono text-text-primary">{hsl}</div>
             </div>
-            <span className="material-symbols-outlined text-text-tertiary">content_copy</span>
+            <span className="material-symbols-outlined text-text-tertiary">
+              content_copy
+            </span>
           </div>
         </div>
 
         {/* 常用颜色 */}
         <div className="bg-bg-secondary rounded-xl border border-border p-6">
-          <div className="text-sm font-medium text-text-secondary mb-4">常用颜色</div>
+          <div className="text-sm font-medium text-text-secondary mb-4">
+            常用颜色
+          </div>
           <div className="grid grid-cols-8 gap-2">
             {[
-              "#EF4444", "#F97316", "#F59E0B", "#22C55E", "#10B981", "#14B8A6",
-              "#06B6D4", "#0EA5E9", "#3B82F6", "#6366F1", "#8B5CF6", "#A855F7",
-              "#D946EF", "#EC4899", "#F43F5E", "#78716C", "#000000", "#FFFFFF",
+              "#EF4444",
+              "#F97316",
+              "#F59E0B",
+              "#22C55E",
+              "#10B981",
+              "#14B8A6",
+              "#06B6D4",
+              "#0EA5E9",
+              "#3B82F6",
+              "#6366F1",
+              "#8B5CF6",
+              "#A855F7",
+              "#D946EF",
+              "#EC4899",
+              "#F43F5E",
+              "#78716C",
+              "#000000",
+              "#FFFFFF",
             ].map((color) => (
               <button
                 key={color}

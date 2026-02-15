@@ -2,7 +2,7 @@
  * @Author: wanglx
  * @Date: 2026-02-15 14:00:53
  * @LastEditors: wanglx
- * @LastEditTime: 2026-02-15 14:04:06
+ * @LastEditTime: 2026-02-15 14:49:28
  * @Description:
  *
  * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved.
@@ -25,13 +25,15 @@ const WLayout: React.FC = () => {
       <WSidebar menuItems={NAV_MENU_CONFIG} />
 
       {/* 主内容区域 */}
-      <main className="flex-1 z-20 overflow-y-auto custom-scrollbar bg-bg-primary">
+      <main className="flex-1 flex flex-col z-20 overflow-hidden bg-bg-primary">
         {/* 头部 */}
         <WHeader />
 
         {/* 内容区域 - 由子路由渲染 */}
-        <div className="max-w-[1400px] mx-auto p-8 flex flex-col gap-8">
-          <Outlet />
+        <div className="flex-1 overflow-auto custom-scrollbar">
+          <div className="min-h-full">
+            <Outlet />
+          </div>
         </div>
       </main>
 

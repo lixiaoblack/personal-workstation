@@ -58,7 +58,7 @@ const OcrTool: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-bg-primary overflow-hidden">
+    <div className="flex flex-col h-full min-h-full bg-bg-primary overflow-hidden">
       {/* 工具栏 */}
       <header className="h-16 flex-shrink-0 border-b border-border flex items-center justify-between px-6">
         <div className="flex items-center gap-6">

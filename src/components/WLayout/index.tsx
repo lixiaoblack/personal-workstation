@@ -13,12 +13,14 @@
  * 所有受保护的页面共享此布局
  */
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { WSidebar } from "@/components/WSidebar";
 import { WHeader } from "@/components/WHeader";
 import { NAV_MENU_CONFIG } from "@/views/Home/config";
 
 const WLayout: React.FC = () => {
+  const location = useLocation();
+
   return (
     <div className="flex h-screen overflow-hidden bg-bg-primary">
       {/* 侧边栏 */}
@@ -31,14 +33,17 @@ const WLayout: React.FC = () => {
 
         {/* 内容区域 - 由子路由渲染 */}
         <div className="flex-1 overflow-auto custom-scrollbar">
-          <div className="min-h-full">
+          <div
+            key={location.pathname}
+            className="h-full animate-fadeIn"
+          >
             <Outlet />
           </div>
         </div>
       </main>
 
       {/* AI 悬浮按钮 */}
-      <div className="fixed bottom-8 right-8">
+      <div className="fixed bottom-8 right-8 z-50">
         <button className="flex items-center gap-3 bg-primary text-white pl-4 pr-6 py-3 rounded-full shadow-lg shadow-primary/40 hover:scale-105 transition-transform">
           <span className="material-symbols-outlined">smart_toy</span>
           <span className="font-bold">有什么可以帮您？</span>

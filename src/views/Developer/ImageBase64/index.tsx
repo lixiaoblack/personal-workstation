@@ -73,7 +73,9 @@ const ImageBase64: React.FC = () => {
               disabled={!base64Output}
               className="p-2 text-text-tertiary hover:bg-bg-tertiary rounded-lg transition-colors flex items-center gap-1 text-sm disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">content_copy</span>
+              <span className="material-symbols-outlined text-lg">
+                content_copy
+              </span>
               复制结果
             </button>
             <button
@@ -113,12 +115,16 @@ const ImageBase64: React.FC = () => {
               className="bg-bg-secondary border-border"
             >
               <p className="text-text-tertiary">
-                <span className="material-symbols-outlined text-4xl text-primary">cloud_upload</span>
+                <span className="material-symbols-outlined text-4xl text-primary">
+                  cloud_upload
+                </span>
               </p>
               <p className="text-text-secondary">点击或拖拽图片到此处</p>
-              <p className="text-text-tertiary text-xs mt-1">支持 PNG、JPG、GIF、WebP 格式</p>
+              <p className="text-text-tertiary text-xs mt-1">
+                支持 PNG、JPG、GIF、WebP 格式
+              </p>
             </Upload.Dragger>
-            
+
             {base64Output && (
               <div className="flex-1 relative">
                 <textarea
@@ -152,7 +158,7 @@ const ImageBase64: React.FC = () => {
               <span className="material-symbols-outlined text-lg">image</span>
               预览图片
             </button>
-            
+
             {previewImage && (
               <div className="flex-1 bg-bg-secondary border border-border rounded-lg p-4 flex items-center justify-center overflow-auto">
                 <img

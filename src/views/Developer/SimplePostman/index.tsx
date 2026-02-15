@@ -10,7 +10,9 @@ const SimplePostman: React.FC = () => {
   const { message } = App.useApp();
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("");
-  const [headers, setHeaders] = useState('{\n  "Content-Type": "application/json"\n}');
+  const [headers, setHeaders] = useState(
+    '{\n  "Content-Type": "application/json"\n}'
+  );
   const [body, setBody] = useState("");
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,9 @@ const SimplePostman: React.FC = () => {
       const endTime = Date.now();
       setResponseTime(endTime - startTime);
       setResponseStatus(0);
-      setResponse(`请求失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      setResponse(
+        `请求失败: ${error instanceof Error ? error.message : "未知错误"}`
+      );
       message.error("请求失败");
     } finally {
       setLoading(false);

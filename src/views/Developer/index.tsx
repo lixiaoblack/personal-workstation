@@ -1,3 +1,12 @@
+/*
+ * @Author: wanglx
+ * @Date: 2026-02-15 14:35:11
+ * @LastEditors: wanglx
+ * @LastEditTime: 2026-02-15 14:52:51
+ * @Description:
+ *
+ * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved.
+ */
 /**
  * Developer 开发者工具布局组件
  * 包含顶部菜单栏和内容区域

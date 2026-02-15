@@ -3,8 +3,10 @@
  * 包含品牌标识、导航菜单、用户操作区
  * 使用 Tailwind CSS + 主题变量
  */
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import type { ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts";
 
 // 导航菜单项类型
 export interface INavMenuItem {
@@ -19,7 +21,7 @@ export interface INavMenuItem {
 export interface IWSidebarProps {
   /** 导航菜单配置 */
   menuItems: INavMenuItem[];
-  /** 当前选中菜单项 */
+  /** 当前选中菜单项（已弃用，使用路由自动判断） */
   activeKey?: string;
   /** 菜单点击回调 */
   onMenuClick?: (key: string, item: INavMenuItem) => void;
@@ -33,20 +35,41 @@ export interface IWSidebarProps {
 
 const WSidebar: React.FC<IWSidebarProps> = ({
   menuItems,
-  activeKey,
   onMenuClick,
   brandName = "个人工作站",
   version = "专业版 v2.4.0",
   footerExtra,
 }) => {
-  const [selectedKey, setSelectedKey] = useState(
-    activeKey || menuItems[0]?.key
-  );
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  // 根据当前路由路径判断选中状态
+  const selectedKey = useMemo(() => {
+    const currentPath = location.pathname;
+    // 精确匹配
+    const exactMatch = menuItems.find((item) => item.path === currentPath);
+    if (exactMatch) return exactMatch.key;
+    // 前缀匹配（用于嵌套路由）
+    const prefixMatch = menuItems.find(
+      (item) => item.path && currentPath.startsWith(item.path)
+    );
+    if (prefixMatch) return prefixMatch.key;
+    // 默认选中第一个
+    return menuItems[0]?.key;
+  }, [location.pathname, menuItems]);
 
   // 处理菜单点击
   const handleMenuClick = (item: INavMenuItem) => {
-    setSelectedKey(item.key);
     onMenuClick?.(item.key, item);
+    if (item.path) {
+      navigate(item.path);
+    }
+  };
+
+  // 处理退出登录
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -70,22 +93,21 @@ const WSidebar: React.FC<IWSidebarProps> = ({
           {/* 导航菜单 */}
           <nav className="flex flex-col gap-1">
             {menuItems.map((item) => (
-              <a
+              <button
                 key={item.key}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors cursor-pointer
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 cursor-pointer w-full text-left
                   ${
                     selectedKey === item.key
-                      ? "bg-bg-hover text-text-primary"
+                      ? "bg-primary/10 text-primary font-medium"
                       : "text-text-secondary hover:text-text-primary hover:bg-bg-hover"
                   }`}
                 onClick={() => handleMenuClick(item)}
-                href={item.path || "#"}
               >
                 <span className="material-symbols-outlined text-xl">
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
-              </a>
+              </button>
             ))}
           </nav>
         </div>
@@ -100,22 +122,22 @@ const WSidebar: React.FC<IWSidebarProps> = ({
 
           {/* 设置和退出 */}
           <div className="flex flex-col gap-1">
-            <a
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer"
-              href="#"
+            <button
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer w-full text-left"
+              onClick={() => navigate("/settings")}
             >
               <span className="material-symbols-outlined text-xl">
                 settings
               </span>
               <span>设置</span>
-            </a>
-            <a
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-error hover:bg-error-light transition-colors cursor-pointer"
-              href="#"
+            </button>
+            <button
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-error hover:bg-error/10 transition-colors cursor-pointer w-full text-left"
+              onClick={handleLogout}
             >
               <span className="material-symbols-outlined text-xl">logout</span>
               <span>退出登录</span>
-            </a>
+            </button>
           </div>
 
           {/* 额外内容 */}

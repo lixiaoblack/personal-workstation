@@ -27,15 +27,15 @@ const OcrTool: React.FC = () => {
     setTimeout(() => {
       setOcrResult(
         "【OCR识别结果】\n\n" +
-        "这是一个模拟的OCR识别结果。\n\n" +
-        "实际使用时，需要接入以下OCR服务之一：\n" +
-        "1. 百度OCR API\n" +
-        "2. 腾讯云OCR\n" +
-        "3. 阿里云OCR\n" +
-        "4. Google Cloud Vision\n" +
-        "5. Tesseract.js (本地识别)\n\n" +
-        `文件名: ${file.name}\n` +
-        `文件大小: ${(file.size / 1024).toFixed(2)} KB`
+          "这是一个模拟的OCR识别结果。\n\n" +
+          "实际使用时，需要接入以下OCR服务之一：\n" +
+          "1. 百度OCR API\n" +
+          "2. 腾讯云OCR\n" +
+          "3. 阿里云OCR\n" +
+          "4. Google Cloud Vision\n" +
+          "5. Tesseract.js (本地识别)\n\n" +
+          `文件名: ${file.name}\n` +
+          `文件大小: ${(file.size / 1024).toFixed(2)} KB`
       );
       setLoading(false);
       message.info("OCR识别完成（模拟结果）");
@@ -68,7 +68,9 @@ const OcrTool: React.FC = () => {
               disabled={!ocrResult}
               className="p-2 text-text-tertiary hover:bg-bg-tertiary rounded-lg transition-colors flex items-center gap-1 text-sm disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">content_copy</span>
+              <span className="material-symbols-outlined text-lg">
+                content_copy
+              </span>
               复制结果
             </button>
             <button

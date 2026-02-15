@@ -87,7 +87,9 @@ const ExcelToJson: React.FC = () => {
               disabled={!jsonOutput}
               className="p-2 text-text-tertiary hover:bg-bg-tertiary rounded-lg transition-colors flex items-center gap-1 text-sm disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">content_copy</span>
+              <span className="material-symbols-outlined text-lg">
+                content_copy
+              </span>
               复制
             </button>
             <button
@@ -95,7 +97,9 @@ const ExcelToJson: React.FC = () => {
               disabled={!jsonOutput}
               className="p-2 text-text-tertiary hover:bg-bg-tertiary rounded-lg transition-colors flex items-center gap-1 text-sm disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">download</span>
+              <span className="material-symbols-outlined text-lg">
+                download
+              </span>
               下载
             </button>
             <button
@@ -135,14 +139,20 @@ const ExcelToJson: React.FC = () => {
               className="bg-bg-secondary border-border"
             >
               <p className="text-text-tertiary">
-                <span className="material-symbols-outlined text-4xl text-primary">table</span>
+                <span className="material-symbols-outlined text-4xl text-primary">
+                  table
+                </span>
               </p>
               <p className="text-text-secondary">点击或拖拽文件到此处</p>
-              <p className="text-text-tertiary text-xs mt-1">目前支持 CSV 格式</p>
+              <p className="text-text-tertiary text-xs mt-1">
+                目前支持 CSV 格式
+              </p>
             </Upload.Dragger>
 
             <div className="mt-4 p-4 bg-bg-secondary rounded-lg border border-border">
-              <h4 className="text-sm font-medium text-text-primary mb-2">使用说明</h4>
+              <h4 className="text-sm font-medium text-text-primary mb-2">
+                使用说明
+              </h4>
               <ul className="text-xs text-text-tertiary space-y-1 list-disc list-inside">
                 <li>上传 CSV 格式的文件</li>
                 <li>第一行将被识别为表头</li>
@@ -171,7 +181,9 @@ const ExcelToJson: React.FC = () => {
             ) : (
               <div className="flex items-center justify-center h-full text-text-tertiary">
                 <div className="text-center">
-                  <span className="material-symbols-outlined text-4xl opacity-50">code</span>
+                  <span className="material-symbols-outlined text-4xl opacity-50">
+                    code
+                  </span>
                   <p className="mt-2">转换结果将显示在这里</p>
                 </div>
               </div>

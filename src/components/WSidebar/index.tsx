@@ -47,15 +47,31 @@ const WSidebar: React.FC<IWSidebarProps> = ({
   // 根据当前路由路径判断选中状态
   const selectedKey = useMemo(() => {
     const currentPath = location.pathname;
-    // 精确匹配
+
+    // 1. 精确匹配
     const exactMatch = menuItems.find((item) => item.path === currentPath);
     if (exactMatch) return exactMatch.key;
-    // 前缀匹配（用于嵌套路由）
-    const prefixMatch = menuItems.find(
-      (item) => item.path && currentPath.startsWith(item.path)
+
+    // 2. 前缀匹配（用于嵌套路由）
+    //    注意：排除根路径 "/"，因为它会匹配所有路径
+    //    只匹配 path 长度大于 1 且当前路径以该 path 开头的菜单项
+    const prefixMatches = menuItems.filter(
+      (item) =>
+        item.path &&
+        item.path !== "/" &&
+        item.path.length > 1 &&
+        currentPath.startsWith(item.path)
     );
-    if (prefixMatch) return prefixMatch.key;
-    // 默认选中第一个
+
+    // 找到最长匹配的路径（更精确的匹配优先）
+    if (prefixMatches.length > 0) {
+      const longestMatch = prefixMatches.reduce((prev, curr) =>
+        (curr.path?.length || 0) > (prev.path?.length || 0) ? curr : prev
+      );
+      return longestMatch.key;
+    }
+
+    // 3. 默认选中第一个
     return menuItems[0]?.key;
   }, [location.pathname, menuItems]);
 

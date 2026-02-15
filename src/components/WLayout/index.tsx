@@ -2,7 +2,7 @@
  * @Author: wanglx
  * @Date: 2026-02-15 14:00:53
  * @LastEditors: wanglx
- * @LastEditTime: 2026-02-15 14:49:28
+ * @LastEditTime: 2026-02-15 15:02:38
  * @Description:
  *
  * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved.
@@ -33,10 +33,7 @@ const WLayout: React.FC = () => {
 
         {/* 内容区域 - 由子路由渲染 */}
         <div className="flex-1 overflow-auto custom-scrollbar">
-          <div
-            key={location.pathname}
-            className="h-full animate-fadeIn"
-          >
+          <div key={location.pathname} className="h-full animate-fadeIn">
             <Outlet />
           </div>
         </div>

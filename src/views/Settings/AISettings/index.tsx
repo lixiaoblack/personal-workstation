@@ -30,7 +30,9 @@ const AISettings: React.FC = () => {
   const { message } = App.useApp();
 
   // 在线 API 配置
-  const [onlineConfigs, setOnlineConfigs] = useState<Record<string, Record<string, string>>>({
+  const [onlineConfigs, setOnlineConfigs] = useState<
+    Record<string, Record<string, string>>
+  >({
     openai: { apiKey: "", baseUrl: "" },
     dashscope: { apiKey: "", modelId: "" },
     zhipu: { apiKey: "", model: "glm-4-plus" },
@@ -44,7 +46,9 @@ const AISettings: React.FC = () => {
   });
 
   // Ollama 服务状态
-  const [ollamaStatus, setOllamaStatus] = useState<"running" | "stopped" | "checking">("running");
+  const [ollamaStatus, setOllamaStatus] = useState<
+    "running" | "stopped" | "checking"
+  >("running");
 
   // 在线 API 模型配置
   const onlineModels: ModelConfig[] = [
@@ -55,8 +59,18 @@ const AISettings: React.FC = () => {
       icon: "api",
       iconColor: "emerald",
       fields: [
-        { key: "apiKey", label: "API Key", type: "password", placeholder: "sk-..." },
-        { key: "baseUrl", label: "Base URL", type: "text", placeholder: "https://api.openai.com/v1" },
+        {
+          key: "apiKey",
+          label: "API Key",
+          type: "password",
+          placeholder: "sk-...",
+        },
+        {
+          key: "baseUrl",
+          label: "Base URL",
+          type: "text",
+          placeholder: "https://api.openai.com/v1",
+        },
       ],
     },
     {
@@ -66,8 +80,18 @@ const AISettings: React.FC = () => {
       icon: "filter_drama",
       iconColor: "orange",
       fields: [
-        { key: "apiKey", label: "API Key", type: "password", placeholder: "请输入您的百炼 API Key" },
-        { key: "modelId", label: "默认模型 ID", type: "text", placeholder: "例如: qwen-max" },
+        {
+          key: "apiKey",
+          label: "API Key",
+          type: "password",
+          placeholder: "请输入您的百炼 API Key",
+        },
+        {
+          key: "modelId",
+          label: "默认模型 ID",
+          type: "text",
+          placeholder: "例如: qwen-max",
+        },
       ],
     },
     {
@@ -77,7 +101,12 @@ const AISettings: React.FC = () => {
       icon: "psychology",
       iconColor: "blue",
       fields: [
-        { key: "apiKey", label: "API Key", type: "password", placeholder: "请输入您的智谱 API Key" },
+        {
+          key: "apiKey",
+          label: "API Key",
+          type: "password",
+          placeholder: "请输入您的智谱 API Key",
+        },
         {
           key: "model",
           label: "首选模型",
@@ -95,7 +124,11 @@ const AISettings: React.FC = () => {
   ];
 
   // 处理配置变更
-  const handleConfigChange = (modelId: string, fieldKey: string, value: string) => {
+  const handleConfigChange = (
+    modelId: string,
+    fieldKey: string,
+    value: string
+  ) => {
     setOnlineConfigs((prev) => ({
       ...prev,
       [modelId]: {
@@ -179,16 +212,6 @@ const AISettings: React.FC = () => {
               AI 模型接入设置
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs px-2 py-1 bg-primary/10 text-primary border border-primary/20 rounded font-medium">
-              工作站模式
-            </div>
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-              <span className="material-symbols-outlined text-sm text-primary">
-                person
-              </span>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -201,7 +224,9 @@ const AISettings: React.FC = () => {
               <span className="material-symbols-outlined text-primary">
                 cloud_done
               </span>
-              <h2 className="text-xl font-bold text-text-primary">在线 API 接入</h2>
+              <h2 className="text-xl font-bold text-text-primary">
+                在线 API 接入
+              </h2>
             </div>
             <div className="grid gap-6">
               {onlineModels.map((model) => (
@@ -212,14 +237,18 @@ const AISettings: React.FC = () => {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${getIconColorClass(model.iconColor)}`}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${getIconColorClass(
+                          model.iconColor
+                        )}`}
                       >
                         <span className="material-symbols-outlined">
                           {model.icon}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-bold text-text-primary">{model.name}</h3>
+                        <h3 className="font-bold text-text-primary">
+                          {model.name}
+                        </h3>
                         <p className="text-xs text-text-tertiary">
                           {model.description}
                         </p>
@@ -246,7 +275,11 @@ const AISettings: React.FC = () => {
                             className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-3 text-sm focus:ring-primary focus:border-primary outline-none appearance-none text-text-primary"
                             value={onlineConfigs[model.id]?.[field.key] || ""}
                             onChange={(e) =>
-                              handleConfigChange(model.id, field.key, e.target.value)
+                              handleConfigChange(
+                                model.id,
+                                field.key,
+                                e.target.value
+                              )
                             }
                           >
                             {field.options?.map((opt) => (
@@ -263,7 +296,11 @@ const AISettings: React.FC = () => {
                               type="password"
                               value={onlineConfigs[model.id]?.[field.key] || ""}
                               onChange={(e) =>
-                                handleConfigChange(model.id, field.key, e.target.value)
+                                handleConfigChange(
+                                  model.id,
+                                  field.key,
+                                  e.target.value
+                                )
                               }
                             />
                             <button className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary">
@@ -279,7 +316,11 @@ const AISettings: React.FC = () => {
                             type="text"
                             value={onlineConfigs[model.id]?.[field.key] || ""}
                             onChange={(e) =>
-                              handleConfigChange(model.id, field.key, e.target.value)
+                              handleConfigChange(
+                                model.id,
+                                field.key,
+                                e.target.value
+                              )
                             }
                           />
                         )}
@@ -294,8 +335,12 @@ const AISettings: React.FC = () => {
           {/* 本地模型接入 */}
           <section>
             <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-primary">dns</span>
-              <h2 className="text-xl font-bold text-text-primary">本地模型接入</h2>
+              <span className="material-symbols-outlined text-primary">
+                dns
+              </span>
+              <h2 className="text-xl font-bold text-text-primary">
+                本地模型接入
+              </h2>
             </div>
             <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
               <div className="flex items-center justify-between mb-6">
@@ -358,7 +403,9 @@ const AISettings: React.FC = () => {
                     placeholder="http://127.0.0.1"
                     type="text"
                     value={localConfig.host}
-                    onChange={(e) => handleLocalConfigChange("host", e.target.value)}
+                    onChange={(e) =>
+                      handleLocalConfigChange("host", e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -370,7 +417,9 @@ const AISettings: React.FC = () => {
                     placeholder="11434"
                     type="text"
                     value={localConfig.port}
-                    onChange={(e) => handleLocalConfigChange("port", e.target.value)}
+                    onChange={(e) =>
+                      handleLocalConfigChange("port", e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -383,7 +432,9 @@ const AISettings: React.FC = () => {
                       placeholder="例如: llama3"
                       type="text"
                       value={localConfig.model}
-                      onChange={(e) => handleLocalConfigChange("model", e.target.value)}
+                      onChange={(e) =>
+                        handleLocalConfigChange("model", e.target.value)
+                      }
                     />
                     <button className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary">
                       <span className="material-symbols-outlined text-sm">

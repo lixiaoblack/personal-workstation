@@ -3,83 +3,33 @@
  * 用于渲染进程访问主进程暴露的 API
  */
 
-// 用户信息接口
-export interface User {
-  id: number;
-  username: string;
-  nickname: string | null;
-  avatar: string | null;
-  email: string | null;
-  phone: string | null;
-  birthday: string | null;
-  gender: number;
-  bio: string | null;
-  created_at: string;
-  updated_at: string;
-  last_login_at: string | null;
-  settings: string | null;
-}
+// 从主进程类型定义导入
+export type {
+  User,
+  LoginResult,
+  LoginCredentials,
+  RegisterData,
+  UpdateProfileData,
+  UpdatePasswordData,
+  ResetPasswordData,
+  StorageInfo,
+  ClearCacheResult,
+  AvatarSelectResult,
+} from "../../electron/types";
 
-// 登录结果
-export interface LoginResult {
-  success: boolean;
-  user?: User;
-  token?: string;
-  error?: string;
-}
-
-// 登录凭证
-export interface LoginCredentials {
-  username: string;
-  password: string;
-  remember?: boolean;
-}
-
-// 注册数据
-export interface RegisterData {
-  username: string;
-  password: string;
-  nickname?: string;
-}
-
-// 更新资料数据
-export interface UpdateProfileData {
-  nickname?: string;
-  avatar?: string;
-  email?: string;
-  phone?: string;
-  birthday?: string;
-  gender?: number;
-  bio?: string;
-}
-
-// 更新密码数据
-export interface UpdatePasswordData {
-  oldPassword: string;
-  newPassword: string;
-}
-
-// 重置密码数据
-export interface ResetPasswordData {
-  username: string;
-  newPassword: string;
-}
-
-// 存储信息接口
-export interface StorageInfo {
-  cacheSize: number;
-  totalSize: number;
-  cachePath: string;
-  dataSize: number;
-  logsSize: number;
-}
-
-// 清理缓存结果
-export interface ClearCacheResult {
-  success: boolean;
-  clearedSize: number;
-  error?: string;
-}
+// 从主进程导入类型用于 ElectronAPI 定义
+import type {
+  User,
+  LoginResult,
+  LoginCredentials,
+  RegisterData,
+  UpdateProfileData,
+  UpdatePasswordData,
+  ResetPasswordData,
+  StorageInfo,
+  ClearCacheResult,
+  AvatarSelectResult,
+} from "../../electron/types";
 
 // Electron API 接口
 export interface ElectronAPI {
@@ -106,6 +56,9 @@ export interface ElectronAPI {
   // 存储管理
   getStorageInfo: () => Promise<StorageInfo>;
   clearCache: () => Promise<ClearCacheResult>;
+
+  // 头像管理
+  selectAvatar: () => Promise<AvatarSelectResult>;
 }
 
 declare global {

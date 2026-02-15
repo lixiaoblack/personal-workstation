@@ -4,6 +4,37 @@
 
 ---
 
+## [0.4.6] - 2026-02-13
+
+### 新增 (Added)
+
+- 类型定义规范化
+  - 创建 `electron/types/` 目录独立管理接口定义
+  - `user.ts` - 用户相关类型（User、LoginResult、LoginCredentials 等）
+  - `storage.ts` - 存储和头像相关类型
+  - `index.ts` - 统一导出
+
+- Settings 页面组件解耦
+  - `GeneralSettings` - 常规设置（主题切换）
+  - `ProfileSettings` - 个人信息（含头像功能）
+  - `StorageSettings` - 存储管理
+  - `AboutSettings` - 关于页面
+
+- 头像功能完整实现
+  - 创建 `avatarService.ts` 头像服务
+  - 支持文件选择对话框
+  - 支持 JPG、PNG、WebP、GIF 格式（最大 5MB）
+  - 自动转换为 base64 格式用于预览
+  - 保存到应用数据目录
+
+### 修改 (Changed)
+
+- 更新 `preload.ts` 引用独立类型文件
+- 更新 `src/types/electron.d.ts` 引用主进程类型定义
+- 重构 `Settings/index.tsx` 为导航容器，各模块独立渲染
+
+---
+
 ## [0.4.5] - 2026-02-13
 
 ### 新增 (Added)

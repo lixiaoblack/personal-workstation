@@ -23,6 +23,11 @@
 
 ### 已完成
 
+- [x] TASK-019: Settings 页面重构和头像功能 | 完成时间: 2026-02-13 21:00
+  - 类型定义规范化：创建 electron/types 目录独立管理接口
+  - Settings 页面解耦：拆分为 GeneralSettings、ProfileSettings、StorageSettings、AboutSettings 独立组件
+  - 头像功能：文件选择、预览、保存到应用目录、base64 转换
+
 - [x] TASK-018: 个人信息和存储管理功能 | 完成时间: 2026-02-13 19:30
   - 个人信息编辑保存到 SQLite
   - 存储管理服务

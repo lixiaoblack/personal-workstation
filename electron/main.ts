@@ -5,6 +5,7 @@ import path from "node:path";
 import { initDatabase, closeDatabase } from "./database/index";
 import * as userService from "./services/userService";
 import * as storageService from "./services/storageService";
+import * as avatarService from "./services/avatarService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -148,6 +149,11 @@ function registerIpcHandlers() {
 
   ipcMain.handle("storage:clearCache", async () => {
     return storageService.clearCache();
+  });
+
+  // 头像管理
+  ipcMain.handle("avatar:select", async () => {
+    return avatarService.selectAvatar(mainWindow);
   });
 }
 

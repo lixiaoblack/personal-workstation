@@ -8,11 +8,11 @@ import path from "path";
 
 // 存储信息接口
 export interface StorageInfo {
-  cacheSize: number;      // 缓存大小（字节）
-  totalSize: number;      // 总大小（字节）
-  cachePath: string;      // 缓存路径
-  dataSize: number;       // 数据库大小（字节）
-  logsSize: number;       // 日志大小（字节）
+  cacheSize: number; // 缓存大小（字节）
+  totalSize: number; // 总大小（字节）
+  cachePath: string; // 缓存路径
+  dataSize: number; // 数据库大小（字节）
+  logsSize: number; // 日志大小（字节）
 }
 
 /**
@@ -87,27 +87,26 @@ export function getStorageInfo(): StorageInfo {
  * 清理缓存
  * 返回清理后的大小（字节）
  */
-export function clearCache(): { success: boolean; clearedSize: number; error?: string } {
+export function clearCache(): {
+  success: boolean;
+  clearedSize: number;
+  error?: string;
+} {
   const userDataPath = app.getPath("userData");
-  
+
   // 需要清理的目录
-  const dirsToClear = [
-    "Cache",
-    "GPUCache",
-    "Code Cache",
-    "logs",
-  ];
+  const dirsToClear = ["Cache", "GPUCache", "Code Cache", "logs"];
 
   let clearedSize = 0;
 
   for (const dirName of dirsToClear) {
     const dirPath = path.join(userDataPath, dirName);
-    
+
     if (fs.existsSync(dirPath)) {
       try {
         // 计算大小
         const size = getDirectorySize(dirPath);
-        
+
         // 删除目录内容
         const files = fs.readdirSync(dirPath);
         for (const file of files) {
@@ -118,7 +117,7 @@ export function clearCache(): { success: boolean; clearedSize: number; error?: s
             // 忽略无法删除的文件
           }
         }
-        
+
         clearedSize += size;
       } catch {
         // 忽略错误

@@ -3,11 +3,11 @@
  * 保护需要登录才能访问的路由
  */
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
@@ -38,8 +38,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 已登录，渲染子组件
-  return <>{children}</>;
+  // 已登录，渲染子组件或 Outlet
+  return children ? <>{children}</> : <Outlet />;
 };
 
 export { ProtectedRoute };

@@ -23,6 +23,12 @@
 
 ### 已完成
 
+- [x] TASK-011: 重构页面布局结构 | 完成时间: 2026-02-15 14:15
+  - 创建 WLayout 布局组件，包含侧边栏、头部和内容区
+  - 使用嵌套路由共享布局，所有受保护页面共用 WLayout
+  - 修改 Home 页面，移除布局相关代码，只保留内容区域
+  - 修改 ProtectedRoute 支持 Outlet 模式
+
 - [x] TASK-010: 修复 antd message 静态方法警告 | 完成时间: 2026-02-15 14:00
   - 在 App.tsx 中添加 AntdApp 组件包裹
   - 使用 App.useApp() hook 获取 message

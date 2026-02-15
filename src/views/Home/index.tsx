@@ -4,13 +4,10 @@
  * 使用 Tailwind CSS + 主题变量
  */
 import React from "react";
-import { WSidebar } from "@/components/WSidebar";
-import { WHeader } from "@/components/WHeader";
 import { WCard } from "@/components/WCard";
 import { WProgress } from "@/components/WProgress";
 import { useAuth } from "@/contexts";
 import {
-  NAV_MENU_CONFIG,
   MODULE_CARDS_CONFIG,
   FOCUS_TASKS_CONFIG,
   RECENT_LOGS_CONFIG,
@@ -223,102 +220,82 @@ const Home: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-primary">
-      {/* 侧边栏 */}
-      <WSidebar menuItems={NAV_MENU_CONFIG} />
-
-      {/* 主内容区域 */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar bg-bg-primary">
-        {/* 头部 */}
-        <WHeader />
-
-        {/* 内容区域 */}
-        <div className="max-w-[1400px] mx-auto p-8 flex flex-col gap-8">
-          {/* 欢迎区域 */}
-          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-bg-primary to-bg-primary border border-border p-8">
-            <div className="relative z-20 flex justify-between items-end">
-              <div>
-                <h2 className="text-4xl font-black tracking-tight text-text-primary mb-2">
-                  欢迎回来，{user?.nickname || user?.username || "用户"}
-                  <span className="text-primary inline-block animate-pulse">
-                    _
-                  </span>
-                </h2>
-                <p className="text-text-secondary text-lg">
-                  今天是 {dateStr}，{weekDay}。您有 5 个待处理任务。
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <div className="bg-bg-hover backdrop-blur-sm border border-border p-4 rounded-xl text-center min-w-[100px]">
-                  <p className="text-xs text-text-tertiary uppercase tracking-widest mb-1">
-                    今日效率
-                  </p>
-                  <p className="text-2xl font-bold text-primary">85%</p>
-                </div>
-                <div className="bg-bg-hover backdrop-blur-sm border border-border p-4 rounded-xl text-center min-w-[100px]">
-                  <p className="text-xs text-text-tertiary uppercase tracking-widest mb-1">
-                    活跃时长
-                  </p>
-                  <p className="text-2xl font-bold text-text-primary">4.2h</p>
-                </div>
-              </div>
-            </div>
-            {/* 背景装饰 */}
-            <div className="absolute top-0 right-0 w-1/3 h-full opacity-10 pointer-events-none">
-              <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full" />
-            </div>
-          </section>
-
-          {/* 核心模块入口 */}
-          <section>
-            <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
-              <span className="w-1.5 h-6 bg-primary rounded-full" />
-              核心模块入口
-            </h3>
-            {renderModuleCards()}
-          </section>
-
-          {/* 焦点区域 */}
-          <div className="grid grid-cols-[2fr_1fr] gap-8 max-lg:grid-cols-1">
-            {/* 今日焦点 */}
-            <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                今日焦点
-              </h3>
-              {renderFocusTasks()}
-            </section>
-
-            {/* AI 总结 */}
-            <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                AI 智能总结
-              </h3>
-              {renderAiSummary()}
-              {renderSystemStatus()}
-            </section>
+    <>
+      {/* 欢迎区域 */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-bg-primary to-bg-primary border border-border p-8">
+        <div className="relative z-20 flex justify-between items-end">
+          <div>
+            <h2 className="text-4xl font-black tracking-tight text-text-primary mb-2">
+              欢迎回来，{user?.nickname || user?.username || "用户"}
+              <span className="text-primary inline-block animate-pulse">
+                _
+              </span>
+            </h2>
+            <p className="text-text-secondary text-lg">
+              今天是 {dateStr}，{weekDay}。您有 5 个待处理任务。
+            </p>
           </div>
-
-          {/* 最近日志 */}
-          <section>
-            <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
-              <span className="w-1.5 h-6 bg-primary rounded-full" />
-              最近日志
-            </h3>
-            {renderRecentLogs()}
-          </section>
+          <div className="flex gap-2">
+            <div className="bg-bg-hover backdrop-blur-sm border border-border p-4 rounded-xl text-center min-w-[100px]">
+              <p className="text-xs text-text-tertiary uppercase tracking-widest mb-1">
+                今日效率
+              </p>
+              <p className="text-2xl font-bold text-primary">85%</p>
+            </div>
+            <div className="bg-bg-hover backdrop-blur-sm border border-border p-4 rounded-xl text-center min-w-[100px]">
+              <p className="text-xs text-text-tertiary uppercase tracking-widest mb-1">
+                活跃时长
+              </p>
+              <p className="text-2xl font-bold text-text-primary">4.2h</p>
+            </div>
+          </div>
         </div>
-      </main>
+        {/* 背景装饰 */}
+        <div className="absolute top-0 right-0 w-1/3 h-full opacity-10 pointer-events-none">
+          <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full" />
+        </div>
+      </section>
 
-      {/* AI 悬浮按钮 */}
-      <div className="fixed bottom-8 right-8">
-        <button className="flex items-center gap-3 bg-primary text-white pl-4 pr-6 py-3 rounded-full shadow-lg shadow-primary/40 hover:scale-105 transition-transform">
-          <span className="material-symbols-outlined">smart_toy</span>
-          <span className="font-bold">有什么可以帮您？</span>
-        </button>
+      {/* 核心模块入口 */}
+      <section>
+        <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
+          <span className="w-1.5 h-6 bg-primary rounded-full" />
+          核心模块入口
+        </h3>
+        {renderModuleCards()}
+      </section>
+
+      {/* 焦点区域 */}
+      <div className="grid grid-cols-[2fr_1fr] gap-8 max-lg:grid-cols-1">
+        {/* 今日焦点 */}
+        <section>
+          <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
+            <span className="w-1.5 h-6 bg-primary rounded-full" />
+            今日焦点
+          </h3>
+          {renderFocusTasks()}
+        </section>
+
+        {/* AI 总结 */}
+        <section>
+          <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
+            <span className="w-1.5 h-6 bg-primary rounded-full" />
+            AI 智能总结
+          </h3>
+          {renderAiSummary()}
+          {renderSystemStatus()}
+        </section>
       </div>
-    </div>
+
+      {/* 最近日志 */}
+      <section>
+        <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-text-primary">
+          <span className="w-1.5 h-6 bg-primary rounded-full" />
+          最近日志
+        </h3>
+        {renderRecentLogs()}
+      </section>
+    </>
   );
 };
 

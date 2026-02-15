@@ -5,6 +5,9 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 
+// 布局组件
+import { WLayout } from "@/components/WLayout";
+
 // 页面组件
 import Home from "@/views/Home";
 import Login from "@/views/Login";
@@ -12,11 +15,6 @@ import ForgotPassword from "@/views/ForgotPassword";
 
 // 路由守卫
 import ProtectedRoute from "./ProtectedRoute";
-
-// 受保护的路由包装器
-const ProtectedWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <ProtectedRoute>{children}</ProtectedRoute>;
 
 // 公开路由（无需登录）
 const publicRoutes: RouteObject[] = [
@@ -30,74 +28,70 @@ const publicRoutes: RouteObject[] = [
   },
 ];
 
-// 受保护的路由（需要登录）
+// 受保护的路由（需要登录）- 使用嵌套路由共享布局
 const protectedRoutes: RouteObject[] = [
   {
-    path: "/",
-    element: (
-      <ProtectedWrapper>
-        <Home />
-      </ProtectedWrapper>
-    ),
-  },
-  {
-    path: "/dashboard",
-    element: <Navigate to="/" replace />,
-  },
-  // 开发者工具
-  {
-    path: "/developer",
-    element: (
-      <ProtectedWrapper>
-        <div className="flex items-center justify-center h-full text-white">
-          开发者工具 - 开发中
-        </div>
-      </ProtectedWrapper>
-    ),
-  },
-  // GIS 专业工具
-  {
-    path: "/gis",
-    element: (
-      <ProtectedWrapper>
-        <div className="flex items-center justify-center h-full text-white">
-          GIS 专业工具 - 开发中
-        </div>
-      </ProtectedWrapper>
-    ),
-  },
-  // 工作日志
-  {
-    path: "/journal",
-    element: (
-      <ProtectedWrapper>
-        <div className="flex items-center justify-center h-full text-white">
-          工作日志 - 开发中
-        </div>
-      </ProtectedWrapper>
-    ),
-  },
-  // 记事本
-  {
-    path: "/notes",
-    element: (
-      <ProtectedWrapper>
-        <div className="flex items-center justify-center h-full text-white">
-          记事本 - 开发中
-        </div>
-      </ProtectedWrapper>
-    ),
-  },
-  // 待办提醒
-  {
-    path: "/todo",
-    element: (
-      <ProtectedWrapper>
-        <div className="flex items-center justify-center h-full text-white">
-          待办提醒 - 开发中
-        </div>
-      </ProtectedWrapper>
-    ),
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <WLayout />,
+        children: [
+          {
+            path: "/",
+            element: <Home />,
+          },
+          {
+            path: "/dashboard",
+            element: <Navigate to="/" replace />,
+          },
+          // 开发者工具
+          {
+            path: "/developer",
+            element: (
+              <div className="flex items-center justify-center h-full text-text-secondary">
+                开发者工具 - 开发中
+              </div>
+            ),
+          },
+          // GIS 专业工具
+          {
+            path: "/gis",
+            element: (
+              <div className="flex items-center justify-center h-full text-text-secondary">
+                GIS 专业工具 - 开发中
+              </div>
+            ),
+          },
+          // 工作日志
+          {
+            path: "/journal",
+            element: (
+              <div className="flex items-center justify-center h-full text-text-secondary">
+                工作日志 - 开发中
+              </div>
+            ),
+          },
+          // 记事本
+          {
+            path: "/notes",
+            element: (
+              <div className="flex items-center justify-center h-full text-text-secondary">
+                记事本 - 开发中
+              </div>
+            ),
+          },
+          // 待办提醒
+          {
+            path: "/todo",
+            element: (
+              <div className="flex items-center justify-center h-full text-text-secondary">
+                待办提醒 - 开发中
+              </div>
+            ),
+          },
+        ],
+      },
+    ],
   },
 ];
 

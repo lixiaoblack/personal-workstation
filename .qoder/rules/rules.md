@@ -34,7 +34,10 @@ personal-workstation/
 │   └── skills/
 ├── md/                         # 项目文档目录
 │   ├── tasks.md                # 任务情况记录
-│   └── changelog.md            # 修改记录
+│   ├── changelog.md            # 修改记录
+│   ├── ai-agent-tech-plan.md   # AI 技术方案
+│   ├── ai-tasks.md             # AI 任务清单
+│   └── ai-changelog.md         # AI 修改记录
 ├── electron/                   # Electron 主进程
 │   ├── main.ts                 # 主进程入口
 │   └── preload.ts              # 预加载脚本
@@ -579,3 +582,104 @@ src/
         ├── variables.css    # CSS 变量定义
         └── antd-theme.ts    # Ant Design 主题配置
 ```
+
+---
+
+## AI 功能开发规范
+
+### 文档结构
+
+AI 功能开发使用独立的文档系统，与主项目文档互不关联：
+
+```
+md/
+├── tasks.md              # 主项目任务记录
+├── changelog.md          # 主项目修改记录
+├── ai-agent-tech-plan.md # AI 技术方案文档
+├── ai-tasks.md           # AI 功能任务清单 (独立)
+└── ai-changelog.md       # AI 功能修改记录 (独立)
+```
+
+### AI 任务编号规则
+
+- 格式：`AI-XXX`（三位数字）
+- 示例：AI-001, AI-015, AI-037
+- 与主项目任务编号 `TASK-XXX` 区分
+
+### AI 开发提交流程
+
+完成 AI 相关任务后，必须执行以下步骤：
+
+1. **运行 Lint 检查**
+   ```bash
+   pnpm run lint
+   ```
+
+2. **更新 AI 任务清单** (`md/ai-tasks.md`)
+   - 将任务从「待处理」移至「进行中」或「已完成」
+   - 更新任务统计
+   - 记录完成时间
+
+3. **更新 AI 修改记录** (`md/ai-changelog.md`)
+   - 在对应版本下记录变更内容
+   - 按类型分类：Added / Changed / Fixed / Removed
+
+4. **提交 Git**
+   ```bash
+   git add .
+   git commit -m "feat(ai): 任务描述"
+   ```
+
+### AI 任务状态流转
+
+```
+待处理 → 进行中 → 已完成
+   ↓         ↓
+取消/阻塞
+```
+
+### AI 任务清单格式示例
+
+```markdown
+### 进行中
+
+- [ ] AI-001: WebSocket 通信层 - 主进程服务器 | 开始时间: 2026-02-13 10:00
+
+### 已完成
+
+- [x] AI-001: WebSocket 通信层 - 主进程服务器 | 完成时间: 2026-02-13 12:00
+  - 实现 WebSocket 服务器基础框架
+  - 添加消息处理逻辑
+```
+
+### AI 修改记录格式示例
+
+```markdown
+## [0.1.0] - 2026-02-13
+
+### 新增 (Added)
+
+- WebSocket 服务器基础框架
+- 消息协议解析功能
+
+### 修改 (Changed)
+
+- 优化消息处理性能
+```
+
+### 技术栈约束
+
+| 组件 | 技术选型 | 说明 |
+|------|----------|------|
+| 智能体框架 | LangGraph >= 1.0.0 | 智能体编排 |
+| 向量数据库 | LanceDB | 嵌入式、离线支持 |
+| 模型接入 | OpenAI API / Ollama | 在线优先、离线降级 |
+| 通信协议 | WebSocket | 本地通信、流式响应 |
+| MCP | mcp-python | 工具协议集成 |
+
+### 离线运行约束
+
+- **核心原则**：智能体必须在本地运行，禁止通过联网请求外部服务器实现核心功能
+- **模型降级**：在线 API 不可用时自动切换到 Ollama
+- **知识库**：向量数据存储在本地 LanceDB
+

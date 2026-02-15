@@ -123,14 +123,14 @@ const JsonBeautify: React.FC = () => {
         rightDecorations
       );
     },
-    [],
+    []
   );
 
   /**
    * 智能移除注释（避免误处理字符串内的内容）
    */
   const removeComments = useCallback((code: string): string => {
-    let result = '';
+    let result = "";
     let i = 0;
     const len = code.length;
 
@@ -145,7 +145,7 @@ const JsonBeautify: React.FC = () => {
         i++;
         // 找到字符串结束
         while (i < len) {
-          if (code[i] === '\\' && i + 1 < len) {
+          if (code[i] === "\\" && i + 1 < len) {
             // 转义字符
             result += code[i] + code[i + 1];
             i += 2;
@@ -162,14 +162,14 @@ const JsonBeautify: React.FC = () => {
       }
 
       // 处理模板字符串
-      if (char === '`') {
+      if (char === "`") {
         result += char;
         i++;
         while (i < len) {
-          if (code[i] === '\\' && i + 1 < len) {
+          if (code[i] === "\\" && i + 1 < len) {
             result += code[i] + code[i + 1];
             i += 2;
-          } else if (code[i] === '`') {
+          } else if (code[i] === "`") {
             result += code[i];
             i++;
             break;
@@ -182,25 +182,25 @@ const JsonBeautify: React.FC = () => {
       }
 
       // 处理单行注释 //
-      if (char === '/' && nextChar === '/') {
+      if (char === "/" && nextChar === "/") {
         // 跳过直到换行
         i += 2;
-        while (i < len && code[i] !== '\n') {
+        while (i < len && code[i] !== "\n") {
           i++;
         }
         // 保留换行符
         if (i < len) {
-          result += '\n';
+          result += "\n";
           i++;
         }
         continue;
       }
 
       // 处理多行注释 /* */
-      if (char === '/' && nextChar === '*') {
+      if (char === "/" && nextChar === "*") {
         i += 2;
         while (i < len - 1) {
-          if (code[i] === '*' && code[i + 1] === '/') {
+          if (code[i] === "*" && code[i + 1] === "/") {
             i += 2;
             break;
           }
@@ -210,18 +210,18 @@ const JsonBeautify: React.FC = () => {
       }
 
       // 处理正则表达式（简单情况）
-      if (char === '/') {
+      if (char === "/") {
         // 检查是否可能是正则（前面是 =, (, [, ,, :, !, &, |, ;, {, }, \n 等）
         const prevNonSpace = result.trimEnd().slice(-1);
-        const couldBeRegex = /[=(,:!&|;{}[\n\s]$/.test(prevNonSpace + ' ');
-        if (couldBeRegex && i + 1 < len && code[i + 1] !== '/') {
+        const couldBeRegex = /[=(,:!&|;{}[\n\s]$/.test(prevNonSpace + " ");
+        if (couldBeRegex && i + 1 < len && code[i + 1] !== "/") {
           result += char;
           i++;
           while (i < len) {
-            if (code[i] === '\\' && i + 1 < len) {
+            if (code[i] === "\\" && i + 1 < len) {
               result += code[i] + code[i + 1];
               i += 2;
-            } else if (code[i] === '/') {
+            } else if (code[i] === "/") {
               result += code[i];
               i++;
               break;
@@ -278,7 +278,7 @@ const JsonBeautify: React.FC = () => {
       } catch (e) {
         return {
           success: false,
-          error: e instanceof Error ? e.message : '解析失败',
+          error: e instanceof Error ? e.message : "解析失败",
         };
       }
     },
@@ -306,7 +306,9 @@ const JsonBeautify: React.FC = () => {
         setRightJson(result.result || "");
       } else {
         hasError = true;
-        errorMsg = errorMsg ? `${errorMsg} | 右侧: ${result.error}` : `右侧: ${result.error}`;
+        errorMsg = errorMsg
+          ? `${errorMsg} | 右侧: ${result.error}`
+          : `右侧: ${result.error}`;
       }
     }
 

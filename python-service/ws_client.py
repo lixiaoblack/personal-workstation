@@ -19,10 +19,13 @@ def _disable_proxy_for_localhost():
     """为本地连接禁用代理"""
     # 清除代理环境变量，避免连接本地服务器时尝试使用代理
     proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 
-                  'all_proxy', 'ALL_PROXY']
+                  'all_proxy', 'ALL_PROXY', 'socks_proxy', 'SOCKS_PROXY']
     for var in proxy_vars:
         if var in os.environ:
             del os.environ[var]
+    # 设置 NO_PROXY 环境变量，排除本地地址
+    os.environ['NO_PROXY'] = '127.0.0.1,localhost'
+    os.environ['no_proxy'] = '127.0.0.1,localhost'
     logger.debug("已禁用代理设置")
 
 
@@ -57,10 +60,12 @@ class WebSocketClient:
         _disable_proxy_for_localhost()
         
         try:
+            # 明确禁用代理，使用 proxy=None 参数
             self.ws = await websockets.connect(
                 self.uri,
                 ping_interval=30,
-                ping_timeout=10
+                ping_timeout=10,
+                proxy=None  # 明确禁用代理
             )
             self.connected = True
             logger.info(f"已连接到 {self.uri}")

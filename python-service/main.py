@@ -3,7 +3,16 @@
 AI Agent Python Service
 WebSocket 桥接服务，连接 Electron WebSocket 服务器
 """
+# 在导入其他模块前禁用代理（解决 SOCKS 代理问题）
 import os
+_proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 
+              'all_proxy', 'ALL_PROXY', 'socks_proxy', 'SOCKS_PROXY']
+for _var in _proxy_vars:
+    if _var in os.environ:
+        del os.environ[_var]
+os.environ['NO_PROXY'] = '127.0.0.1,localhost'
+os.environ['no_proxy'] = '127.0.0.1,localhost'
+
 import sys
 import asyncio
 import logging

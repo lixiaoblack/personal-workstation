@@ -33,6 +33,11 @@ export type {
   ModelConfigStatus,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  AIChatMessage,
+  ChatRole,
+  ChatRequest,
+  ChatCompletionResponse,
+  ChatStreamChunk,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -64,6 +69,8 @@ import type {
   ModelConfigListItem,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  ChatRequest,
+  ChatCompletionResponse,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -136,6 +143,17 @@ export interface ElectronAPI {
   ) => Promise<ModelConfig | null>;
   deleteModelConfig: (id: number) => Promise<boolean>;
   setDefaultModelConfig: (id: number) => Promise<boolean>;
+
+  // 模型路由 - AI 聊天
+  sendChatRequest: (
+    request: ChatRequest,
+    configId?: number
+  ) => Promise<ChatCompletionResponse>;
+  testModelConnection: (configId: number) => Promise<{
+    success: boolean;
+    latency?: number;
+    error?: string;
+  }>;
 }
 
 declare global {

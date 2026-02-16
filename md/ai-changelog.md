@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.8 | 2026-02-17 | 模型路由在线 API 连接 |
 | 0.5.7 | 2026-02-17 | AI 设置页面模型配置 UI |
 | 0.5.6 | 2026-02-17 | 模型配置 SQLite 存储 |
 | 0.5.5 | 2026-02-17 | Python WebSocket 桥接 |
@@ -68,6 +69,12 @@
   - 重构 AISettings 页面使用 SQLite 存储
   - 支持启用/禁用、设为默认、优先级管理
   - 测试连接功能预留
+- 模型路由服务
+  - 集成 OpenAI SDK
+  - 支持 OpenAI、百炼、智谱、自定义 API（OpenAI 兼容格式）
+  - 支持流式响应（sendChatRequestStream）
+  - 支持连接测试（testModelConnection）
+  - 自动更新模型配置状态（active/error）
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`

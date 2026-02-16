@@ -22,6 +22,8 @@ import type {
   ModelConfigListItem,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  ChatRequest,
+  ChatCompletionResponse,
 } from "./types";
 
 // WebSocket 服务器信息
@@ -146,6 +148,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("model:delete", id),
   setDefaultModelConfig: (id: number): Promise<boolean> =>
     ipcRenderer.invoke("model:setDefault", id),
+
+  // 模型路由 - AI 聊天
+  sendChatRequest: (
+    request: ChatRequest,
+    configId?: number
+  ): Promise<ChatCompletionResponse> =>
+    ipcRenderer.invoke("model:chat", request, configId),
+  testModelConnection: (
+    configId: number
+  ): Promise<{ success: boolean; latency?: number; error?: string }> =>
+    ipcRenderer.invoke("model:testConnection", configId),
 });
 
 // 类型声明
@@ -210,6 +223,17 @@ export interface ElectronAPI {
   ) => Promise<ModelConfig | null>;
   deleteModelConfig: (id: number) => Promise<boolean>;
   setDefaultModelConfig: (id: number) => Promise<boolean>;
+
+  // 模型路由 - AI 聊天
+  sendChatRequest: (
+    request: ChatRequest,
+    configId?: number
+  ) => Promise<ChatCompletionResponse>;
+  testModelConnection: (configId: number) => Promise<{
+    success: boolean;
+    latency?: number;
+    error?: string;
+  }>;
 }
 
 declare global {

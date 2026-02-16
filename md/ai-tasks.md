@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 14 |
-| 待处理 | 25 |
+| 已完成 | 15 |
+| 待处理 | 24 |
 
 ---
 
@@ -112,9 +112,16 @@
   - 重构 AISettings 页面集成 SQLite 存储
   - 支持启用/禁用、设为默认、优先级管理
 
+- [x] AI-014: 模型路由 - 在线 API 连接 | 完成时间: 2026-02-17 03:00
+  - 创建模型路由类型定义（AIChatMessage, ChatRequest, ChatCompletionResponse）
+  - 创建模型路由服务（modelRouterService.ts）
+  - 集成 OpenAI SDK，支持 OpenAI 兼容 API
+  - 支持流式响应（sendChatRequestStream）
+  - 支持连接测试（testModelConnection）
+  - 添加 IPC 处理器和渲染进程 API
+
 ### 待处理
 
-- [ ] AI-014: 模型路由 - 在线 API 连接 | 创建时间: 2026-02-17
 - [ ] AI-015: 模型路由 - Ollama 连接 | 创建时间: 2026-02-17
 - [ ] AI-016: 模型路由 - 降级策略实现 | 创建时间: 2026-02-17
 

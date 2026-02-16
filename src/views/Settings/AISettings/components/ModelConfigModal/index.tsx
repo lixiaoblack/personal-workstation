@@ -3,19 +3,28 @@
  */
 import React, { useState, useEffect } from "react";
 import { Modal, Input, Select, InputNumber, App } from "antd";
-import type { ModelConfig, ModelProvider, CreateModelConfigInput } from "@/types/electron";
+import type {
+  ModelConfig,
+  ModelProvider,
+  CreateModelConfigInput,
+} from "@/types/electron";
 
 interface ModelConfigModalProps {
   open: boolean;
   config: ModelConfig | null; // 使用完整配置类型
   onClose: () => void;
-  onSave: (id: number | null, input: CreateModelConfigInput) => Promise<boolean>;
+  onSave: (
+    id: number | null,
+    input: CreateModelConfigInput
+  ) => Promise<boolean>;
 }
 
 // 掩码 API Key（只显示前4位和后4位）
 const maskApiKey = (key: string): string => {
   if (!key || key.length < 12) return key;
-  return `${key.slice(0, 4)}${"*".repeat(Math.min(key.length - 8, 20))}${key.slice(-4)}`;
+  return `${key.slice(0, 4)}${"*".repeat(
+    Math.min(key.length - 8, 20)
+  )}${key.slice(-4)}`;
 };
 
 const providerOptions: { value: ModelProvider; label: string }[] = [
@@ -69,11 +78,16 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
         setHost(config.host || "http://127.0.0.1:11434");
       } else {
         // 在线 API 配置
-        const onlineConfig = config as Extract<ModelConfig, { provider: "openai" | "bailian" | "zhipu" | "custom" }>;
+        const onlineConfig = config as Extract<
+          ModelConfig,
+          { provider: "openai" | "bailian" | "zhipu" | "custom" }
+        >;
         const storedApiKey = onlineConfig.apiKey || "";
         setHasApiKey(!!storedApiKey);
         setApiKey(""); // 编辑时不显示实际值，用户可以选择修改
-        setApiBaseUrl(onlineConfig.apiBaseUrl || defaultApiUrls[config.provider]);
+        setApiBaseUrl(
+          onlineConfig.apiBaseUrl || defaultApiUrls[config.provider]
+        );
       }
     } else {
       // 重置为默认值
@@ -230,9 +244,24 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
               {config && hasApiKey ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-2 bg-bg-tertiary rounded-lg">
-                    <span className="material-symbols-outlined text-success text-sm">lock</span>
+                    <span className="material-symbols-outlined text-success text-sm">
+                      lock
+                    </span>
                     <span className="text-sm text-text-secondary font-mono">
-                      {maskApiKey((config as Extract<ModelConfig, { provider: "openai" | "bailian" | "zhipu" | "custom" }>).apiKey)}
+                      {maskApiKey(
+                        (
+                          config as Extract<
+                            ModelConfig,
+                            {
+                              provider:
+                                | "openai"
+                                | "bailian"
+                                | "zhipu"
+                                | "custom";
+                            }
+                          >
+                        ).apiKey
+                      )}
                     </span>
                   </div>
                   <Input.Password
@@ -240,7 +269,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                   />
-                  <p className="text-xs text-text-tertiary">留空则保留原 API Key</p>
+                  <p className="text-xs text-text-tertiary">
+                    留空则保留原 API Key
+                  </p>
                 </div>
               ) : (
                 <Input.Password

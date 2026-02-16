@@ -3,14 +3,20 @@
  */
 import React, { useState, useEffect } from "react";
 import { Modal, Input, Select, InputNumber, App } from "antd";
-import type { ModelConfigListItem, ModelProvider, CreateModelConfigInput } from "@/types/electron";
+import type { ModelConfig, ModelProvider, CreateModelConfigInput } from "@/types/electron";
 
 interface ModelConfigModalProps {
   open: boolean;
-  config: ModelConfigListItem | null;
+  config: ModelConfig | null; // 使用完整配置类型
   onClose: () => void;
   onSave: (id: number | null, input: CreateModelConfigInput) => Promise<boolean>;
 }
+
+// 掩码 API Key（只显示前4位和后4位）
+const maskApiKey = (key: string): string => {
+  if (!key || key.length < 12) return key;
+  return `${key.slice(0, 4)}${"*".repeat(Math.min(key.length - 8, 20))}${key.slice(-4)}`;
+};
 
 const providerOptions: { value: ModelProvider; label: string }[] = [
   { value: "openai", label: "OpenAI" },
@@ -42,6 +48,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
   const [name, setName] = useState("");
   const [modelId, setModelId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [hasApiKey, setHasApiKey] = useState(false); // 是否已有存储的 apiKey
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [host, setHost] = useState("http://127.0.0.1:11434");
   const [priority, setPriority] = useState(10);
@@ -55,13 +62,26 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       setName(config.name);
       setModelId(config.modelId);
       setPriority(config.priority);
-      // 其他字段需要从完整配置获取，这里先不处理
+      setMaxTokens(config.maxTokens || null);
+      setTemperature(config.temperature || null);
+
+      if (config.provider === "ollama") {
+        setHost(config.host || "http://127.0.0.1:11434");
+      } else {
+        // 在线 API 配置
+        const onlineConfig = config as Extract<ModelConfig, { provider: "openai" | "bailian" | "zhipu" | "custom" }>;
+        const storedApiKey = onlineConfig.apiKey || "";
+        setHasApiKey(!!storedApiKey);
+        setApiKey(""); // 编辑时不显示实际值，用户可以选择修改
+        setApiBaseUrl(onlineConfig.apiBaseUrl || defaultApiUrls[config.provider]);
+      }
     } else {
       // 重置为默认值
       setProvider("openai");
       setName("");
       setModelId("");
       setApiKey("");
+      setHasApiKey(false);
       setApiBaseUrl(defaultApiUrls.openai);
       setHost("http://127.0.0.1:11434");
       setPriority(10);
@@ -90,9 +110,13 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       message.warning("请输入模型 ID");
       return;
     }
-    if (provider !== "ollama" && !apiKey.trim()) {
-      message.warning("请输入 API Key");
-      return;
+    // 编辑时：如果已有 apiKey 且用户没有输入新的，则不传 apiKey（保留原值）
+    // 新建时：必须输入 apiKey
+    if (provider !== "ollama") {
+      if (!config && !apiKey.trim()) {
+        message.warning("请输入 API Key");
+        return;
+      }
     }
 
     setLoading(true);
@@ -109,7 +133,10 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       if (provider === "ollama") {
         input.host = host;
       } else {
-        input.apiKey = apiKey;
+        // 只有输入了新的 apiKey 才更新
+        if (apiKey.trim()) {
+          input.apiKey = apiKey.trim();
+        }
         input.apiBaseUrl = apiBaseUrl || undefined;
       }
 
@@ -138,7 +165,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       <div className="space-y-4 py-4">
         {/* 提供商 */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-text-tertiary">提供商</label>
+          <label className="text-sm font-medium text-text-tertiary">
+            提供商
+          </label>
           <Select
             className="w-full"
             value={provider}
@@ -166,7 +195,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
             模型 ID <span className="text-error">*</span>
           </label>
           <Input
-            placeholder={isOllama ? "例如: llama3, qwen2" : "例如: gpt-4o, qwen-max"}
+            placeholder={
+              isOllama ? "例如: llama3, qwen2" : "例如: gpt-4o, qwen-max"
+            }
             value={modelId}
             onChange={(e) => setModelId(e.target.value)}
           />
@@ -175,7 +206,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
         {/* Ollama 配置 */}
         {isOllama ? (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-tertiary">服务地址</label>
+            <label className="text-sm font-medium text-text-tertiary">
+              服务地址
+            </label>
             <Input
               placeholder="http://127.0.0.1:11434"
               value={host}
@@ -187,18 +220,42 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
             {/* API Key */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-tertiary">
-                API Key <span className="text-error">*</span>
+                API Key{" "}
+                {config && hasApiKey ? (
+                  <span className="text-success">(已存储)</span>
+                ) : (
+                  <span className="text-error">*</span>
+                )}
               </label>
-              <Input.Password
-                placeholder="请输入 API Key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
+              {config && hasApiKey ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 p-2 bg-bg-tertiary rounded-lg">
+                    <span className="material-symbols-outlined text-success text-sm">lock</span>
+                    <span className="text-sm text-text-secondary font-mono">
+                      {maskApiKey((config as Extract<ModelConfig, { provider: "openai" | "bailian" | "zhipu" | "custom" }>).apiKey)}
+                    </span>
+                  </div>
+                  <Input.Password
+                    placeholder="输入新的 API Key 以更新"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <p className="text-xs text-text-tertiary">留空则保留原 API Key</p>
+                </div>
+              ) : (
+                <Input.Password
+                  placeholder="请输入 API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+              )}
             </div>
 
             {/* API Base URL */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text-tertiary">API Base URL</label>
+              <label className="text-sm font-medium text-text-tertiary">
+                API Base URL
+              </label>
               <Input
                 placeholder="自定义 API 地址（可选）"
                 value={apiBaseUrl}
@@ -211,7 +268,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
         {/* 高级设置 */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-tertiary">优先级</label>
+            <label className="text-sm font-medium text-text-tertiary">
+              优先级
+            </label>
             <InputNumber
               className="w-full"
               min={1}
@@ -221,7 +280,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-tertiary">最大 Token</label>
+            <label className="text-sm font-medium text-text-tertiary">
+              最大 Token
+            </label>
             <InputNumber
               className="w-full"
               min={1}
@@ -231,7 +292,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-tertiary">温度</label>
+            <label className="text-sm font-medium text-text-tertiary">
+              温度
+            </label>
             <InputNumber
               className="w-full"
               min={0}

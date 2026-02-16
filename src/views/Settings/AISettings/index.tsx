@@ -10,6 +10,7 @@ import type {
   PythonInstallGuide,
   PythonServiceInfo,
   PythonServiceConfig,
+  ModelConfig,
   ModelConfigListItem,
   CreateModelConfigInput,
 } from "@/types/electron";
@@ -23,11 +24,15 @@ const AISettings: React.FC = () => {
   // Python 环境状态
   const [pythonEnv, setPythonEnv] = useState<PythonEnvironment | null>(null);
   const [pythonLoading, setPythonLoading] = useState(false);
-  const [installGuide, setInstallGuide] = useState<PythonInstallGuide | null>(null);
+  const [installGuide, setInstallGuide] = useState<PythonInstallGuide | null>(
+    null
+  );
   void installGuide; // 预留给安装引导使用
 
   // Python 服务状态
-  const [serviceInfo, setServiceInfo] = useState<PythonServiceInfo | null>(null);
+  const [serviceInfo, setServiceInfo] = useState<PythonServiceInfo | null>(
+    null
+  );
   const [serviceLoading, setServiceLoading] = useState(false);
   const [serviceConfig, setServiceConfig] = useState<PythonServiceConfig>({
     port: 8765,
@@ -37,7 +42,7 @@ const AISettings: React.FC = () => {
   const [modelConfigs, setModelConfigs] = useState<ModelConfigListItem[]>([]);
   const [modelLoading, setModelLoading] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<ModelConfigListItem | null>(null);
+  const [editingConfig, setEditingConfig] = useState<ModelConfig | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
 
   // 初始化
@@ -155,7 +160,9 @@ const AISettings: React.FC = () => {
   const handleRestartService = async () => {
     setServiceLoading(true);
     try {
-      const result = await window.electronAPI.restartPythonService(serviceConfig);
+      const result = await window.electronAPI.restartPythonService(
+        serviceConfig
+      );
       if (result.success) {
         message.success("Python 服务已重启");
         await loadServiceInfo();
@@ -171,13 +178,26 @@ const AISettings: React.FC = () => {
   };
 
   // 编辑配置
-  const handleEditConfig = (config: ModelConfigListItem) => {
-    setEditingConfig(config);
-    setConfigModalOpen(true);
+  const handleEditConfig = async (config: ModelConfigListItem) => {
+    // 获取完整配置（包含 apiKey 等敏感信息）
+    try {
+      const fullConfig = await window.electronAPI.getModelConfigById(config.id);
+      if (fullConfig) {
+        setEditingConfig(fullConfig);
+        setConfigModalOpen(true);
+      } else {
+        message.error("获取配置详情失败");
+      }
+    } catch (error) {
+      message.error("获取配置详情失败");
+    }
   };
 
   // 保存配置
-  const handleSaveConfig = async (id: number | null, input: CreateModelConfigInput) => {
+  const handleSaveConfig = async (
+    id: number | null,
+    input: CreateModelConfigInput
+  ) => {
     try {
       if (id) {
         await window.electronAPI.updateModelConfig(id, input);
@@ -255,7 +275,8 @@ const AISettings: React.FC = () => {
     };
 
     const isRunning = serviceInfo?.status === "running";
-    const isStopped = serviceInfo?.status === "stopped" || serviceInfo?.status === "error";
+    const isStopped =
+      serviceInfo?.status === "stopped" || serviceInfo?.status === "error";
 
     return (
       <div className="space-y-6">
@@ -264,11 +285,15 @@ const AISettings: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-500">terminal</span>
+                <span className="material-symbols-outlined text-blue-500">
+                  terminal
+                </span>
               </div>
               <div>
                 <h3 className="font-bold text-text-primary">Python 环境</h3>
-                <p className="text-xs text-text-tertiary">AI 智能体运行所需环境</p>
+                <p className="text-xs text-text-tertiary">
+                  AI 智能体运行所需环境
+                </p>
               </div>
             </div>
             <button
@@ -276,7 +301,11 @@ const AISettings: React.FC = () => {
               onClick={handleDetectPython}
               disabled={pythonLoading}
             >
-              <span className={`material-symbols-outlined text-sm ${pythonLoading ? "animate-spin" : ""}`}>
+              <span
+                className={`material-symbols-outlined text-sm ${
+                  pythonLoading ? "animate-spin" : ""
+                }`}
+              >
                 {pythonLoading ? "progress_activity" : "refresh"}
               </span>
               重新检测
@@ -286,31 +315,44 @@ const AISettings: React.FC = () => {
           {pythonLoading ? (
             <div className="flex items-center justify-center py-8">
               <Spin />
-              <span className="ml-3 text-text-tertiary">正在检测 Python 环境...</span>
+              <span className="ml-3 text-text-tertiary">
+                正在检测 Python 环境...
+              </span>
             </div>
           ) : pythonEnv ? (
             <div className="space-y-3">
               <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-                <span className="material-symbols-outlined text-text-tertiary">computer</span>
+                <span className="material-symbols-outlined text-text-tertiary">
+                  computer
+                </span>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-text-primary">
-                    {getOSDisplayName(pythonEnv.os)} {pythonEnv.osVersion.split(" ")[1]}
+                    {getOSDisplayName(pythonEnv.os)}{" "}
+                    {pythonEnv.osVersion.split(" ")[1]}
                   </p>
                   <p className="text-xs text-text-tertiary">操作系统</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-                <span className="material-symbols-outlined text-text-tertiary">code</span>
+                <span className="material-symbols-outlined text-text-tertiary">
+                  code
+                </span>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-text-primary">
-                    {pythonEnv.pythonInstalled ? `Python ${pythonEnv.pythonVersion?.raw}` : "未安装"}
+                    {pythonEnv.pythonInstalled
+                      ? `Python ${pythonEnv.pythonVersion?.raw}`
+                      : "未安装"}
                   </p>
-                  <p className="text-xs text-text-tertiary">{pythonEnv.pythonPath || "未检测到"}</p>
+                  <p className="text-xs text-text-tertiary">
+                    {pythonEnv.pythonPath || "未检测到"}
+                  </p>
                 </div>
                 {pythonEnv.pythonInstalled && (
                   <span
                     className={`px-2 py-1 rounded text-xs font-medium ${
-                      pythonEnv.meetsRequirements ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+                      pythonEnv.meetsRequirements
+                        ? "bg-success/10 text-success"
+                        : "bg-warning/10 text-warning"
                     }`}
                   >
                     {pythonEnv.meetsRequirements ? "满足要求" : "版本过低"}
@@ -319,9 +361,13 @@ const AISettings: React.FC = () => {
               </div>
               {pythonEnv.virtualEnv.active && (
                 <div className="flex items-center gap-4 p-3 bg-success/5 border border-success/20 rounded-lg">
-                  <span className="material-symbols-outlined text-success">check_circle</span>
+                  <span className="material-symbols-outlined text-success">
+                    check_circle
+                  </span>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-text-primary">{pythonEnv.virtualEnv.name}</p>
+                    <p className="text-sm font-medium text-text-primary">
+                      {pythonEnv.virtualEnv.name}
+                    </p>
                     <p className="text-xs text-text-tertiary">活跃的虚拟环境</p>
                   </div>
                 </div>
@@ -335,16 +381,28 @@ const AISettings: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-emerald-500">smart_toy</span>
+                <span className="material-symbols-outlined text-emerald-500">
+                  smart_toy
+                </span>
               </div>
               <div>
-                <h3 className="font-bold text-text-primary">Python 智能体服务</h3>
-                <p className="text-xs text-text-tertiary">管理 AI 智能体 Python 后端</p>
+                <h3 className="font-bold text-text-primary">
+                  Python 智能体服务
+                </h3>
+                <p className="text-xs text-text-tertiary">
+                  管理 AI 智能体 Python 后端
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${statusColors[serviceInfo?.status || "stopped"]}`}></span>
-              <span className="text-xs text-text-secondary">{statusTexts[serviceInfo?.status || "stopped"]}</span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  statusColors[serviceInfo?.status || "stopped"]
+                }`}
+              ></span>
+              <span className="text-xs text-text-secondary">
+                {statusTexts[serviceInfo?.status || "stopped"]}
+              </span>
             </div>
           </div>
 
@@ -353,14 +411,17 @@ const AISettings: React.FC = () => {
               {serviceInfo.pid && (
                 <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
                   <span className="text-xs text-text-tertiary">进程 ID</span>
-                  <span className="text-sm font-medium text-text-primary">{serviceInfo.pid}</span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {serviceInfo.pid}
+                  </span>
                 </div>
               )}
               {serviceInfo.uptime !== null && (
                 <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
                   <span className="text-xs text-text-tertiary">运行时长</span>
                   <span className="text-sm font-medium text-text-primary">
-                    {Math.floor(serviceInfo.uptime / 60)}分 {serviceInfo.uptime % 60}秒
+                    {Math.floor(serviceInfo.uptime / 60)}分{" "}
+                    {serviceInfo.uptime % 60}秒
                   </span>
                 </div>
               )}
@@ -373,12 +434,19 @@ const AISettings: React.FC = () => {
           )}
 
           <div className="mb-6">
-            <label className="text-xs text-text-tertiary mb-2 block">服务端口</label>
+            <label className="text-xs text-text-tertiary mb-2 block">
+              服务端口
+            </label>
             <input
               type="number"
               className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-sm text-text-primary outline-none focus:border-primary"
               value={serviceConfig.port || 8765}
-              onChange={(e) => setServiceConfig({ ...serviceConfig, port: parseInt(e.target.value) || 8765 })}
+              onChange={(e) =>
+                setServiceConfig({
+                  ...serviceConfig,
+                  port: parseInt(e.target.value) || 8765,
+                })
+              }
               disabled={isRunning}
               placeholder="8765"
             />
@@ -391,7 +459,13 @@ const AISettings: React.FC = () => {
                 onClick={handleStartService}
                 disabled={serviceLoading || !pythonEnv?.meetsRequirements}
               >
-                {serviceLoading ? <Spin size="small" /> : <span className="material-symbols-outlined text-base">play_arrow</span>}
+                {serviceLoading ? (
+                  <Spin size="small" />
+                ) : (
+                  <span className="material-symbols-outlined text-base">
+                    play_arrow
+                  </span>
+                )}
                 启动服务
               </button>
             ) : (
@@ -401,7 +475,13 @@ const AISettings: React.FC = () => {
                   onClick={handleStopService}
                   disabled={serviceLoading}
                 >
-                  {serviceLoading ? <Spin size="small" /> : <span className="material-symbols-outlined text-base">stop</span>}
+                  {serviceLoading ? (
+                    <Spin size="small" />
+                  ) : (
+                    <span className="material-symbols-outlined text-base">
+                      stop
+                    </span>
+                  )}
                   停止
                 </button>
                 <button
@@ -409,7 +489,13 @@ const AISettings: React.FC = () => {
                   onClick={handleRestartService}
                   disabled={serviceLoading}
                 >
-                  {serviceLoading ? <Spin size="small" /> : <span className="material-symbols-outlined text-base">refresh</span>}
+                  {serviceLoading ? (
+                    <Spin size="small" />
+                  ) : (
+                    <span className="material-symbols-outlined text-base">
+                      refresh
+                    </span>
+                  )}
                   重启
                 </button>
               </>
@@ -430,7 +516,9 @@ const AISettings: React.FC = () => {
         </div>
         <Button
           type="primary"
-          icon={<span className="material-symbols-outlined text-base">add</span>}
+          icon={
+            <span className="material-symbols-outlined text-base">add</span>
+          }
           onClick={() => {
             setEditingConfig(null);
             setConfigModalOpen(true);
@@ -446,7 +534,10 @@ const AISettings: React.FC = () => {
         </div>
       ) : modelConfigs.length === 0 ? (
         <div className="p-8 bg-bg-secondary border border-border rounded-xl">
-          <Empty description="暂无模型配置" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+          <Empty
+            description="暂无模型配置"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          >
             <Button
               type="primary"
               onClick={() => {
@@ -489,7 +580,9 @@ const AISettings: React.FC = () => {
             >
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <h1 className="text-lg font-bold tracking-tight text-text-primary">AI 模型接入设置</h1>
+            <h1 className="text-lg font-bold tracking-tight text-text-primary">
+              AI 模型接入设置
+            </h1>
           </div>
         </div>
       </header>
@@ -497,17 +590,18 @@ const AISettings: React.FC = () => {
       {/* 主内容区 */}
       <main className="max-w-5xl mx-auto px-4 py-8 pb-16">
         <div className="space-y-10">
+          {/* 模型配置 */}
+          <section>{renderModelConfigSection()}</section>
           {/* Python 环境 & 服务 */}
           <section>
             <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-primary">memory</span>
+              <span className="material-symbols-outlined text-primary">
+                memory
+              </span>
               <h2 className="text-xl font-bold text-text-primary">运行环境</h2>
             </div>
             {renderPythonEnvCard()}
           </section>
-
-          {/* 模型配置 */}
-          <section>{renderModelConfigSection()}</section>
         </div>
       </main>
 

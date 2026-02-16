@@ -94,7 +94,11 @@ const ModelConfigCard: React.FC<ModelConfigCardProps> = ({
     {
       key: "test",
       label: "测试连接",
-      icon: <span className="material-symbols-outlined text-sm">nest_remote_comfort_sensor</span>,
+      icon: (
+        <span className="material-symbols-outlined text-sm">
+          nest_remote_comfort_sensor
+        </span>
+      ),
       onClick: () => onTest(config),
     },
     {
@@ -132,7 +136,9 @@ const ModelConfigCard: React.FC<ModelConfigCardProps> = ({
               providerInfo.color
             )}`}
           >
-            <span className="material-symbols-outlined">{providerInfo.icon}</span>
+            <span className="material-symbols-outlined">
+              {providerInfo.icon}
+            </span>
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -150,7 +156,11 @@ const ModelConfigCard: React.FC<ModelConfigCardProps> = ({
           </div>
         </div>
 
-        <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
+        <Dropdown
+          menu={{ items: menuItems }}
+          trigger={["click"]}
+          placement="bottomRight"
+        >
           <button className="p-1.5 hover:bg-bg-hover rounded-lg transition-colors text-text-tertiary">
             <span className="material-symbols-outlined text-lg">more_vert</span>
           </button>
@@ -165,7 +175,9 @@ const ModelConfigCard: React.FC<ModelConfigCardProps> = ({
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <div className="flex items-center gap-3">
-          <span className="text-xs text-text-tertiary">优先级: {config.priority}</span>
+          <span className="text-xs text-text-tertiary">
+            优先级: {config.priority}
+          </span>
           <button
             className="text-xs text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
             onClick={() => onTest(config)}
@@ -174,7 +186,9 @@ const ModelConfigCard: React.FC<ModelConfigCardProps> = ({
             {testing ? (
               <Spin size="small" />
             ) : (
-              <span className="material-symbols-outlined text-xs">nest_remote_comfort_sensor</span>
+              <span className="material-symbols-outlined text-xs">
+                nest_remote_comfort_sensor
+              </span>
             )}
             测试连接
           </button>

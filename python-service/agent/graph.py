@@ -158,10 +158,20 @@ def agent_node(state: AgentState, tool_registry: ToolRegistry) -> Dict[str, Any]
     
     # 3. 调用 LLM 进行推理
     try:
+        # 转换 LangChain 消息类型为标准格式
+        # LangChain: human/ai/system -> 标准: user/assistant/system
+        def convert_role(msg_type: str) -> str:
+            """将 LangChain 消息类型转换为标准格式"""
+            role_map = {
+                "human": "user",
+                "ai": "assistant",
+                "system": "system",
+            }
+            return role_map.get(msg_type, "user")
+        
         # 使用 model_router 调用模型（同步方式）
-        # 注意：这里简化处理，实际应该使用异步
         response = model_router.chat(
-            messages=[{"role": m.type, "content": m.content} for m in messages],
+            messages=[{"role": convert_role(m.type), "content": m.content} for m in messages],
             stream=False
         )
         
@@ -170,7 +180,9 @@ def agent_node(state: AgentState, tool_registry: ToolRegistry) -> Dict[str, Any]
         logger.info(f"[Agent] LLM 输出: {llm_output[:200]}...")
         
     except Exception as e:
+        import traceback
         logger.error(f"[Agent] LLM 调用失败: {e}")
+        logger.error(f"[Agent] 错误堆栈: {traceback.format_exc()}")
         return {
             "error": str(e),
             "should_finish": True,

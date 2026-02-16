@@ -7,6 +7,8 @@ import * as userService from "./services/userService";
 import * as storageService from "./services/storageService";
 import * as avatarService from "./services/avatarService";
 import * as websocketService from "./services/websocketService";
+import * as pythonEnvService from "./services/pythonEnvService";
+import type { PythonDetectOptions } from "./types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -161,6 +163,19 @@ function registerIpcHandlers() {
   ipcMain.handle("ws:getInfo", async () => {
     return websocketService.getServerInfo();
   });
+
+  // Python 环境检测
+  ipcMain.handle("python:detect", async (_event, options?: PythonDetectOptions) => {
+    return pythonEnvService.detectPythonEnvironment(options);
+  });
+
+  ipcMain.handle("python:getInstallGuide", async () => {
+    return pythonEnvService.getPythonInstallGuide();
+  });
+
+  ipcMain.handle("python:checkDependencies", async () => {
+    return pythonEnvService.checkAIDependencies();
+  });
 }
 
 // Electron 应用生命周期
@@ -174,7 +189,9 @@ app.whenReady().then(async () => {
   // 启动 WebSocket 服务器
   try {
     const wsInfo = await websocketService.startWebSocketServer();
-    console.log(`[Main] WebSocket 服务已启动: ws://${wsInfo.host}:${wsInfo.port}`);
+    console.log(
+      `[Main] WebSocket 服务已启动: ws://${wsInfo.host}:${wsInfo.port}`
+    );
   } catch (error) {
     console.error("[Main] WebSocket 服务启动失败:", error);
   }

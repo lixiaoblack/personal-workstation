@@ -11,6 +11,9 @@ import type {
   ClearCacheResult,
   AvatarSelectResult,
   ConnectionState,
+  PythonEnvironment,
+  PythonDetectOptions,
+  PythonInstallGuide,
 } from "./types";
 
 // WebSocket 服务器信息
@@ -33,6 +36,9 @@ export type {
   ClearCacheResult,
   AvatarSelectResult,
   ConnectionState,
+  PythonEnvironment,
+  PythonDetectOptions,
+  PythonInstallGuide,
 };
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -77,8 +83,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("avatar:select"),
 
   // WebSocket 服务
-  getWsInfo: (): Promise<WsServerInfo> =>
-    ipcRenderer.invoke("ws:getInfo"),
+  getWsInfo: (): Promise<WsServerInfo> => ipcRenderer.invoke("ws:getInfo"),
+
+  // Python 环境检测
+  detectPython: (options?: PythonDetectOptions): Promise<PythonEnvironment> =>
+    ipcRenderer.invoke("python:detect", options),
+  getPythonInstallGuide: (): Promise<PythonInstallGuide> =>
+    ipcRenderer.invoke("python:getInstallGuide"),
+  checkAIDependencies: (): Promise<{ installed: string[]; missing: string[] }> =>
+    ipcRenderer.invoke("python:checkDependencies"),
 });
 
 // 类型声明
@@ -112,6 +125,11 @@ export interface ElectronAPI {
 
   // WebSocket 服务
   getWsInfo: () => Promise<WsServerInfo>;
+
+  // Python 环境检测
+  detectPython: (options?: PythonDetectOptions) => Promise<PythonEnvironment>;
+  getPythonInstallGuide: () => Promise<PythonInstallGuide>;
+  checkAIDependencies: () => Promise<{ installed: string[]; missing: string[] }>;
 }
 
 declare global {

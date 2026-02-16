@@ -3,15 +3,8 @@
  * 用于渲染进程连接 WebSocket 服务器
  */
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  MessageType,
-  ConnectionState,
-  createMessage,
-} from "@/types/electron";
-import type {
-  WebSocketMessage,
-  ChatMessage,
-} from "@/types/electron";
+import { MessageType, ConnectionState, createMessage } from "@/types/electron";
+import type { WebSocketMessage, ChatMessage } from "@/types/electron";
 
 interface UseWebSocketOptions {
   autoConnect?: boolean; // 自动连接，默认 true

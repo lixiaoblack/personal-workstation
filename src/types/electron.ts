@@ -15,11 +15,14 @@ export type {
   StorageInfo,
   ClearCacheResult,
   AvatarSelectResult,
-  type WebSocketMessage,
-  type ChatMessage,
-  type ChatResponseMessage,
-  type ChatStreamMessage,
-  type ChatErrorMessage,
+  WebSocketMessage,
+  ChatMessage,
+  ChatResponseMessage,
+  ChatStreamMessage,
+  ChatErrorMessage,
+  PythonEnvironment,
+  PythonDetectOptions,
+  PythonInstallGuide,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -40,6 +43,9 @@ import type {
   StorageInfo,
   ClearCacheResult,
   AvatarSelectResult,
+  PythonEnvironment,
+  PythonDetectOptions,
+  PythonInstallGuide,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -80,6 +86,11 @@ export interface ElectronAPI {
 
   // WebSocket 服务
   getWsInfo: () => Promise<WsServerInfo>;
+
+  // Python 环境检测
+  detectPython: (options?: PythonDetectOptions) => Promise<PythonEnvironment>;
+  getPythonInstallGuide: () => Promise<PythonInstallGuide>;
+  checkAIDependencies: () => Promise<{ installed: string[]; missing: string[] }>;
 }
 
 declare global {

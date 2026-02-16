@@ -1,10 +1,11 @@
 /**
  * AISettings AI 模型设置页面
- * 包含在线API接入和本地模型接入配置
+ * 包含 Python 环境检测、在线API接入和本地模型接入配置
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { App } from "antd";
+import { App, Spin } from "antd";
+import type { PythonEnvironment, PythonInstallGuide } from "@/types/electron";
 
 // 模型配置类型
 interface ModelConfig {
@@ -29,6 +30,11 @@ const AISettings: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
 
+  // Python 环境状态
+  const [pythonEnv, setPythonEnv] = useState<PythonEnvironment | null>(null);
+  const [pythonLoading, setPythonLoading] = useState(false);
+  const [installGuide, setInstallGuide] = useState<PythonInstallGuide | null>(null);
+
   // 在线 API 配置
   const [onlineConfigs, setOnlineConfigs] = useState<
     Record<string, Record<string, string>>
@@ -49,6 +55,47 @@ const AISettings: React.FC = () => {
   const [ollamaStatus, setOllamaStatus] = useState<
     "running" | "stopped" | "checking"
   >("running");
+
+  // 初始化时检测 Python 环境
+  useEffect(() => {
+    const initPython = async () => {
+      await handleDetectPython();
+      await loadInstallGuide();
+    };
+    initPython();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 加载安装引导
+  const loadInstallGuide = async () => {
+    try {
+      const guide = await window.electronAPI.getPythonInstallGuide();
+      setInstallGuide(guide);
+    } catch (error) {
+      console.error("获取安装引导失败:", error);
+    }
+  };
+
+  // 检测 Python 环境
+  const handleDetectPython = async () => {
+    setPythonLoading(true);
+    try {
+      const env = await window.electronAPI.detectPython();
+      setPythonEnv(env);
+      if (env.pythonInstalled && env.meetsRequirements) {
+        message.success(`检测到 Python ${env.pythonVersion?.raw}`);
+      } else if (env.pythonInstalled && !env.meetsRequirements) {
+        message.warning(`Python 版本过低，需要 3.9+`);
+      } else {
+        message.warning("未检测到 Python 环境");
+      }
+    } catch (error) {
+      console.error("检测 Python 环境失败:", error);
+      message.error("检测 Python 环境失败");
+    } finally {
+      setPythonLoading(false);
+    }
+  };
 
   // 在线 API 模型配置
   const onlineModels: ModelConfig[] = [
@@ -196,6 +243,169 @@ const AISettings: React.FC = () => {
     return colors[color] || colors.blue;
   };
 
+  // 获取操作系统显示名称
+  const getOSDisplayName = (os: string) => {
+    const names: Record<string, string> = {
+      darwin: "macOS",
+      win32: "Windows",
+      linux: "Linux",
+    };
+    return names[os] || os;
+  };
+
+  // 渲染 Python 环境状态卡片
+  const renderPythonEnvCard = () => (
+    <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-blue-500">terminal</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-text-primary">Python 环境</h3>
+            <p className="text-xs text-text-tertiary">AI 智能体运行所需环境</p>
+          </div>
+        </div>
+        <button
+          className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+          onClick={handleDetectPython}
+          disabled={pythonLoading}
+        >
+          <span className={`material-symbols-outlined text-sm ${pythonLoading ? "animate-spin" : ""}`}>
+            {pythonLoading ? "progress_activity" : "refresh"}
+          </span>
+          重新检测
+        </button>
+      </div>
+
+      {pythonLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Spin />
+          <span className="ml-3 text-text-tertiary">正在检测 Python 环境...</span>
+        </div>
+      ) : pythonEnv ? (
+        <div className="space-y-4">
+          {/* 系统信息 */}
+          <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
+            <span className="material-symbols-outlined text-text-tertiary">computer</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text-primary">
+                {getOSDisplayName(pythonEnv.os)} {pythonEnv.osVersion.split(" ")[1]}
+              </p>
+              <p className="text-xs text-text-tertiary">操作系统</p>
+            </div>
+          </div>
+
+          {/* Python 版本 */}
+          <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
+            <span className="material-symbols-outlined text-text-tertiary">code</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text-primary">
+                {pythonEnv.pythonInstalled
+                  ? `Python ${pythonEnv.pythonVersion?.raw}`
+                  : "未安装"}
+              </p>
+              <p className="text-xs text-text-tertiary">
+                {pythonEnv.pythonPath || "未检测到 Python 路径"}
+              </p>
+            </div>
+            {pythonEnv.pythonInstalled && (
+              <span
+                className={`px-2 py-1 rounded text-xs font-medium ${
+                  pythonEnv.meetsRequirements
+                    ? "bg-success/10 text-success"
+                    : "bg-warning/10 text-warning"
+                }`}
+              >
+                {pythonEnv.meetsRequirements ? "满足要求" : "版本过低"}
+              </span>
+            )}
+          </div>
+
+          {/* 包管理器 */}
+          {pythonEnv.packageManagers.length > 0 && (
+            <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
+              <span className="material-symbols-outlined text-text-tertiary">package</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-primary">
+                  {pythonEnv.packageManagers.map((pm) => pm.type).join(", ")}
+                </p>
+                <p className="text-xs text-text-tertiary">包管理器</p>
+              </div>
+            </div>
+          )}
+
+          {/* 虚拟环境 */}
+          {pythonEnv.virtualEnv.active && (
+            <div className="flex items-center gap-4 p-3 bg-success/5 border border-success/20 rounded-lg">
+              <span className="material-symbols-outlined text-success">check_circle</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-primary">
+                  {pythonEnv.virtualEnv.name}
+                </p>
+                <p className="text-xs text-text-tertiary">
+                  活跃的 {pythonEnv.virtualEnv.type} 虚拟环境
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 建议列表 */}
+          {pythonEnv.recommendations.length > 0 && (
+            <div className="mt-4 p-4 bg-warning/5 border border-warning/20 rounded-lg">
+              <p className="text-sm font-medium text-warning mb-2">建议</p>
+              <ul className="text-xs text-text-secondary space-y-1">
+                {pythonEnv.recommendations.map((rec, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="material-symbols-outlined text-xs text-warning mt-0.5">arrow_right</span>
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* 安装引导 */}
+          {!pythonEnv.pythonInstalled && installGuide && (
+            <div className="mt-4 p-4 bg-bg-tertiary rounded-lg">
+              <p className="text-sm font-medium text-text-primary mb-3">安装方式</p>
+              <div className="space-y-2">
+                {installGuide.methods.map((method, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg hover:bg-bg-hover cursor-pointer transition-colors"
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      method.recommended ? "bg-primary/10 text-primary" : "bg-bg-tertiary text-text-tertiary"
+                    }`}>
+                      <span className="material-symbols-outlined text-sm">download</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text-primary">{method.name}</p>
+                      <p className="text-xs text-text-tertiary">{method.description}</p>
+                    </div>
+                    {method.recommended && (
+                      <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded">
+                        推荐
+                      </span>
+                    )}
+                    {method.url && (
+                      <span className="material-symbols-outlined text-text-tertiary">open_in_new</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center py-8 text-text-tertiary">
+          点击"重新检测"按钮检测 Python 环境
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-bg-primary">
       {/* 顶部导航栏 */}
@@ -218,6 +428,19 @@ const AISettings: React.FC = () => {
       {/* 主内容区 */}
       <main className="max-w-5xl mx-auto px-4 py-8 pb-32">
         <div className="space-y-10">
+          {/* Python 环境检测 */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-primary">
+                memory
+              </span>
+              <h2 className="text-xl font-bold text-text-primary">
+                运行环境
+              </h2>
+            </div>
+            {renderPythonEnvCard()}
+          </section>
+
           {/* 在线 API 接入 */}
           <section>
             <div className="flex items-center gap-2 mb-6">

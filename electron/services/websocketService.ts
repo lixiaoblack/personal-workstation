@@ -82,7 +82,9 @@ export function startWebSocketServer(
       };
 
       clients.set(ws, clientInfo);
-      console.log(`[WebSocket] 客户端已连接: ${clientId}, 当前连接数: ${clients.size}`);
+      console.log(
+        `[WebSocket] 客户端已连接: ${clientId}, 当前连接数: ${clients.size}`
+      );
 
       // 发送连接确认
       const ackMessage = createMessage(MessageType.CONNECTION_ACK, {
@@ -99,7 +101,9 @@ export function startWebSocketServer(
       ws.on("close", () => {
         const info = clients.get(ws);
         console.log(
-          `[WebSocket] 客户端已断开: ${info?.id}, 当前连接数: ${clients.size - 1}`
+          `[WebSocket] 客户端已断开: ${info?.id}, 当前连接数: ${
+            clients.size - 1
+          }`
         );
         clients.delete(ws);
       });
@@ -179,7 +183,10 @@ export function broadcast(message: WebSocketMessage): void {
 /**
  * 向特定客户端发送消息
  */
-export function sendToClient(clientId: string, message: WebSocketMessage): boolean {
+export function sendToClient(
+  clientId: string,
+  message: WebSocketMessage
+): boolean {
   const entries = Array.from(clients.entries());
   for (const [ws, info] of entries) {
     if (info.id === clientId && ws.readyState === WebSocket.OPEN) {
@@ -212,8 +219,11 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
 
     // 处理聊天消息 - 简单回显（后续会接入 Python 服务）
     if (message.type === MessageType.CHAT_MESSAGE) {
-      const chatMsg = message as Extract<WebSocketMessage, { type: MessageType.CHAT_MESSAGE }>;
-      
+      const chatMsg = message as Extract<
+        WebSocketMessage,
+        { type: MessageType.CHAT_MESSAGE }
+      >;
+
       // 模拟响应（后续替换为实际 AI 响应）
       const response = createMessage(MessageType.CHAT_RESPONSE, {
         content: `收到消息: ${chatMsg.content}`,

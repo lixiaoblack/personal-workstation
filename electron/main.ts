@@ -296,16 +296,16 @@ function registerIpcHandlers() {
     return conversationService.deleteConversation(id);
   });
 
+  ipcMain.handle("message:add", async (_event, input: CreateMessageInput) => {
+    return conversationService.addMessage(input);
+  });
+
   ipcMain.handle(
-    "message:add",
-    async (_event, input: CreateMessageInput) => {
-      return conversationService.addMessage(input);
+    "message:autoSetTitle",
+    async (_event, conversationId: number) => {
+      return conversationService.autoSetConversationTitle(conversationId);
     }
   );
-
-  ipcMain.handle("message:autoSetTitle", async (_event, conversationId: number) => {
-    return conversationService.autoSetConversationTitle(conversationId);
-  });
 }
 
 // Electron 应用生命周期
@@ -322,6 +322,22 @@ app.whenReady().then(async () => {
     console.log(
       `[Main] WebSocket 服务已启动: ws://${wsInfo.host}:${wsInfo.port}`
     );
+
+    // 自动启动 Python 服务
+    try {
+      const pythonResult = await pythonProcessService.startPythonService({
+        port: wsInfo.port,
+        autoRestart: true,
+        maxRestarts: 3,
+      });
+      if (pythonResult.success) {
+        console.log(`[Main] Python 服务已自动启动，PID: ${pythonResult.pid}`);
+      } else {
+        console.warn(`[Main] Python 服务自动启动失败: ${pythonResult.error}`);
+      }
+    } catch (pythonError) {
+      console.warn("[Main] Python 服务自动启动异常:", pythonError);
+    }
   } catch (error) {
     console.error("[Main] WebSocket 服务启动失败:", error);
   }

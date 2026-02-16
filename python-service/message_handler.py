@@ -19,7 +19,7 @@ class MessageHandler:
     def __init__(self, send_callback=None):
         """
         初始化消息处理器
-        
+
         Args:
             send_callback: 发送消息的异步回调函数，用于流式消息
         """
@@ -158,7 +158,7 @@ class MessageHandler:
         """处理流式聊天"""
         conversation_id = message.get("conversationId")
         msg_id = message.get("id")
-        
+
         # 发送流式开始消息
         if self.send_callback:
             await self.send_callback({
@@ -168,16 +168,16 @@ class MessageHandler:
                 "conversationId": conversation_id,
                 "modelId": model_id,
             })
-        
+
         full_content = ""
         chunk_index = 0
-        
+
         try:
             # 流式调用模型
             async for chunk in model_router.chat_stream_async(messages, model_id):
                 full_content += chunk
                 chunk_index += 1
-                
+
                 # 发送流式内容块
                 if self.send_callback:
                     await self.send_callback({
@@ -188,7 +188,7 @@ class MessageHandler:
                         "content": chunk,
                         "chunkIndex": chunk_index,
                     })
-            
+
             # 存储完整响应
             if conversation_id:
                 if conversation_id not in self.conversations:
@@ -198,7 +198,7 @@ class MessageHandler:
                     "content": full_content,
                     "timestamp": int(time.time() * 1000)
                 })
-            
+
             # 发送流式结束消息
             if self.send_callback:
                 await self.send_callback({
@@ -208,9 +208,9 @@ class MessageHandler:
                     "conversationId": conversation_id,
                     "fullContent": full_content,
                 })
-            
+
             return None  # 不返回响应，已通过流式消息发送
-            
+
         except Exception as e:
             logger.error(f"流式聊天错误: {e}")
             # 发送错误消息
@@ -346,7 +346,8 @@ class MessageHandler:
                     # 注册模型
                     model_router.register_model(model_id, config)
                     registered_count += 1
-                    logger.info(f"已注册模型: {config.model_id} (provider: {provider})")
+                    logger.info(
+                        f"已注册模型: {config.model_id} (provider: {provider})")
 
                 except Exception as e:
                     errors.append(f"注册模型 {config_data.get('id')} 失败: {str(e)}")

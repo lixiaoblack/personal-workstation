@@ -151,7 +151,9 @@ export function getConversationById(id: number): Conversation | null {
 /**
  * 创建新对话
  */
-export function createConversation(input: CreateConversationInput): Conversation {
+export function createConversation(
+  input: CreateConversationInput
+): Conversation {
   const db = getDatabase();
   const stmt = db.prepare(`
     INSERT INTO conversations (title, model_id, model_name)
@@ -197,7 +199,9 @@ export function updateConversation(
 
   updates.push("updated_at = datetime('now', 'localtime')");
 
-  db.prepare(`UPDATE conversations SET ${updates.join(", ")} WHERE id = @id`).run(values);
+  db.prepare(
+    `UPDATE conversations SET ${updates.join(", ")} WHERE id = @id`
+  ).run(values);
 
   return getConversationById(id);
 }
@@ -297,7 +301,9 @@ export function getFirstUserMessage(conversationId: number): Message | null {
 /**
  * 自动设置对话标题（使用第一条用户消息内容）
  */
-export function autoSetConversationTitle(conversationId: number): string | null {
+export function autoSetConversationTitle(
+  conversationId: number
+): string | null {
   const firstMessage = getFirstUserMessage(conversationId);
   if (!firstMessage) return null;
 

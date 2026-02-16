@@ -3,7 +3,13 @@
  * 基于 ant-design-x 构建的专业 AI 对话界面
  * 支持流式传输、对话历史、模型选择
  */
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Input, message, Dropdown } from "antd";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -43,9 +49,12 @@ const AIChat: React.FC = () => {
   const [currentModel, setCurrentModel] = useState<ModelConfig | null>(null);
 
   // 对话分组列表
-  const [conversationGroups, setConversationGroups] = useState<ConversationGroup[]>([]);
+  const [conversationGroups, setConversationGroups] = useState<
+    ConversationGroup[]
+  >([]);
   // 当前选中的对话
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [activeConversation, setActiveConversation] =
+    useState<Conversation | null>(null);
   // 当前对话的消息列表
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -65,7 +74,9 @@ const AIChat: React.FC = () => {
   // 编辑对话标题弹窗
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState("");
-  const [editingConversationId, setEditingConversationId] = useState<number | null>(null);
+  const [editingConversationId, setEditingConversationId] = useState<
+    number | null
+  >(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -100,22 +111,27 @@ const AIChat: React.FC = () => {
   }, []);
 
   // 加载对话的消息列表
-  const loadMessages = useCallback(async (conversationId: number) => {
-    try {
-      const conversation = await window.electronAPI.getConversationById(conversationId);
-      if (conversation) {
-        setMessages(conversation.messages || []);
-        setActiveConversation(conversation);
-        // 设置模型
-        if (conversation.modelId) {
-          const model = models.find((m) => m.id === conversation.modelId);
-          if (model) setCurrentModel(model);
+  const loadMessages = useCallback(
+    async (conversationId: number) => {
+      try {
+        const conversation = await window.electronAPI.getConversationById(
+          conversationId
+        );
+        if (conversation) {
+          setMessages(conversation.messages || []);
+          setActiveConversation(conversation);
+          // 设置模型
+          if (conversation.modelId) {
+            const model = models.find((m) => m.id === conversation.modelId);
+            if (model) setCurrentModel(model);
+          }
         }
+      } catch (error) {
+        console.error("加载消息列表失败:", error);
       }
-    } catch (error) {
-      console.error("加载消息列表失败:", error);
-    }
-  }, [models]);
+    },
+    [models]
+  );
 
   // 初始化加载
   useEffect(() => {
@@ -231,7 +247,13 @@ const AIChat: React.FC = () => {
       loadingRef.current = false;
       return;
     }
-  }, [lastMessage, streamState.conversationId, loadMessages, loadConversations, activeConversation?.id]);
+  }, [
+    lastMessage,
+    streamState.conversationId,
+    loadMessages,
+    loadConversations,
+    activeConversation?.id,
+  ]);
 
   // ===== 对话管理 =====
   // 创建新对话
@@ -311,7 +333,12 @@ const AIChat: React.FC = () => {
       console.error("更新标题失败:", error);
       message.error("更新标题失败");
     }
-  }, [editingConversationId, editingTitle, activeConversation, loadConversations]);
+  }, [
+    editingConversationId,
+    editingTitle,
+    activeConversation,
+    loadConversations,
+  ]);
 
   // 选择对话
   const handleSelectConversation = useCallback(
@@ -509,7 +536,11 @@ const AIChat: React.FC = () => {
                     {
                       key: "edit",
                       label: "编辑标题",
-                      icon: <span className="material-symbols-outlined text-sm">edit</span>,
+                      icon: (
+                        <span className="material-symbols-outlined text-sm">
+                          edit
+                        </span>
+                      ),
                       onClick: () =>
                         handleEditTitle({
                           id: conv.id,
@@ -524,7 +555,11 @@ const AIChat: React.FC = () => {
                     {
                       key: "delete",
                       label: "删除对话",
-                      icon: <span className="material-symbols-outlined text-sm">delete</span>,
+                      icon: (
+                        <span className="material-symbols-outlined text-sm">
+                          delete
+                        </span>
+                      ),
                       danger: true,
                       onClick: () => handleDeleteConversation(conv.id),
                     },
@@ -611,7 +646,9 @@ const AIChat: React.FC = () => {
             </>
           ) : (
             <>
-              <span className="text-primary">AI 助手 ({currentModel?.name || "未知模型"})</span>
+              <span className="text-primary">
+                AI 助手 ({currentModel?.name || "未知模型"})
+              </span>
               <span>{formatTime(msg.timestamp)}</span>
             </>
           )}
@@ -646,7 +683,9 @@ const AIChat: React.FC = () => {
     return (
       <div className="flex flex-col items-start gap-2">
         <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary ml-2">
-          <span className="text-primary">AI 助手 ({currentModel?.name || "未知模型"})</span>
+          <span className="text-primary">
+            AI 助手 ({currentModel?.name || "未知模型"})
+          </span>
           <span className="animate-pulse">正在生成...</span>
         </div>
         <div className="max-w-[90%] flex gap-4">
@@ -682,17 +721,19 @@ const AIChat: React.FC = () => {
       </p>
       {models.length > 0 && (
         <div className="flex flex-wrap gap-2 justify-center">
-          {["帮我写一段 Python 代码", "解释什么是闭包", "如何优化 SQL 查询"].map(
-            (suggestion) => (
-              <button
-                key={suggestion}
-                className="px-4 py-2 rounded-full border border-border hover:border-primary hover:text-primary text-text-tertiary text-sm transition-all"
-                onClick={() => setInputValue(suggestion)}
-              >
-                {suggestion}
-              </button>
-            )
-          )}
+          {[
+            "帮我写一段 Python 代码",
+            "解释什么是闭包",
+            "如何优化 SQL 查询",
+          ].map((suggestion) => (
+            <button
+              key={suggestion}
+              className="px-4 py-2 rounded-full border border-border hover:border-primary hover:text-primary text-text-tertiary text-sm transition-all"
+              onClick={() => setInputValue(suggestion)}
+            >
+              {suggestion}
+            </button>
+          ))}
         </div>
       )}
       {models.length === 0 && (
@@ -833,7 +874,10 @@ const AIChat: React.FC = () => {
                   placeholder="在这里输入您的问题，例如：'如何使用 Python 处理地理栅格数据？'"
                   className="flex-1 bg-transparent border-none focus:ring-0 text-text-primary text-sm placeholder:text-text-tertiary resize-none custom-scrollbar py-1 outline-none"
                   rows={3}
-                  disabled={connectionState !== ConnectionState.CONNECTED || streamState.status === "streaming"}
+                  disabled={
+                    connectionState !== ConnectionState.CONNECTED ||
+                    streamState.status === "streaming"
+                  }
                 />
                 <button
                   className={`p-3 rounded-xl flex items-center justify-center transition-all shadow-lg shrink-0 ${

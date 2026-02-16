@@ -13,10 +13,7 @@ import {
   createMessage,
 } from "../types/websocket";
 import { getEnabledModelConfigs } from "./modelConfigService";
-import type {
-  OnlineModelConfig,
-  OllamaModelConfig,
-} from "../types/model";
+import type { OnlineModelConfig, OllamaModelConfig } from "../types/model";
 
 // WebSocket 服务器配置
 interface WebSocketServerConfig {
@@ -236,10 +233,10 @@ export function syncModelConfigsToPython(): void {
   try {
     // 获取已启用的模型配置
     const configs = getEnabledModelConfigs();
-    
+
     // 发送模型配置同步消息
     const message = createMessage("model_config_sync" as MessageType, {
-      configs: configs.map(config => {
+      configs: configs.map((config) => {
         // 根据提供商类型提取不同字段
         const baseFields = {
           id: config.id,
@@ -265,9 +262,11 @@ export function syncModelConfigsToPython(): void {
         }
       }),
     });
-    
+
     pythonClient.send(JSON.stringify(message));
-    console.log(`[WebSocket] 已同步 ${configs.length} 个模型配置到 Python 服务`);
+    console.log(
+      `[WebSocket] 已同步 ${configs.length} 个模型配置到 Python 服务`
+    );
   } catch (error) {
     console.error("[WebSocket] 同步模型配置失败:", error);
   }
@@ -339,7 +338,7 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
         console.log("[WebSocket] Python 智能体已连接");
         // 通知所有渲染进程
         broadcastPythonStatus("connected");
-        
+
         // 同步已启用的模型配置到 Python 服务
         syncModelConfigsToPython();
       }

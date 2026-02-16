@@ -168,9 +168,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("conversation:getGrouped"),
   getConversationById: (id: number): Promise<Conversation | null> =>
     ipcRenderer.invoke("conversation:getById", id),
-  createConversation: (
-    input: CreateConversationInput
-  ): Promise<Conversation> => ipcRenderer.invoke("conversation:create", input),
+  createConversation: (input: CreateConversationInput): Promise<Conversation> =>
+    ipcRenderer.invoke("conversation:create", input),
   updateConversation: (
     id: number,
     input: UpdateConversationInput

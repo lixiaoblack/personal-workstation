@@ -148,7 +148,11 @@ export function useWebSocket(
 
   // 发送聊天消息
   const sendChat = useCallback(
-    (content: string, conversationId?: string, stream: boolean = true): boolean => {
+    (
+      content: string,
+      conversationId?: string,
+      stream: boolean = true
+    ): boolean => {
       const message = createMessage<ChatMessage>(MessageType.CHAT_MESSAGE, {
         content,
         conversationId,

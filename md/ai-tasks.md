@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 18 |
-| 待处理 | 22 |
+| 已完成 | 19 |
+| 待处理 | 21 |
 
 ---
 
@@ -145,6 +145,15 @@
   - Python 端优先使用传入的历史记录，兼容旧客户端
   - 支持切换对话时自动加载上下文
   - 重启软件后上下文不丢失（数据存储在 SQLite）
+
+- [x] AI-018: LangGraph 智能体 - ReAct Agent 基础实现 | 完成时间: 2026-02-16 19:00
+  - 创建 agent 模块（state.py, tools.py, graph.py）
+  - 实现 AgentState 状态管理（TypedDict + 详细注释）
+  - 实现 ToolRegistry 工具注册机制（动态注册 + OpenAI 格式）
+  - 内置 CalculatorTool 和 EchoTool 示例工具
+  - 实现 ReActAgent 基于 LangGraph 的 ReAct 循环
+  - 扩展 WebSocket 消息协议支持 agent_step 等消息类型
+  - 集成 agent_chat 消息处理到 message_handler
 
 ### 待处理
 

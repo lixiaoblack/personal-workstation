@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.15 | 2026-02-16 | ReAct Agent 基础框架 |
 | 0.5.14 | 2026-02-16 | 上下文滑动窗口策略 |
 | 0.5.13 | 2026-02-16 | MobX 模型状态管理 |
 | 0.5.12 | 2026-02-16 | AI-015 Ollama 连接支持 |
@@ -34,6 +35,17 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.15
+
+- **ReAct Agent 基础框架**
+  - agent 模块：state.py（状态定义）、tools.py（工具系统）、graph.py（工作流）
+  - AgentState 状态管理：包含输入、执行步骤、输出、控制字段
+  - ToolRegistry 工具注册机制：支持动态注册、OpenAI 格式转换
+  - 内置工具：CalculatorTool（计算器）、EchoTool（回显测试）
+  - ReActAgent 类：基于 LangGraph 实现 ReAct 循环
+  - WebSocket 消息类型：agent_step、agent_thought、agent_tool_call、agent_tool_result
+  - agent_chat 消息处理：集成到 message_handler.py
 
 ### 新增 (Added) - v0.5.14
 

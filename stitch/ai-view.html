@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>个人工作站 - AI 聊天室</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3c83f6",
+              "background-light": "#f5f7f8",
+              "background-dark": "#101722",
+              "neutral-800": "#1e293b",
+              "neutral-900": "#0f172a",
+            },
+            fontFamily: {
+              display: ["Inter", "Noto Sans SC", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", "Noto Sans SC", sans-serif;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #282e39;
+        border-radius: 10px;
+      }
+      .code-block {
+        background: #1e293b;
+        border: 1px solid #334155;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-slate-200 antialiased overflow-hidden"
+  >
+    <div class="flex h-screen w-full overflow-hidden">
+      <!-- Chat History Sidebar -->
+      <aside
+        class="w-72 flex flex-col border-r border-slate-800 bg-neutral-900/50 shrink-0"
+      >
+        <div
+          class="p-4 border-b border-slate-800 flex items-center justify-between"
+        >
+          <h3 class="text-white font-bold text-sm tracking-wide">最近对话</h3>
+          <span
+            class="material-symbols-outlined text-slate-500 cursor-pointer hover:text-white transition-colors"
+            >search</span
+          >
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-2">
+          <div class="mb-4">
+            <p
+              class="px-3 text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-widest"
+            >
+              今天
+            </p>
+            <div class="flex flex-col gap-1">
+              <div
+                class="group flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/50 cursor-pointer"
+              >
+                <span class="material-symbols-outlined text-primary text-[20px]"
+                  >chat_bubble</span
+                >
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-sm font-medium truncate">
+                    如何优化 SQL 查询
+                  </p>
+                  <p class="text-slate-500 text-[11px]">14:30 · 12条消息</p>
+                </div>
+                <span
+                  class="material-symbols-outlined text-slate-600 text-[18px] opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
+                  >delete</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <p
+              class="px-3 text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-widest"
+            >
+              昨天
+            </p>
+            <div class="flex flex-col gap-1">
+              <div
+                class="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/30 cursor-pointer transition-colors"
+              >
+                <span
+                  class="material-symbols-outlined text-slate-500 text-[20px]"
+                  >chat_bubble</span
+                >
+                <div class="flex-1 min-w-0">
+                  <p class="text-slate-300 text-sm font-medium truncate">
+                    Python 数据分析脚本
+                  </p>
+                  <p class="text-slate-500 text-[11px]">09:15 · 5条消息</p>
+                </div>
+                <span
+                  class="material-symbols-outlined text-slate-600 text-[18px] opacity-0 group-hover:opacity-100 transition-all"
+                  >delete</span
+                >
+              </div>
+              <div
+                class="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/30 cursor-pointer transition-colors"
+              >
+                <span
+                  class="material-symbols-outlined text-slate-500 text-[20px]"
+                  >chat_bubble</span
+                >
+                <div class="flex-1 min-w-0">
+                  <p class="text-slate-300 text-sm font-medium truncate">
+                    React 组件优化建议
+                  </p>
+                  <p class="text-slate-500 text-[11px]">
+                    昨天 18:20 · 24条消息
+                  </p>
+                </div>
+                <span
+                  class="material-symbols-outlined text-slate-600 text-[18px] opacity-0 group-hover:opacity-100 transition-all"
+                  >delete</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <p
+              class="px-3 text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-widest"
+            >
+              上周
+            </p>
+            <div class="flex flex-col gap-1">
+              <div
+                class="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/30 cursor-pointer transition-colors"
+              >
+                <span
+                  class="material-symbols-outlined text-slate-500 text-[20px]"
+                  >chat_bubble</span
+                >
+                <div class="flex-1 min-w-0">
+                  <p class="text-slate-300 text-sm font-medium truncate">
+                    地理空间数据处理流程
+                  </p>
+                  <p class="text-slate-500 text-[11px]">4天前 · 8条消息</p>
+                </div>
+                <span
+                  class="material-symbols-outlined text-slate-600 text-[18px] opacity-0 group-hover:opacity-100 transition-all"
+                  >delete</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <!-- Main Chat Area -->
+      <main class="flex-1 flex flex-col relative bg-slate-900/20">
+        <!-- Chat Header -->
+        <header
+          class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-background-dark/80 backdrop-blur-md z-10"
+        >
+          <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary"
+                >smart_toy</span
+              >
+              <h2 class="text-white font-bold tracking-tight">AI 助手</h2>
+            </div>
+            <div class="h-6 w-[1px] bg-slate-800"></div>
+            <div class="flex items-center gap-4">
+              <div
+                class="flex items-center gap-1.5 px-3 py-1 bg-slate-800 rounded-full border border-slate-700 cursor-pointer hover:border-primary/50 transition-colors"
+              >
+                <span
+                  class="text-xs font-semibold text-slate-300 uppercase tracking-tighter"
+                  >GPT-4o</span
+                >
+                <span
+                  class="material-symbols-outlined text-[16px] text-slate-500"
+                  >expand_more</span
+                >
+              </div>
+              <div
+                class="flex items-center gap-4 text-xs font-medium text-slate-500"
+              >
+                <a class="hover:text-primary transition-colors" href="#"
+                  >Claude 3.5</a
+                >
+                <a class="hover:text-primary transition-colors" href="#"
+                  >Qwen-Max</a
+                >
+                <a class="hover:text-primary transition-colors" href="#"
+                  >DeepSeek</a
+                >
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div
+              class="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20"
+            >
+              <span
+                class="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
+              ></span>
+              <span class="text-xs text-green-400 font-medium tracking-wide"
+                >已连接</span
+              >
+            </div>
+            <div class="flex items-center gap-1">
+              <button
+                class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              >
+                <span class="material-symbols-outlined text-[20px]"
+                  >settings</span
+                >
+              </button>
+              <button
+                class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              >
+                <span class="material-symbols-outlined text-[20px]"
+                  >dock_to_right</span
+                >
+              </button>
+            </div>
+          </div>
+        </header>
+        <!-- Chat Messages Container -->
+        <div
+          class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 max-w-4xl mx-auto w-full"
+        >
+          <!-- User Message -->
+          <div class="flex flex-col items-end gap-2">
+            <div
+              class="flex items-center gap-2 text-[11px] font-medium text-slate-500 mr-2"
+            >
+              <span>14:30</span>
+              <span>我</span>
+            </div>
+            <div
+              class="max-w-[80%] bg-primary px-5 py-3 rounded-2xl rounded-tr-none text-white text-sm shadow-lg shadow-primary/10 leading-relaxed"
+            >
+              你好，请帮我优化一段 SQL 查询代码，这段代码在处理 100
+              万行数据时非常缓慢。
+            </div>
+          </div>
+          <!-- AI Message -->
+          <div class="flex flex-col items-start gap-2">
+            <div
+              class="flex items-center gap-2 text-[11px] font-medium text-slate-500 ml-2"
+            >
+              <span class="text-primary">AI 助手 (GPT-4o)</span>
+              <span>14:30</span>
+            </div>
+            <div class="max-w-[90%] flex gap-4">
+              <div
+                class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0"
+              >
+                <span class="material-symbols-outlined text-primary text-[18px]"
+                  >smart_toy</span
+                >
+              </div>
+              <div
+                class="flex flex-col gap-4 text-slate-200 text-sm leading-relaxed"
+              >
+                <p>
+                  没问题！为了更好地优化您的查询，我建议我们先检查是否存在以下常见瓶颈：
+                </p>
+                <ul class="list-disc list-inside space-y-1 text-slate-400 pl-2">
+                  <li>
+                    是否缺少必要的
+                    <strong class="text-slate-200">索引</strong>？
+                  </li>
+                  <li>
+                    是否使用了大量的
+                    <strong class="text-slate-200">SELECT *</strong>
+                    而非指定字段？
+                  </li>
+                  <li>
+                    是否存在多表关联时的
+                    <strong class="text-slate-200">笛卡尔积</strong> 问题？
+                  </li>
+                </ul>
+                <p>这是一个典型的优化示例：</p>
+                <!-- Code Block Container -->
+                <div class="code-block rounded-xl overflow-hidden shadow-2xl">
+                  <div
+                    class="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="w-2.5 h-2.5 rounded-full bg-red-500/80"
+                      ></span>
+                      <span
+                        class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"
+                      ></span>
+                      <span
+                        class="w-2.5 h-2.5 rounded-full bg-green-500/80"
+                      ></span>
+                      <span
+                        class="text-[10px] text-slate-400 ml-2 uppercase tracking-widest font-bold"
+                        >SQL</span
+                      >
+                    </div>
+                    <button
+                      class="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors"
+                    >
+                      <span class="material-symbols-outlined text-[14px]"
+                        >content_copy</span
+                      >
+                      复制
+                    </button>
+                  </div>
+                  <div
+                    class="p-4 font-mono text-[13px] leading-6 overflow-x-auto"
+                  >
+                    <span class="text-purple-400">SELECT</span> u.name,
+                    <span class="text-purple-400">SUM</span>(o.amount)
+                    <span class="text-purple-400">AS</span> total_sales<br />
+                    <span class="text-purple-400">FROM</span> users u<br />
+                    <span class="text-blue-400">JOIN</span> orders o
+                    <span class="text-purple-400">ON</span> u.id = o.user_id<br />
+                    <span class="text-blue-400">WHERE</span> o.created_at &gt;=
+                    <span class="text-green-400">'2023-01-01'</span><br />
+                    <span class="text-blue-400">GROUP BY</span> u.id<br />
+                    <span class="text-blue-400">HAVING</span> total_sales &gt;
+                    <span class="text-orange-400">1000</span>;
+                  </div>
+                </div>
+                <p>您可以把您的具体代码发给我，我来为您做针对性的分析。</p>
+              </div>
+            </div>
+          </div>
+          <!-- User Message -->
+          <div class="flex flex-col items-end gap-2">
+            <div
+              class="flex items-center gap-2 text-[11px] font-medium text-slate-500 mr-2"
+            >
+              <span>14:32</span>
+              <span>我</span>
+            </div>
+            <div
+              class="max-w-[80%] bg-primary px-5 py-3 rounded-2xl rounded-tr-none text-white text-sm shadow-lg shadow-primary/10 leading-relaxed"
+            >
+              好的，这是我的查询语句，请看看：
+            </div>
+          </div>
+        </div>
+        <!-- Input Console -->
+        <div class="p-6 bg-transparent">
+          <div class="max-w-4xl mx-auto">
+            <div
+              class="bg-neutral-800 border border-slate-700/50 rounded-2xl shadow-2xl focus-within:border-primary/50 transition-all p-2"
+            >
+              <!-- Toolbar -->
+              <div
+                class="flex items-center justify-between px-2 py-1 mb-1 border-b border-slate-700/30"
+              >
+                <div class="flex items-center gap-1">
+                  <button
+                    class="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                    title="添加附件"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >attach_file</span
+                    >
+                  </button>
+                  <button
+                    class="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                    title="上传图片"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >image</span
+                    >
+                  </button>
+                  <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+                  <button
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all text-xs font-medium"
+                    title="快捷模板"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >temp_preferences_custom</span
+                    >
+                    <span>快捷模板</span>
+                  </button>
+                </div>
+                <div class="text-[10px] text-slate-500 font-medium">
+                  按 Enter 发送，Shift + Enter 换行
+                </div>
+              </div>
+              <!-- Textarea & Send Button -->
+              <div class="flex items-end gap-3 px-2 py-2">
+                <textarea
+                  class="flex-1 bg-transparent border-none focus:ring-0 text-slate-200 text-sm placeholder:text-slate-600 resize-none custom-scrollbar py-1"
+                  placeholder="在这里输入您的问题，例如：'如何使用 Python 处理地理栅格数据？'"
+                  rows="3"
+                ></textarea>
+                <button
+                  class="bg-primary hover:bg-primary/90 text-white p-3 rounded-xl flex items-center justify-center transition-all shadow-lg shadow-primary/20 shrink-0"
+                >
+                  <span class="material-symbols-outlined text-[24px]"
+                    >send</span
+                  >
+                </button>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-center gap-6">
+              <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
+                <span class="material-symbols-outlined text-[16px]">info</span>
+                AI 可能会产生错误，请核实重要信息
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

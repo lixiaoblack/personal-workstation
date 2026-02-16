@@ -4,7 +4,26 @@
 
 ---
 
-## [0.5.0] - 2026-02-13
+## [0.5.1] - 2026-02-16
+
+### 修复 (Fixed)
+
+- 修复 ws 模块 bufferutil 依赖错误
+  - 将 bufferutil、utf-8-validate 添加到 vite external 配置
+
+### 修改 (Changed)
+
+- 升级 antd 从 5.x 到 6.x 以兼容 @ant-design/x
+- 重构 AI 聊天界面，参考 ai-view.html 设计稿
+  - 添加对话历史侧边栏
+  - 添加模型选择功能
+  - 优化消息列表样式
+  - 完善输入工具栏
+- 修正 ai-tasks.md 时间错误
+
+---
+
+## [0.5.0] - 2026-02-16
 
 ### 新增 (Added)
 

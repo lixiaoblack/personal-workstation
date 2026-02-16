@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 20 |
-| 待处理 | 11 |
+| 已完成 | 23 |
+| 待处理 | 8 |
 
 ---
 
@@ -123,7 +123,7 @@
   - **修复**：模型配置同步到 Python 服务
   - **修复**：ModelConfig 缺少 id 字段
 
-- [x] AI-015: 模型路由 - Ollama 连接 | 完成时间: 2026-02-16 15:30
+- [x] AI-015: 模型路由 - Ollama 连接 | 完成时间: 2026-02-17 15:30
   - 扩展 WebSocket 消息类型，添加 Ollama 相关消息类型
   - 实现 Electron IPC 处理器，通过 WebSocket 转发 Ollama 请求到 Python
   - 扩展 WebSocket 服务消息路由，支持 Ollama 消息转发和响应处理
@@ -131,14 +131,14 @@
   - 支持获取 Ollama 状态、模型列表、连接测试
   - ModelConfigModal 添加 Ollama 模型自动发现功能，下拉选择已有模型
 
-- [x] AI-016: 模型状态管理 - MobX 集成 | 完成时间: 2026-02-16 16:30
+- [x] AI-016: 模型状态管理 - MobX 集成 | 完成时间: 2026-02-17 16:30
   - 安装 mobx 和 mobx-react-lite 依赖
   - 创建 modelStore 管理模型列表和当前选中模型
   - AIChat 页面使用 MobX observer 自动响应状态变化
   - AISettings 页面配置变更后自动同步 MobX Store
   - 解决模型配置后 AIChat 页面不刷新的问题
 
-- [x] AI-017: 上下文管理 - 滑动窗口策略 | 完成时间: 2026-02-16 17:30
+- [x] AI-017: 上下文管理 - 滑动窗口策略 | 完成时间: 2026-02-17 17:30
   - 添加 HistoryMessageItem 类型支持历史消息传递
   - Electron 端添加 getRecentMessages API 获取最近 N 条消息
   - AIChat 页面发送消息时携带历史记录（默认 20 条）
@@ -162,7 +162,7 @@
 
 ### 已完成
 
-- [x] AI-018: LangGraph 智能体 - ReAct Agent 基础实现 | 完成时间: 2026-02-16 19:00
+- [x] AI-018: LangGraph 智能体 - ReAct Agent 基础实现 | 完成时间: 2026-02-17 19:00
   - 创建 agent 模块（state.py, tools.py, graph.py）
   - 实现 AgentState 状态管理（TypedDict + 详细注释）
   - 实现 ToolRegistry 工具注册机制（动态注册 + OpenAI 格式）
@@ -176,13 +176,35 @@
   - 支持显示 thought/tool_call/tool_result/answer 四种步骤类型
   - 工具调用详情展示（工具名、参数、结果）
 
+- [x] AI-021: Skills 系统 - 技能注册机制 | 完成时间: 2026-02-17 21:00
+  - 创建 Skills 模块目录结构（agent/skills/）
+  - 实现 Skill 基类和类型定义（base.py）
+  - 实现 SkillRegistry 注册中心（registry.py）
+  - 实现 SkillLoader 热加载器（loader.py）
+  - 支持三种技能类型：builtin（内置）、custom（自定义）、composite（组合）
+  - 支持三种触发方式：manual（手动）、keyword（关键词）、intent（意图）
+  - 技能参数定义和 OpenAI Tool 格式转换
+
+- [x] AI-022: Skills 系统 - 热加载支持 | 完成时间: 2026-02-17 21:00
+  - 实现 SkillLoader 从 YAML/JSON 文件加载技能
+  - 支持目录批量加载
+  - 支持文件变化监听（watchdog）
+  - 实现技能重载功能
+  - 添加 pyyaml、watchdog 依赖
+
+- [x] AI-023: Skills 系统 - 内置技能实现 | 完成时间: 2026-02-17 21:00
+  - 实现 CalculatorSkill 数学计算技能
+  - 实现 DateTimeSkill 日期时间技能
+  - 实现 TextProcessSkill 文本处理技能
+  - 创建 YAML 自定义技能示例（code_explainer.yaml）
+  - 集成到 main.py 启动初始化
+  - 添加 WebSocket 消息类型（skill_list/execute/reload）
+  - 实现 message_handler 技能处理函数
+
 ### 待处理
 
 - [ ] AI-019: LangGraph 智能体 - Deep Agents 集成 | 创建时间: 2026-02-17
 - [ ] AI-020: LangGraph 智能体 - 多轮对话状态管理 | 创建时间: 2026-02-17
-- [ ] AI-021: Skills 系统 - 技能注册机制 | 创建时间: 2026-02-17
-- [ ] AI-022: Skills 系统 - 热加载支持 | 创建时间: 2026-02-17
-- [ ] AI-023: Skills 系统 - 内置技能实现 | 创建时间: 2026-02-17
 
 ---
 

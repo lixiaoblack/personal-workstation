@@ -29,6 +29,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def init_skills_system():
+    """
+    初始化 Skills 系统
+
+    在服务启动时调用，完成：
+    1. 初始化技能注册中心
+    2. 注册内置技能
+    3. 加载用户自定义技能
+    """
+    from agent.skills import global_skill_registry, init_builtin_skills, SkillLoader
+    from agent.tools import global_tool_registry
+
+    # 1. 注册内置技能
+    init_builtin_skills(global_skill_registry)
+
+    # 2. 设置工具注册中心（用于 YamlSkill 执行工具）
+    global_skill_registry._tool_registry = global_tool_registry
+
+    # 3. 加载用户自定义技能
+    skills_dir = os.path.join(os.path.dirname(__file__), "skills")
+    if os.path.exists(skills_dir):
+        loader = SkillLoader(
+            tool_registry=global_tool_registry,
+            skill_registry=global_skill_registry
+        )
+        skills = loader.load_from_directory(skills_dir)
+        logger.info(f"从 {skills_dir} 加载了 {len(skills)} 个自定义技能")
+
+    logger.info(f"Skills 系统初始化完成，共 {len(global_skill_registry)} 个技能")
+
+
 class AgentService:
     """AI 智能体服务"""
 
@@ -45,6 +76,9 @@ class AgentService:
     async def start(self, ws_host: str, ws_port: int):
         """启动服务"""
         logger.info(f"启动 AI 智能体服务，连接到 ws://{ws_host}:{ws_port}")
+
+        # 初始化 Skills 系统
+        init_skills_system()
 
         # 先初始化 WebSocket 客户端
         self.ws_client = WebSocketClient(

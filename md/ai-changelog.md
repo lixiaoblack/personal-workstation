@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.18 | 2026-02-17 | Skills 技能系统框架 |
 | 0.5.17 | 2026-02-16 | Agent 思考过程持久化与修复 |
 | 0.5.16 | 2026-02-16 | Agent 思考过程前端展示 |
 | 0.5.15 | 2026-02-16 | ReAct Agent 基础框架 |
@@ -37,6 +38,44 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.18
+
+- **Skills 技能系统框架**
+  - 创建 Skills 模块目录结构（python-service/agent/skills/）
+  - 实现 Skill 基类和类型定义（base.py）
+    - SkillType 枚举：builtin（内置）、custom（自定义）、composite（组合）
+    - SkillTrigger 枚举：manual（手动）、keyword（关键词）、intent（意图）
+    - SkillMetadata、SkillToolBinding、SkillConfig 数据模型
+    - BaseSkill 抽象基类、YamlSkill 配置技能、BuiltinSkill 内置技能
+  - 实现 SkillRegistry 注册中心（registry.py）
+    - 技能注册/注销/查询
+    - 按类型/触发方式过滤
+    - OpenAI Tool 格式转换
+    - 技能执行接口
+  - 实现 SkillLoader 热加载器（loader.py）
+    - 从 YAML/JSON 文件加载技能
+    - 目录批量加载
+    - 文件变化监听（watchdog）
+    - 技能热重载
+  - 内置技能实现（builtin.py）
+    - CalculatorSkill：数学计算技能
+    - DateTimeSkill：日期时间技能
+    - TextProcessSkill：文本处理技能
+  - YAML 自定义技能示例（skills/code_explainer.yaml）
+  - 添加依赖：pyyaml、watchdog、pydantic
+
+- **Skills 系统集成**
+  - main.py 启动时初始化 Skills 系统
+  - message_handler.py 添加技能消息处理
+    - skill_list：获取技能列表
+    - skill_execute：执行技能
+    - skill_reload：热重载技能
+  - WebSocket 消息类型扩展（websocket.ts）
+    - SKILL_LIST、SKILL_LIST_RESPONSE
+    - SKILL_EXECUTE、SKILL_EXECUTE_RESPONSE
+    - SKILL_RELOAD、SKILL_RELOAD_RESPONSE
+  - SkillInfo、SkillType、SkillTrigger TypeScript 类型定义
 
 ### 新增 (Added) - v0.5.17
 

@@ -43,6 +43,14 @@ export enum MessageType {
   OLLAMA_MODELS_RESPONSE = "ollama_models_response", // Ollama 模型列表响应
   OLLAMA_TEST = "ollama_test", // Ollama 连接测试
   OLLAMA_TEST_RESPONSE = "ollama_test_response", // Ollama 测试响应
+
+  // Skills 技能相关
+  SKILL_LIST = "skill_list", // 技能列表查询
+  SKILL_LIST_RESPONSE = "skill_list_response", // 技能列表响应
+  SKILL_EXECUTE = "skill_execute", // 技能执行请求
+  SKILL_EXECUTE_RESPONSE = "skill_execute_response", // 技能执行响应
+  SKILL_RELOAD = "skill_reload", // 技能重载请求
+  SKILL_RELOAD_RESPONSE = "skill_reload_response", // 技能重载响应
 }
 
 // 基础消息结构
@@ -220,6 +228,92 @@ export interface OllamaTestResponseMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== Skills 技能相关消息类型 ====================
+
+/**
+ * 技能类型
+ */
+export type SkillType = "builtin" | "custom" | "composite";
+
+/**
+ * 技能触发方式
+ */
+export type SkillTrigger = "manual" | "keyword" | "intent";
+
+/**
+ * 技能信息
+ */
+export interface SkillInfo {
+  name: string;
+  displayName: string;
+  description: string;
+  type: SkillType;
+  trigger: SkillTrigger;
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  version: string;
+  author: string;
+}
+
+/**
+ * 技能列表查询消息
+ */
+export interface SkillListMessage extends BaseMessage {
+  type: MessageType.SKILL_LIST;
+}
+
+/**
+ * 技能列表响应消息
+ */
+export interface SkillListResponseMessage extends BaseMessage {
+  type: MessageType.SKILL_LIST_RESPONSE;
+  success: boolean;
+  skills: SkillInfo[];
+  count: number;
+  error?: string;
+}
+
+/**
+ * 技能执行请求消息
+ */
+export interface SkillExecuteMessage extends BaseMessage {
+  type: MessageType.SKILL_EXECUTE;
+  skillName: string;
+  parameters: Record<string, unknown>;
+}
+
+/**
+ * 技能执行响应消息
+ */
+export interface SkillExecuteResponseMessage extends BaseMessage {
+  type: MessageType.SKILL_EXECUTE_RESPONSE;
+  success: boolean;
+  skillName: string;
+  result?: string;
+  error?: string;
+}
+
+/**
+ * 技能重载请求消息
+ */
+export interface SkillReloadMessage extends BaseMessage {
+  type: MessageType.SKILL_RELOAD;
+  skillName?: string; // 如果为空，重载所有技能
+}
+
+/**
+ * 技能重载响应消息
+ */
+export interface SkillReloadResponseMessage extends BaseMessage {
+  type: MessageType.SKILL_RELOAD_RESPONSE;
+  success: boolean;
+  skillName?: string;
+  message?: string;
+  count?: number;
+  error?: string;
+}
+
 // ==================== Agent 相关消息类型 ====================
 
 // 从 conversation.ts 重新导出，避免重复定义
@@ -314,7 +408,13 @@ export type WebSocketMessage =
   | OllamaModelsMessage
   | OllamaModelsResponseMessage
   | OllamaTestMessage
-  | OllamaTestResponseMessage;
+  | OllamaTestResponseMessage
+  | SkillListMessage
+  | SkillListResponseMessage
+  | SkillExecuteMessage
+  | SkillExecuteResponseMessage
+  | SkillReloadMessage
+  | SkillReloadResponseMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

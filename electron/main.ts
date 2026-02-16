@@ -10,13 +10,11 @@ import * as websocketService from "./services/websocketService";
 import * as pythonEnvService from "./services/pythonEnvService";
 import * as pythonProcessService from "./services/pythonProcessService";
 import * as modelConfigService from "./services/modelConfigService";
-import * as modelRouterService from "./services/modelRouterService";
 import type {
   PythonDetectOptions,
   PythonServiceConfig,
   CreateModelConfigInput,
   UpdateModelConfigInput,
-  ChatRequest,
 } from "./types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -249,18 +247,6 @@ function registerIpcHandlers() {
 
   ipcMain.handle("model:setDefault", async (_event, id: number) => {
     return modelConfigService.setDefaultModelConfig(id);
-  });
-
-  // 模型路由 - AI 聊天
-  ipcMain.handle(
-    "model:chat",
-    async (_event, request: ChatRequest, configId?: number) => {
-      return modelRouterService.sendChatRequest(request, configId);
-    }
-  );
-
-  ipcMain.handle("model:testConnection", async (_event, configId: number) => {
-    return modelRouterService.testModelConnection(configId);
   });
 }
 

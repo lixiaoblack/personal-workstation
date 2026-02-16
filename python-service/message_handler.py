@@ -8,6 +8,8 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
+from model_router import model_router, ModelConfig, ModelProvider
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +21,9 @@ class MessageHandler:
             "ping": self._handle_ping,
             "chat_message": self._handle_chat_message,
             "system_status": self._handle_system_status,
+            "model_register": self._handle_model_register,
+            "model_unregister": self._handle_model_unregister,
+            "model_test": self._handle_model_test,
         }
         # 会话存储（后续可替换为持久化存储）
         self.conversations: Dict[str, list] = {}
@@ -53,6 +58,8 @@ class MessageHandler:
         """处理聊天消息"""
         content = message.get("content", "")
         conversation_id = message.get("conversationId")
+        model_id = message.get("modelId")  # 可选，指定模型
+        stream = message.get("stream", False)  # 是否流式输出
 
         logger.info(f"收到聊天消息: {content[:50]}...")
 
@@ -66,25 +73,83 @@ class MessageHandler:
                 "timestamp": int(time.time() * 1000)
             })
 
-        # TODO: 接入实际的 AI 智能体处理
-        # 目前返回模拟响应
-        response_content = await self._generate_mock_response(content)
+        # 使用模型路由器处理
+        try:
+            # 构建消息列表
+            messages = []
+            if conversation_id and conversation_id in self.conversations:
+                # 添加历史消息
+                for msg in self.conversations[conversation_id][:-1]:  # 不包括刚添加的用户消息
+                    messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
+            messages.append({"role": "user", "content": content})
 
-        # 存储响应
-        if conversation_id:
-            self.conversations[conversation_id].append({
-                "role": "assistant",
+            # 调用模型
+            if stream:
+                # 流式响应通过 WebSocket 发送多个消息
+                return await self._handle_stream_chat(message, messages, model_id)
+            else:
+                response_content = await model_router.chat_async(
+                    messages=messages,
+                    model_id=model_id
+                )
+
+                # 存储响应
+                if conversation_id:
+                    self.conversations[conversation_id].append({
+                        "role": "assistant",
+                        "content": response_content,
+                        "timestamp": int(time.time() * 1000)
+                    })
+
+                return {
+                    "type": "chat_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "content": response_content,
+                    "conversationId": conversation_id,
+                    "success": True
+                }
+
+        except ValueError as e:
+            # 模型未注册，回退到模拟响应
+            logger.warning(f"模型未注册，使用模拟响应: {e}")
+            response_content = await self._generate_mock_response(content)
+
+            if conversation_id:
+                self.conversations[conversation_id].append({
+                    "role": "assistant",
+                    "content": response_content,
+                    "timestamp": int(time.time() * 1000)
+                })
+
+            return {
+                "type": "chat_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
                 "content": response_content,
-                "timestamp": int(time.time() * 1000)
-            })
+                "conversationId": conversation_id,
+                "success": True,
+                "fallback": True  # 标记为回退响应
+            }
+        except Exception as e:
+            logger.error(f"处理聊天消息错误: {e}")
+            return self._error_response(str(e), message.get("id"))
 
+    async def _handle_stream_chat(
+        self, message: dict, messages: list, model_id: Optional[int]
+    ) -> dict:
+        """处理流式聊天（返回流式开始消息，后续通过回调发送）"""
+        # 注意：实际的流式内容需要通过 WebSocket 连接直接发送
+        # 这里返回一个流式开始的消息，让前端知道要接收流式数据
         return {
-            "type": "chat_response",
+            "type": "chat_stream_start",
             "id": message.get("id"),
             "timestamp": int(time.time() * 1000),
-            "content": response_content,
-            "conversationId": conversation_id,
-            "success": True
+            "conversationId": message.get("conversationId"),
+            "modelId": model_id,
         }
 
     async def _handle_system_status(self, message: dict) -> dict:
@@ -94,7 +159,84 @@ class MessageHandler:
             "id": message.get("id"),
             "timestamp": int(time.time() * 1000),
             "status": "ready",
-            "conversations": len(self.conversations)
+            "conversations": len(self.conversations),
+            "registered_models": len(model_router._models)
+        }
+
+    async def _handle_model_register(self, message: dict) -> dict:
+        """处理模型注册请求"""
+        try:
+            model_id = message.get("modelId")
+            config_data = message.get("config", {})
+
+            if not model_id:
+                return self._error_response("缺少 modelId", message.get("id"))
+
+            # 构建模型配置
+            provider_str = config_data.get("provider", "openai")
+            try:
+                provider = ModelProvider(provider_str)
+            except ValueError:
+                return self._error_response(f"不支持的提供商: {provider_str}", message.get("id"))
+
+            config = ModelConfig(
+                provider=provider,
+                model_id=config_data.get("modelId", ""),
+                api_key=config_data.get("apiKey"),
+                api_base_url=config_data.get("apiBaseUrl"),
+                host=config_data.get("host"),
+                max_tokens=config_data.get("maxTokens", 4096),
+                temperature=config_data.get("temperature", 0.7),
+                extra_params=config_data.get("extraParams"),
+            )
+
+            # 注册模型
+            model_router.register_model(model_id, config)
+
+            return {
+                "type": "model_register_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "modelId": model_id,
+                "provider": provider.value,
+                "model": config.model_id
+            }
+        except Exception as e:
+            logger.error(f"注册模型失败: {e}")
+            return self._error_response(str(e), message.get("id"))
+
+    async def _handle_model_unregister(self, message: dict) -> dict:
+        """处理模型注销请求"""
+        model_id = message.get("modelId")
+
+        if not model_id:
+            return self._error_response("缺少 modelId", message.get("id"))
+
+        model_router.unregister_model(model_id)
+
+        return {
+            "type": "model_unregister_response",
+            "id": message.get("id"),
+            "timestamp": int(time.time() * 1000),
+            "success": True,
+            "modelId": model_id
+        }
+
+    async def _handle_model_test(self, message: dict) -> dict:
+        """处理模型连接测试请求"""
+        model_id = message.get("modelId")
+
+        if not model_id:
+            return self._error_response("缺少 modelId", message.get("id"))
+
+        result = await model_router.test_connection(model_id)
+
+        return {
+            "type": "model_test_response",
+            "id": message.get("id"),
+            "timestamp": int(time.time() * 1000),
+            **result
         }
 
     async def _generate_mock_response(self, content: str) -> str:

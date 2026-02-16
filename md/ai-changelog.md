@@ -17,7 +17,8 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
-| 0.5.8 | 2026-02-17 | 模型路由在线 API 连接 |
+| 0.5.9 | 2026-02-17 | AI-014 架构重构：Python 端 LangChain |
+| 0.5.8 | 2026-02-17 | 模型路由在线 API 连接（已废弃） |
 | 0.5.7 | 2026-02-17 | AI 设置页面模型配置 UI |
 | 0.5.6 | 2026-02-17 | 模型配置 SQLite 存储 |
 | 0.5.5 | 2026-02-17 | Python WebSocket 桥接 |
@@ -75,6 +76,11 @@
   - 支持流式响应（sendChatRequestStream）
   - 支持连接测试（testModelConnection）
   - 自动更新模型配置状态（active/error）
+- **架构重构**：移除 Electron 端 AI 调用，迁移至 Python 端
+  - 移除 openai SDK（Electron 端）
+  - Python 端创建 model_router.py（LangChain 封装）
+  - 支持模型注册/注销/测试（WebSocket 消息）
+  - 正确架构：渲染进程 → Electron → WebSocket → Python → LangChain
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`

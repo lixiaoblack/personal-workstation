@@ -14,6 +14,7 @@ import Login from "@/views/Login";
 import ForgotPassword from "@/views/ForgotPassword";
 import { Settings } from "@/views/Settings";
 import { AISettings } from "@/views/Settings/AISettings";
+import { AIChat } from "@/views/AIChat";
 
 // 开发者工具页面
 import Developer from "@/views/Developer";
@@ -134,6 +135,11 @@ const protectedRoutes: RouteObject[] = [
           {
             path: "/settings/ai",
             element: <AISettings />,
+          },
+          // AI 聊天
+          {
+            path: "/ai-chat",
+            element: <AIChat />,
           },
         ],
       },

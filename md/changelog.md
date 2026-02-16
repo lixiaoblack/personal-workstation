@@ -4,6 +4,38 @@
 
 ---
 
+## [0.5.0] - 2026-02-13
+
+### 新增 (Added)
+
+- WebSocket 通信层
+  - 创建 `websocketService.ts` WebSocket 服务器服务
+  - 心跳检测和自动断开机制
+  - 消息协议类型定义（`electron/types/websocket.ts`）
+
+- AI 聊天界面
+  - 创建 `AIChat` 页面组件
+  - 消息列表渲染（用户/AI 样式区分）
+  - 多行输入框（Enter 发送/Shift+Enter 换行）
+  - 连接状态实时显示
+
+- WebSocket 客户端 Hook
+  - 创建 `useWebSocket` Hook
+  - 自动连接和重连机制
+  - 消息发送和接收封装
+
+- 导航更新
+  - 侧边栏添加「AI 助手」菜单入口
+  - 路由配置添加 `/ai-chat` 路径
+
+### 修改 (Changed)
+
+- 更新 `main.ts` 启动 WebSocket 服务器
+- 更新 `preload.ts` 添加 `getWsInfo` IPC 调用
+- 更新类型声明支持 WebSocket 相关类型导出
+
+---
+
 ## [0.4.6] - 2026-02-13
 
 ### 新增 (Added)

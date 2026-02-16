@@ -6,6 +6,7 @@ import { initDatabase, closeDatabase } from "./database/index";
 import * as userService from "./services/userService";
 import * as storageService from "./services/storageService";
 import * as avatarService from "./services/avatarService";
+import * as websocketService from "./services/websocketService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -155,15 +156,28 @@ function registerIpcHandlers() {
   ipcMain.handle("avatar:select", async () => {
     return avatarService.selectAvatar(mainWindow);
   });
+
+  // WebSocket 服务管理
+  ipcMain.handle("ws:getInfo", async () => {
+    return websocketService.getServerInfo();
+  });
 }
 
 // Electron 应用生命周期
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // 初始化数据库
   initDatabase();
 
   // 注册 IPC 处理器
   registerIpcHandlers();
+
+  // 启动 WebSocket 服务器
+  try {
+    const wsInfo = await websocketService.startWebSocketServer();
+    console.log(`[Main] WebSocket 服务已启动: ws://${wsInfo.host}:${wsInfo.port}`);
+  } catch (error) {
+    console.error("[Main] WebSocket 服务启动失败:", error);
+  }
 
   createWindow();
 
@@ -174,7 +188,10 @@ app.whenReady().then(() => {
   });
 });
 
-app.on("window-all-closed", () => {
+app.on("window-all-closed", async () => {
+  // 关闭 WebSocket 服务器
+  await websocketService.stopWebSocketServer();
+
   // 关闭数据库连接
   closeDatabase();
 
@@ -183,7 +200,8 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", async () => {
   // 应用退出前清理
+  await websocketService.stopWebSocketServer();
   closeDatabase();
 });

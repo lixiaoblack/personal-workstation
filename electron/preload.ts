@@ -10,7 +10,15 @@ import type {
   StorageInfo,
   ClearCacheResult,
   AvatarSelectResult,
+  ConnectionState,
 } from "./types";
+
+// WebSocket 服务器信息
+export interface WsServerInfo {
+  running: boolean;
+  port: number;
+  clientCount: number;
+}
 
 // 重新导出类型供外部使用
 export type {
@@ -24,6 +32,7 @@ export type {
   StorageInfo,
   ClearCacheResult,
   AvatarSelectResult,
+  ConnectionState,
 };
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -66,6 +75,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 头像管理
   selectAvatar: (): Promise<AvatarSelectResult> =>
     ipcRenderer.invoke("avatar:select"),
+
+  // WebSocket 服务
+  getWsInfo: (): Promise<WsServerInfo> =>
+    ipcRenderer.invoke("ws:getInfo"),
 });
 
 // 类型声明
@@ -96,6 +109,9 @@ export interface ElectronAPI {
 
   // 头像管理
   selectAvatar: () => Promise<AvatarSelectResult>;
+
+  // WebSocket 服务
+  getWsInfo: () => Promise<WsServerInfo>;
 }
 
 declare global {

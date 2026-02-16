@@ -3,7 +3,7 @@
  * 用于渲染进程访问主进程暴露的 API
  */
 
-// 从主进程类型定义导入
+// 从主进程类型定义导入类型
 export type {
   User,
   LoginResult,
@@ -15,7 +15,18 @@ export type {
   StorageInfo,
   ClearCacheResult,
   AvatarSelectResult,
+  type WebSocketMessage,
+  type ChatMessage,
+  type ChatResponseMessage,
+  type ChatStreamMessage,
+  type ChatErrorMessage,
 } from "../../electron/types";
+
+// 枚举需要重新导出（因为需要作为值使用）
+export { MessageType, ConnectionState } from "../../electron/types";
+
+// 辅助函数导出
+export { createMessage } from "../../electron/types/websocket";
 
 // 从主进程导入类型用于 ElectronAPI 定义
 import type {
@@ -30,6 +41,13 @@ import type {
   ClearCacheResult,
   AvatarSelectResult,
 } from "../../electron/types";
+
+// WebSocket 服务器信息
+export interface WsServerInfo {
+  running: boolean;
+  port: number;
+  clientCount: number;
+}
 
 // Electron API 接口
 export interface ElectronAPI {
@@ -59,6 +77,9 @@ export interface ElectronAPI {
 
   // 头像管理
   selectAvatar: () => Promise<AvatarSelectResult>;
+
+  // WebSocket 服务
+  getWsInfo: () => Promise<WsServerInfo>;
 }
 
 declare global {

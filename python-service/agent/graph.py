@@ -85,7 +85,7 @@ REACT_SYSTEM_PROMPT = """你是一个智能助手，使用 ReAct (Reasoning + Ac
 ```
 Thought: [你的思考过程]
 Action: [工具名称]
-Action Input: {"param": "value"}
+Action Input: {{"param": "value"}}
 ```
 
 当你认为问题已经解决时，请按以下格式给出最终答案：
@@ -102,7 +102,7 @@ Final Answer: [最终答案]
 ```
 Thought: 用户需要进行乘法计算，我可以使用 calculator 工具
 Action: calculator
-Action Input: {"expression": "123 * 456"}
+Action Input: {{"expression": "123 * 456"}}
 ```
 
 (系统返回: 计算结果: 56088)

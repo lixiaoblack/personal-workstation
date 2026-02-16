@@ -272,6 +272,13 @@ def parse_llm_output(
             
             input_str = llm_output[input_start + len("Action Input:"):input_end].strip()
             
+            # 清理 markdown 代码块标记
+            if input_str.startswith("```"):
+                input_str = input_str[3:]
+            if input_str.endswith("```"):
+                input_str = input_str[:-3]
+            input_str = input_str.strip()
+            
             # 解析 JSON 参数
             import json
             try:

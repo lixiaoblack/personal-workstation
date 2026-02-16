@@ -119,6 +119,9 @@
   - 支持流式响应（sendChatRequestStream）
   - 支持连接测试（testModelConnection）
   - 添加 IPC 处理器和渲染进程 API
+  - **架构重构**：迁移至 Python 端使用 LangChain
+  - **修复**：模型配置同步到 Python 服务
+  - **修复**：ModelConfig 缺少 id 字段
 
 ### 待处理
 

@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.10 | 2026-02-17 | 模型配置同步修复 |
 | 0.5.9 | 2026-02-17 | AI-014 架构重构：Python 端 LangChain |
 | 0.5.8 | 2026-02-17 | 模型路由在线 API 连接（已废弃） |
 | 0.5.7 | 2026-02-17 | AI 设置页面模型配置 UI |
@@ -81,9 +82,20 @@
   - Python 端创建 model_router.py（LangChain 封装）
   - 支持模型注册/注销/测试（WebSocket 消息）
   - 正确架构：渲染进程 → Electron → WebSocket → Python → LangChain
+- **模型配置同步机制**
+  - Python 连接时自动同步已启用的模型配置
+  - 模型配置变更时自动同步到 Python 服务
+  - 添加 syncModelConfigsToPython 函数
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`
+
+### 修复 (Fixed)
+
+- Python ModelConfig 缺少 id 字段导致注册失败
+- Python 端未处理 connection_ack 消息类型警告
+- 模型状态默认值逻辑：有 API Key/host 时自动标记为 active
+- 数据迁移：更新已有模型配置状态
 
 ---
 
@@ -93,6 +105,6 @@
 
 ---
 
-*文档版本: v1.1*
+*文档版本: v1.2*
 *创建时间: 2026-02-13*
 *最后更新: 2026-02-17*

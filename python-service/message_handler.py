@@ -24,6 +24,8 @@ class MessageHandler:
             "model_register": self._handle_model_register,
             "model_unregister": self._handle_model_unregister,
             "model_test": self._handle_model_test,
+            "model_config_sync": self._handle_model_config_sync,
+            "connection_ack": self._handle_connection_ack,
         }
         # 会话存储（后续可替换为持久化存储）
         self.conversations: Dict[str, list] = {}
@@ -53,6 +55,11 @@ class MessageHandler:
             "id": message.get("id"),
             "timestamp": int(time.time() * 1000)
         }
+
+    async def _handle_connection_ack(self, message: dict) -> Optional[dict]:
+        """处理连接确认消息"""
+        logger.debug(f"收到连接确认: {message.get('clientId')}")
+        return None  # 不需要响应
 
     async def _handle_chat_message(self, message: dict) -> dict:
         """处理聊天消息"""
@@ -238,6 +245,60 @@ class MessageHandler:
             "timestamp": int(time.time() * 1000),
             **result
         }
+
+    async def _handle_model_config_sync(self, message: dict) -> dict:
+        """处理模型配置同步请求"""
+        try:
+            configs = message.get("configs", [])
+            registered_count = 0
+            errors = []
+
+            for config_data in configs:
+                try:
+                    model_id = config_data.get("id")
+                    if not model_id:
+                        continue
+
+                    # 构建模型配置
+                    provider_str = config_data.get("provider", "openai")
+                    try:
+                        provider = ModelProvider(provider_str)
+                    except ValueError:
+                        errors.append(f"不支持的模型提供商: {provider_str}")
+                        continue
+
+                    config = ModelConfig(
+                        id=model_id,
+                        provider=provider,
+                        model_id=config_data.get("modelId", ""),
+                        api_key=config_data.get("apiKey"),
+                        api_base_url=config_data.get("apiBaseUrl"),
+                        host=config_data.get("host"),
+                        max_tokens=config_data.get("maxTokens", 4096),
+                        temperature=config_data.get("temperature", 0.7),
+                    )
+
+                    # 注册模型
+                    model_router.register_model(model_id, config)
+                    registered_count += 1
+                    logger.info(f"已注册模型: {config.model_id} (provider: {provider})")
+
+                except Exception as e:
+                    errors.append(f"注册模型 {config_data.get('id')} 失败: {str(e)}")
+                    logger.error(f"注册模型失败: {e}")
+
+            return {
+                "type": "model_config_sync_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "registered_count": registered_count,
+                "errors": errors if errors else None,
+            }
+
+        except Exception as e:
+            logger.error(f"处理模型配置同步错误: {e}")
+            return self._error_response(str(e), message.get("id"))
 
     async def _generate_mock_response(self, content: str) -> str:
         """生成模拟响应（后续替换为实际 AI 处理）"""

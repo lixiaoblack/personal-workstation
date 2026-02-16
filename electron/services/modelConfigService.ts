@@ -221,7 +221,8 @@ export function createModelConfig(input: CreateModelConfigInput): ModelConfig {
     enabled: row.enabled ?? 0,
     is_default: row.is_default ?? 0,
     priority: row.priority ?? 10,
-    status: row.status || "inactive",
+    // 如果有 API Key（在线模型）或 host（Ollama），则标记为 active
+    status: row.status || (row.api_key || row.host ? "active" : "inactive"),
     max_tokens: row.max_tokens || null,
     temperature: row.temperature || null,
     keep_alive: row.keep_alive || null,

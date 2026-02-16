@@ -29,6 +29,7 @@ class ModelConfig:
     """模型配置"""
     provider: ModelProvider
     model_id: str
+    id: Optional[int] = None  # 模型配置 ID（用于查找）
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
     host: Optional[str] = None  # Ollama 使用
@@ -47,24 +48,24 @@ DEFAULT_API_URLS = {
 
 class ModelRouter:
     """模型路由器"""
-    
+
     def __init__(self):
         self._models: Dict[int, BaseChatModel] = {}
         self._configs: Dict[int, ModelConfig] = {}
-    
+
     def create_chat_model(self, config: ModelConfig) -> BaseChatModel:
         """创建聊天模型"""
         if config.provider == ModelProvider.OLLAMA:
             return self._create_ollama_model(config)
         else:
             return self._create_openai_compatible_model(config)
-    
+
     def _create_openai_compatible_model(self, config: ModelConfig) -> BaseChatModel:
         """创建 OpenAI 兼容模型（OpenAI、百炼、智谱、自定义）"""
         from langchain_openai import ChatOpenAI
-        
+
         base_url = config.api_base_url or DEFAULT_API_URLS.get(config.provider)
-        
+
         return ChatOpenAI(
             model=config.model_id,
             api_key=config.api_key,
@@ -73,11 +74,11 @@ class ModelRouter:
             temperature=config.temperature,
             **(config.extra_params or {})
         )
-    
+
     def _create_ollama_model(self, config: ModelConfig) -> BaseChatModel:
         """创建 Ollama 模型"""
         from langchain_ollama import ChatOllama
-        
+
         return ChatOllama(
             model=config.model_id,
             base_url=config.host or "http://127.0.0.1:11434",
@@ -85,7 +86,7 @@ class ModelRouter:
             temperature=config.temperature,
             **(config.extra_params or {})
         )
-    
+
     def register_model(self, model_id: int, config: ModelConfig) -> None:
         """注册模型配置"""
         self._configs[model_id] = config
@@ -96,20 +97,20 @@ class ModelRouter:
         except Exception as e:
             logger.error(f"创建模型失败: {e}")
             raise
-    
+
     def unregister_model(self, model_id: int) -> None:
         """注销模型"""
         self._configs.pop(model_id, None)
         self._models.pop(model_id, None)
-    
+
     def get_model(self, model_id: int) -> Optional[BaseChatModel]:
         """获取模型实例"""
         return self._models.get(model_id)
-    
+
     def get_config(self, model_id: int) -> Optional[ModelConfig]:
         """获取模型配置"""
         return self._configs.get(model_id)
-    
+
     def chat(
         self,
         messages: list[Dict[str, str]],
@@ -118,12 +119,12 @@ class ModelRouter:
     ) -> Union[str, Iterator[str]]:
         """
         发送聊天请求
-        
+
         Args:
             messages: 消息列表 [{"role": "user", "content": "..."}]
             model_id: 模型 ID（使用注册的模型）
             stream: 是否流式输出
-        
+
         Returns:
             响应内容或流式迭代器
         """
@@ -137,36 +138,36 @@ class ModelRouter:
             if not self._models:
                 raise ValueError("没有可用的模型")
             model = list(self._models.values())[0]
-        
+
         # 转换消息格式
         lc_messages = []
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")
-            
+
             if role == "system":
                 lc_messages.append(SystemMessage(content=content))
             elif role == "assistant":
                 lc_messages.append(AIMessage(content=content))
             else:
                 lc_messages.append(HumanMessage(content=content))
-        
+
         if stream:
             return self._chat_stream(model, lc_messages)
         else:
             return self._chat_sync(model, lc_messages)
-    
+
     def _chat_sync(self, model: BaseChatModel, messages: list[BaseMessage]) -> str:
         """同步聊天"""
         response = model.invoke(messages)
         return response.content
-    
+
     def _chat_stream(self, model: BaseChatModel, messages: list[BaseMessage]) -> Iterator[str]:
         """流式聊天"""
         for chunk in model.stream(messages):
             if chunk.content:
                 yield chunk.content
-    
+
     async def chat_async(
         self,
         messages: list[Dict[str, str]],
@@ -182,24 +183,24 @@ class ModelRouter:
             if not self._models:
                 raise ValueError("没有可用的模型")
             model = list(self._models.values())[0]
-        
+
         # 转换消息格式
         lc_messages = []
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")
-            
+
             if role == "system":
                 lc_messages.append(SystemMessage(content=content))
             elif role == "assistant":
                 lc_messages.append(AIMessage(content=content))
             else:
                 lc_messages.append(HumanMessage(content=content))
-        
+
         # 异步调用
         response = await model.ainvoke(lc_messages)
         return response.content
-    
+
     async def chat_stream_async(
         self,
         messages: list[Dict[str, str]],
@@ -215,43 +216,43 @@ class ModelRouter:
             if not self._models:
                 raise ValueError("没有可用的模型")
             model = list(self._models.values())[0]
-        
+
         # 转换消息格式
         lc_messages = []
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")
-            
+
             if role == "system":
                 lc_messages.append(SystemMessage(content=content))
             elif role == "assistant":
                 lc_messages.append(AIMessage(content=content))
             else:
                 lc_messages.append(HumanMessage(content=content))
-        
+
         # 异步流式调用
         async for chunk in model.astream(lc_messages):
             if chunk.content:
                 yield chunk.content
-    
+
     async def test_connection(self, model_id: int) -> Dict[str, Any]:
         """测试模型连接"""
         import time
-        
+
         config = self._configs.get(model_id)
         if not config:
             return {"success": False, "error": "模型配置不存在"}
-        
+
         model = self._models.get(model_id)
         if not model:
             return {"success": False, "error": "模型未初始化"}
-        
+
         try:
             start_time = time.time()
             # 发送简单测试消息
             response = await model.ainvoke([HumanMessage(content="Hi")])
             latency = int((time.time() - start_time) * 1000)
-            
+
             return {
                 "success": True,
                 "latency": latency,

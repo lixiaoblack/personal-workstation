@@ -12,6 +12,11 @@ import {
   type ChatMessage,
   createMessage,
 } from "../types/websocket";
+import { getEnabledModelConfigs } from "./modelConfigService";
+import type {
+  OnlineModelConfig,
+  OllamaModelConfig,
+} from "../types/model";
 
 // WebSocket 服务器配置
 interface WebSocketServerConfig {
@@ -220,6 +225,55 @@ function broadcastPythonStatus(status: "connected" | "disconnected"): void {
 }
 
 /**
+ * 同步模型配置到 Python 服务
+ */
+export function syncModelConfigsToPython(): void {
+  if (!pythonClient || pythonClient.readyState !== WebSocket.OPEN) {
+    console.log("[WebSocket] Python 客户端未连接，无法同步模型配置");
+    return;
+  }
+
+  try {
+    // 获取已启用的模型配置
+    const configs = getEnabledModelConfigs();
+    
+    // 发送模型配置同步消息
+    const message = createMessage("model_config_sync" as MessageType, {
+      configs: configs.map(config => {
+        // 根据提供商类型提取不同字段
+        const baseFields = {
+          id: config.id,
+          provider: config.provider,
+          modelId: config.modelId,
+          maxTokens: config.maxTokens,
+          temperature: config.temperature,
+        };
+
+        if (config.provider === "ollama") {
+          const ollamaConfig = config as OllamaModelConfig;
+          return {
+            ...baseFields,
+            host: ollamaConfig.host,
+          };
+        } else {
+          const onlineConfig = config as OnlineModelConfig;
+          return {
+            ...baseFields,
+            apiKey: onlineConfig.apiKey,
+            apiBaseUrl: onlineConfig.apiBaseUrl,
+          };
+        }
+      }),
+    });
+    
+    pythonClient.send(JSON.stringify(message));
+    console.log(`[WebSocket] 已同步 ${configs.length} 个模型配置到 Python 服务`);
+  } catch (error) {
+    console.error("[WebSocket] 同步模型配置失败:", error);
+  }
+}
+
+/**
  * 向特定客户端发送消息
  */
 export function sendToClient(
@@ -285,6 +339,9 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
         console.log("[WebSocket] Python 智能体已连接");
         // 通知所有渲染进程
         broadcastPythonStatus("connected");
+        
+        // 同步已启用的模型配置到 Python 服务
+        syncModelConfigsToPython();
       }
 
       return;

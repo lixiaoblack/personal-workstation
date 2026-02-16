@@ -140,6 +140,14 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_model_configs_enabled ON model_configs(enabled);
     CREATE INDEX IF NOT EXISTS idx_model_configs_is_default ON model_configs(is_default);
   `);
+
+  // 数据迁移：将有 API Key 或 host 的模型状态更新为 active
+  database.exec(`
+    UPDATE model_configs 
+    SET status = 'active' 
+    WHERE status = 'inactive' 
+    AND (api_key IS NOT NULL AND api_key != '' OR host IS NOT NULL AND host != '')
+  `);
 }
 
 export default {

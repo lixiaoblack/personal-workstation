@@ -230,23 +230,35 @@ function registerIpcHandlers() {
   ipcMain.handle(
     "model:create",
     async (_event, input: CreateModelConfigInput) => {
-      return modelConfigService.createModelConfig(input);
+      const result = modelConfigService.createModelConfig(input);
+      // 同步模型配置到 Python 服务
+      websocketService.syncModelConfigsToPython();
+      return result;
     }
   );
 
   ipcMain.handle(
     "model:update",
     async (_event, id: number, input: UpdateModelConfigInput) => {
-      return modelConfigService.updateModelConfig(id, input);
+      const result = modelConfigService.updateModelConfig(id, input);
+      // 同步模型配置到 Python 服务
+      websocketService.syncModelConfigsToPython();
+      return result;
     }
   );
 
   ipcMain.handle("model:delete", async (_event, id: number) => {
-    return modelConfigService.deleteModelConfig(id);
+    const result = modelConfigService.deleteModelConfig(id);
+    // 同步模型配置到 Python 服务
+    websocketService.syncModelConfigsToPython();
+    return result;
   });
 
   ipcMain.handle("model:setDefault", async (_event, id: number) => {
-    return modelConfigService.setDefaultModelConfig(id);
+    const result = modelConfigService.setDefaultModelConfig(id);
+    // 同步模型配置到 Python 服务
+    websocketService.syncModelConfigsToPython();
+    return result;
   });
 }
 

@@ -237,7 +237,8 @@ const AIChatComponent: React.FC = () => {
         content: "",
         conversationId: null,
       });
-      setAgentSteps([]); // 清空 Agent 步骤
+      // 不清空 Agent 步骤，让用户可以看到思考过程
+      // setAgentSteps([]); 
       loadingRef.current = false;
       return;
     }
@@ -288,6 +289,7 @@ const AIChatComponent: React.FC = () => {
     // Agent 步骤消息（思考过程）
     if (lastMessage.type === MessageType.AGENT_STEP) {
       const agentStep = lastMessage as AgentStepMessage;
+      console.log("[AIChat] 收到 Agent 步骤:", agentStep);
       // 添加新的 Agent 步骤
       setAgentSteps((prev) => [
         ...prev,
@@ -438,6 +440,9 @@ const AIChatComponent: React.FC = () => {
     }
 
     loadingRef.current = true;
+
+    // 清空之前的 Agent 步骤
+    setAgentSteps([]);
 
     // 添加用户消息
     const userMessage: Message = {

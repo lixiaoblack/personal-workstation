@@ -281,6 +281,7 @@ class MessageHandler:
                     # 其他角色的消息可以后续添加
             
             # 执行 Agent（流式输出思考过程）
+            sent_step_count = 0  # 已发送的步骤数量
             async for event in agent.astream(
                 input_text=content,
                 messages=messages if messages else None,
@@ -289,22 +290,29 @@ class MessageHandler:
                 node_name = event.get("node", "")
                 state_update = event.get("update", {})
                 
+                logger.info(f"[Agent] 事件: node={node_name}, update keys={list(state_update.keys())}")
+                
                 # 发送 Agent 步骤消息
                 if self.send_callback:
-                    # 处理步骤更新
+                    # 处理步骤更新 - 只发送新增的步骤
                     if "steps" in state_update:
-                        new_steps = state_update["steps"]
+                        all_steps = state_update["steps"]
+                        new_steps = all_steps[sent_step_count:]  # 只取新增的步骤
+                        sent_step_count = len(all_steps)  # 更新已发送数量
+                        
                         for step in new_steps:
-                            await self.send_callback({
+                            step_data = {
                                 "type": "agent_step",
-                                "id": f"{msg_id}_step_{step.get('type', 'unknown')}",
+                                "id": f"{msg_id}_step_{step.get('type', 'unknown')}_{sent_step_count}",
                                 "timestamp": int(time.time() * 1000),
                                 "conversationId": conversation_id,
                                 "stepType": step.get("type", "thought"),
                                 "content": step.get("content", ""),
                                 "toolCall": step.get("tool_call"),
                                 "iteration": state_update.get("iteration_count", 0),
-                            })
+                            }
+                            logger.info(f"[Agent] 发送步骤: {step_data['stepType']}, content={step_data['content'][:50] if step_data['content'] else 'empty'}")
+                            await self.send_callback(step_data)
                     
                     # 如果有最终输出，发送结束消息
                     if state_update.get("output") and state_update.get("should_finish"):

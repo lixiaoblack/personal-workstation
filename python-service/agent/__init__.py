@@ -18,7 +18,7 @@ from .graph import ReActAgent
 
 __all__ = [
     "AgentState",
-    "AgentStep", 
+    "AgentStep",
     "ToolRegistry",
     "BaseTool",
     "ReActAgent",

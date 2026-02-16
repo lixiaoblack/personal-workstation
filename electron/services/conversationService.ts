@@ -63,7 +63,7 @@ function rowToMessage(row: MessageRow): Message {
       console.error("[ConversationService] 解析 metadata 失败:", e);
     }
   }
-  
+
   return {
     id: row.id,
     conversationId: row.conversation_id,

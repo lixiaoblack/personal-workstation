@@ -224,7 +224,7 @@ export interface OllamaTestResponseMessage extends BaseMessage {
 
 /**
  * Agent 步骤类型
- * 
+ *
  * Agent 执行过程中的每一步都有对应的类型：
  * - thought: 思考过程，Agent 在分析问题
  * - tool_call: 调用工具，Agent 决定使用某个工具
@@ -235,7 +235,7 @@ export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer";
 
 /**
  * 工具调用信息
- * 
+ *
  * 记录 Agent 调用工具的详细信息
  */
 export interface AgentToolCallInfo {
@@ -251,7 +251,7 @@ export interface AgentToolCallInfo {
 
 /**
  * Agent 步骤消息（通用）
- * 
+ *
  * 用于通知前端 Agent 的执行进度。
  * 每一步思考、工具调用、结果都会通过这个消息发送。
  */
@@ -271,7 +271,7 @@ export interface AgentStepMessage extends BaseMessage {
 
 /**
  * Agent 思考消息
- * 
+ *
  * Agent 在执行过程中的思考内容
  */
 export interface AgentThoughtMessage extends BaseMessage {
@@ -285,7 +285,7 @@ export interface AgentThoughtMessage extends BaseMessage {
 
 /**
  * Agent 工具调用消息
- * 
+ *
  * Agent 决定调用某个工具时发送
  */
 export interface AgentToolCallMessage extends BaseMessage {
@@ -299,7 +299,7 @@ export interface AgentToolCallMessage extends BaseMessage {
 
 /**
  * Agent 工具结果消息
- * 
+ *
  * 工具执行完毕后发送
  */
 export interface AgentToolResultMessage extends BaseMessage {

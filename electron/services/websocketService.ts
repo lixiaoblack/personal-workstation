@@ -391,7 +391,8 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
         console.log("[WebSocket] Agent 消息已转发给 Python 服务");
       } else {
         const response = createMessage(MessageType.CHAT_ERROR, {
-          error: "Python 服务未连接，Agent 消息无法处理。请先启动 Python 服务。",
+          error:
+            "Python 服务未连接，Agent 消息无法处理。请先启动 Python 服务。",
           conversationId: (message as AgentChatMessage).conversationId,
         });
         ws.send(JSON.stringify(response));

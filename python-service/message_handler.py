@@ -247,12 +247,12 @@ class MessageHandler:
     async def _handle_agent_chat(self, message: dict) -> Optional[dict]:
         """
         处理 Agent 聊天消息
-        
+
         Agent 模式使用 ReAct (Reasoning + Acting) 循环：
         1. 思考：分析用户问题，决定下一步行动
         2. 行动：调用工具或给出答案
         3. 观察：查看工具结果，继续思考
-        
+
         每一步都会通过 WebSocket 发送 agent_step 消息给前端，
         让用户看到 Agent 的思考过程。
         """
@@ -261,14 +261,14 @@ class MessageHandler:
         model_id = message.get("modelId")  # 可选，指定模型
         incoming_history = message.get("history", [])  # 历史消息
         msg_id = message.get("id")
-        
+
         logger.info(f"[Agent] 收到消息: {content[:50]}...")
-        
+
         try:
             # 导入 Agent 模块
             from agent import ReActAgent
             from langchain_core.messages import HumanMessage
-            
+
             # 发送流式开始消息（让前端知道 conversationId）
             if self.send_callback:
                 await self.send_callback({
@@ -278,10 +278,10 @@ class MessageHandler:
                     "conversationId": conversation_id,
                     "modelId": model_id,
                 })
-            
+
             # 创建 Agent 实例
             agent = ReActAgent(model_id=model_id)
-            
+
             # 构建消息列表
             messages = []
             if incoming_history:
@@ -289,7 +289,7 @@ class MessageHandler:
                     if msg["role"] == "user":
                         messages.append(HumanMessage(content=msg["content"]))
                     # 其他角色的消息可以后续添加
-            
+
             # 执行 Agent（流式输出思考过程）
             sent_step_count = 0  # 已发送的步骤数量
             async for event in agent.astream(
@@ -299,9 +299,10 @@ class MessageHandler:
             ):
                 node_name = event.get("node", "")
                 state_update = event.get("update", {})
-                
-                logger.info(f"[Agent] 事件: node={node_name}, update keys={list(state_update.keys())}")
-                
+
+                logger.info(
+                    f"[Agent] 事件: node={node_name}, update keys={list(state_update.keys())}")
+
                 # 发送 Agent 步骤消息
                 if self.send_callback:
                     # 处理步骤更新 - 只发送新增的步骤
@@ -309,7 +310,7 @@ class MessageHandler:
                         all_steps = state_update["steps"]
                         new_steps = all_steps[sent_step_count:]  # 只取新增的步骤
                         sent_step_count = len(all_steps)  # 更新已发送数量
-                        
+
                         for step in new_steps:
                             step_data = {
                                 "type": "agent_step",
@@ -321,9 +322,10 @@ class MessageHandler:
                                 "toolCall": step.get("tool_call"),
                                 "iteration": state_update.get("iteration_count", 0),
                             }
-                            logger.info(f"[Agent] 发送步骤: {step_data['stepType']}, content={step_data['content'][:50] if step_data['content'] else 'empty'}")
+                            logger.info(
+                                f"[Agent] 发送步骤: {step_data['stepType']}, content={step_data['content'][:50] if step_data['content'] else 'empty'}")
                             await self.send_callback(step_data)
-                    
+
                     # 如果有最终输出，发送结束消息
                     if state_update.get("output") and state_update.get("should_finish"):
                         await self.send_callback({
@@ -333,9 +335,9 @@ class MessageHandler:
                             "conversationId": conversation_id,
                             "fullContent": state_update["output"],
                         })
-            
+
             return None  # 通过流式消息发送，不返回响应
-            
+
         except Exception as e:
             import traceback
             logger.error(f"[Agent] 处理消息错误: {e}")

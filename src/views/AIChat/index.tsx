@@ -51,10 +51,10 @@ const DEFAULT_CONTEXT_LIMIT = 20;
 
 // Agent 步骤显示配置
 const AGENT_STEP_ICONS: Record<AgentStepType, string> = {
-  thought: "💭",      // 思考
-  tool_call: "🔧",    // 调用工具
-  tool_result: "📊",  // 工具结果
-  answer: "💬",       // 最终答案
+  thought: "💭", // 思考
+  tool_call: "🔧", // 调用工具
+  tool_result: "📊", // 工具结果
+  answer: "💬", // 最终答案
 };
 
 const AGENT_STEP_LABELS: Record<AgentStepType, string> = {
@@ -80,9 +80,10 @@ const isOllamaModel = (model: ModelConfig): model is OllamaModelConfig => {
 
 const AIChatComponent: React.FC = () => {
   const navigate = useNavigate();
-  const { connectionState, sendChat, sendAgentChat, lastMessage } = useWebSocket({
-    autoConnect: true,
-  });
+  const { connectionState, sendChat, sendAgentChat, lastMessage } =
+    useWebSocket({
+      autoConnect: true,
+    });
 
   // 从 MobX Store 获取模型状态
   const { models, currentModel, setCurrentModel } = modelStore;
@@ -161,10 +162,12 @@ const AIChatComponent: React.FC = () => {
             const model = models.find((m) => m.id === conversation.modelId);
             if (model) setCurrentModel(model);
           }
-          
+
           // 从最后一条 AI 消息的 metadata 中恢复 Agent 步骤
           const messages = conversation.messages || [];
-          const lastAiMessage = [...messages].reverse().find(m => m.role === "assistant");
+          const lastAiMessage = [...messages]
+            .reverse()
+            .find((m) => m.role === "assistant");
           if (lastAiMessage?.metadata?.agentSteps) {
             const steps = lastAiMessage.metadata.agentSteps as AgentStepItem[];
             setAgentSteps(steps);
@@ -230,10 +233,11 @@ const AIChatComponent: React.FC = () => {
           try {
             // 收集当前的 Agent 步骤（如果有）
             const currentAgentSteps = agentStepsRef.current;
-            const metadata = currentAgentSteps.length > 0 
-              ? { agentSteps: currentAgentSteps } 
-              : undefined;
-            
+            const metadata =
+              currentAgentSteps.length > 0
+                ? { agentSteps: currentAgentSteps }
+                : undefined;
+
             await window.electronAPI.addMessage({
               conversationId: cid,
               role: "assistant",
@@ -258,7 +262,7 @@ const AIChatComponent: React.FC = () => {
         conversationId: null,
       });
       // 不清空 Agent 步骤，让用户可以看到思考过程
-      // setAgentSteps([]); 
+      // setAgentSteps([]);
       loadingRef.current = false;
       return;
     }
@@ -899,11 +903,12 @@ const AIChatComponent: React.FC = () => {
   // 渲染 Agent 思考步骤
   const renderAgentSteps = () => {
     // 过滤掉 answer 类型（答案在消息列表中显示）
-    const thinkingSteps = agentSteps.filter(step => step.type !== "answer");
+    const thinkingSteps = agentSteps.filter((step) => step.type !== "answer");
     if (thinkingSteps.length === 0) return null;
 
     // 判断是否还在执行中
-    const isStreaming = streamState.status === "streaming" || loadingRef.current;
+    const isStreaming =
+      streamState.status === "streaming" || loadingRef.current;
 
     return (
       <div className="flex justify-start mb-4">
@@ -920,7 +925,11 @@ const AIChatComponent: React.FC = () => {
             {/* 标题 */}
             <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
               <span className="text-primary">AI 助手</span>
-              <span className={isStreaming ? "animate-pulse text-warning" : "text-success"}>
+              <span
+                className={
+                  isStreaming ? "animate-pulse text-warning" : "text-success"
+                }
+              >
                 {isStreaming ? "思考中..." : "思考完成"}
               </span>
             </div>
@@ -1111,7 +1120,9 @@ const AIChatComponent: React.FC = () => {
 
         {/* 消息列表 */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 max-w-4xl mx-auto w-full">
-          {messages.length === 0 && streamState.status !== "streaming" && agentSteps.length === 0 ? (
+          {messages.length === 0 &&
+          streamState.status !== "streaming" &&
+          agentSteps.length === 0 ? (
             renderEmptyState()
           ) : (
             <div className="space-y-8">
@@ -1158,7 +1169,13 @@ const AIChatComponent: React.FC = () => {
                   </button>
                   <div className="h-4 w-[1px] bg-border mx-1"></div>
                   {/* Agent 模式开关 */}
-                  <Tooltip title={agentMode ? "Agent 模式：智能体将使用工具完成任务" : "普通模式：直接对话"}>
+                  <Tooltip
+                    title={
+                      agentMode
+                        ? "Agent 模式：智能体将使用工具完成任务"
+                        : "普通模式：直接对话"
+                    }
+                  >
                     <div className="flex items-center gap-2 px-2">
                       <Switch
                         size="small"
@@ -1167,7 +1184,11 @@ const AIChatComponent: React.FC = () => {
                         checkedChildren="🤖"
                         unCheckedChildren="💬"
                       />
-                      <span className={`text-xs font-medium ${agentMode ? "text-primary" : "text-text-tertiary"}`}>
+                      <span
+                        className={`text-xs font-medium ${
+                          agentMode ? "text-primary" : "text-text-tertiary"
+                        }`}
+                      >
                         {agentMode ? "Agent" : "对话"}
                       </span>
                     </div>

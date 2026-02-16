@@ -9,7 +9,8 @@ import * as avatarService from "./services/avatarService";
 import * as websocketService from "./services/websocketService";
 import * as pythonEnvService from "./services/pythonEnvService";
 import * as pythonProcessService from "./services/pythonProcessService";
-import type { PythonDetectOptions, PythonServiceConfig } from "./types";
+import * as modelConfigService from "./services/modelConfigService";
+import type { PythonDetectOptions, PythonServiceConfig, CreateModelConfigInput, UpdateModelConfigInput } from "./types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -202,6 +203,45 @@ function registerIpcHandlers() {
 
   ipcMain.handle("python:service:getInfo", async () => {
     return pythonProcessService.getPythonServiceInfo();
+  });
+
+  // 模型配置管理
+  ipcMain.handle("model:getConfigs", async () => {
+    return modelConfigService.getModelConfigs();
+  });
+
+  ipcMain.handle("model:getById", async (_event, id: number) => {
+    return modelConfigService.getModelConfigById(id);
+  });
+
+  ipcMain.handle("model:getDefault", async () => {
+    return modelConfigService.getDefaultModelConfig();
+  });
+
+  ipcMain.handle("model:getEnabled", async () => {
+    return modelConfigService.getEnabledModelConfigs();
+  });
+
+  ipcMain.handle(
+    "model:create",
+    async (_event, input: CreateModelConfigInput) => {
+      return modelConfigService.createModelConfig(input);
+    }
+  );
+
+  ipcMain.handle(
+    "model:update",
+    async (_event, id: number, input: UpdateModelConfigInput) => {
+      return modelConfigService.updateModelConfig(id, input);
+    }
+  );
+
+  ipcMain.handle("model:delete", async (_event, id: number) => {
+    return modelConfigService.deleteModelConfig(id);
+  });
+
+  ipcMain.handle("model:setDefault", async (_event, id: number) => {
+    return modelConfigService.setDefaultModelConfig(id);
   });
 }
 

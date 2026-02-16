@@ -18,6 +18,10 @@ import type {
   PythonServiceInfo,
   PythonServiceStartResult,
   PythonServiceStopResult,
+  ModelConfig,
+  ModelConfigListItem,
+  CreateModelConfigInput,
+  UpdateModelConfigInput,
 } from "./types";
 
 // WebSocket 服务器信息
@@ -48,6 +52,10 @@ export type {
   PythonServiceInfo,
   PythonServiceStartResult,
   PythonServiceStopResult,
+  ModelConfig,
+  ModelConfigListItem,
+  CreateModelConfigInput,
+  UpdateModelConfigInput,
 };
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -117,6 +125,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("python:service:restart", config),
   getPythonServiceInfo: (): Promise<PythonServiceInfo> =>
     ipcRenderer.invoke("python:service:getInfo"),
+
+  // 模型配置管理
+  getModelConfigs: (): Promise<ModelConfigListItem[]> =>
+    ipcRenderer.invoke("model:getConfigs"),
+  getModelConfigById: (id: number): Promise<ModelConfig | null> =>
+    ipcRenderer.invoke("model:getById", id),
+  getDefaultModelConfig: (): Promise<ModelConfig | null> =>
+    ipcRenderer.invoke("model:getDefault"),
+  getEnabledModelConfigs: (): Promise<ModelConfig[]> =>
+    ipcRenderer.invoke("model:getEnabled"),
+  createModelConfig: (
+    input: CreateModelConfigInput
+  ): Promise<ModelConfig> => ipcRenderer.invoke("model:create", input),
+  updateModelConfig: (
+    id: number,
+    input: UpdateModelConfigInput
+  ): Promise<ModelConfig | null> =>
+    ipcRenderer.invoke("model:update", id, input),
+  deleteModelConfig: (id: number): Promise<boolean> =>
+    ipcRenderer.invoke("model:delete", id),
+  setDefaultModelConfig: (id: number): Promise<boolean> =>
+    ipcRenderer.invoke("model:setDefault", id),
 });
 
 // 类型声明
@@ -168,6 +198,19 @@ export interface ElectronAPI {
     config?: PythonServiceConfig
   ) => Promise<PythonServiceStartResult>;
   getPythonServiceInfo: () => Promise<PythonServiceInfo>;
+
+  // 模型配置管理
+  getModelConfigs: () => Promise<ModelConfigListItem[]>;
+  getModelConfigById: (id: number) => Promise<ModelConfig | null>;
+  getDefaultModelConfig: () => Promise<ModelConfig | null>;
+  getEnabledModelConfigs: () => Promise<ModelConfig[]>;
+  createModelConfig: (input: CreateModelConfigInput) => Promise<ModelConfig>;
+  updateModelConfig: (
+    id: number,
+    input: UpdateModelConfigInput
+  ) => Promise<ModelConfig | null>;
+  deleteModelConfig: (id: number) => Promise<boolean>;
+  setDefaultModelConfig: (id: number) => Promise<boolean>;
 }
 
 declare global {

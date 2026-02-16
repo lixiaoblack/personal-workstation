@@ -212,9 +212,7 @@ function broadcastToRenderers(message: WebSocketMessage): void {
 /**
  * 广播 Python 服务状态
  */
-function broadcastPythonStatus(
-  status: "connected" | "disconnected"
-): void {
+function broadcastPythonStatus(status: "connected" | "disconnected"): void {
   const message = createMessage(MessageType.PYTHON_STATUS, {
     status: status === "connected" ? "running" : "stopped",
   });

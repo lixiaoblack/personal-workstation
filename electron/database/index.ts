@@ -108,6 +108,38 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
   `);
+
+  // AI 模型配置表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS model_configs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider TEXT NOT NULL,
+      name TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      api_key TEXT,
+      api_base_url TEXT,
+      organization TEXT,
+      host TEXT,
+      enabled INTEGER DEFAULT 0,
+      is_default INTEGER DEFAULT 0,
+      priority INTEGER DEFAULT 10,
+      status TEXT DEFAULT 'inactive',
+      last_error TEXT,
+      max_tokens INTEGER,
+      temperature REAL,
+      keep_alive TEXT,
+      extra_params TEXT,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+    );
+  `);
+
+  // 模型配置索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_model_configs_provider ON model_configs(provider);
+    CREATE INDEX IF NOT EXISTS idx_model_configs_enabled ON model_configs(enabled);
+    CREATE INDEX IF NOT EXISTS idx_model_configs_is_default ON model_configs(is_default);
+  `);
 }
 
 export default {

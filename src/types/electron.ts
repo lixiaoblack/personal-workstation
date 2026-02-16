@@ -27,6 +27,10 @@ export type {
   PythonServiceInfo,
   PythonServiceStartResult,
   PythonServiceStopResult,
+  ModelConfig,
+  ModelConfigListItem,
+  CreateModelConfigInput,
+  UpdateModelConfigInput,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -54,6 +58,10 @@ import type {
   PythonServiceInfo,
   PythonServiceStartResult,
   PythonServiceStopResult,
+  ModelConfig,
+  ModelConfigListItem,
+  CreateModelConfigInput,
+  UpdateModelConfigInput,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -113,6 +121,19 @@ export interface ElectronAPI {
     config?: PythonServiceConfig
   ) => Promise<PythonServiceStartResult>;
   getPythonServiceInfo: () => Promise<PythonServiceInfo>;
+
+  // 模型配置管理
+  getModelConfigs: () => Promise<ModelConfigListItem[]>;
+  getModelConfigById: (id: number) => Promise<ModelConfig | null>;
+  getDefaultModelConfig: () => Promise<ModelConfig | null>;
+  getEnabledModelConfigs: () => Promise<ModelConfig[]>;
+  createModelConfig: (input: CreateModelConfigInput) => Promise<ModelConfig>;
+  updateModelConfig: (
+    id: number,
+    input: UpdateModelConfigInput
+  ) => Promise<ModelConfig | null>;
+  deleteModelConfig: (id: number) => Promise<boolean>;
+  setDefaultModelConfig: (id: number) => Promise<boolean>;
 }
 
 declare global {

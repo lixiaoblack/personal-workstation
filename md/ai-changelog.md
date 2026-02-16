@@ -8,6 +8,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.6 | 2026-02-17 | 模型配置 SQLite 存储 |
 | 0.5.5 | 2026-02-17 | Python WebSocket 桥接 |
 | - | - | 暂无发布版本 |
 
@@ -45,6 +46,12 @@
     - 客户端标识机制（renderer/python_agent）
     - 消息路由：渲染进程 <-> Electron WS <-> Python 服务
     - Python 服务状态广播
+- 模型配置管理
+  - 模型配置类型定义（ModelConfig, ModelConfigListItem 等）
+  - 支持 OpenAI、百炼、智谱、Ollama、自定义 API
+  - SQLite 存储模型配置
+  - CRUD 服务和 IPC API
+  - 默认模型配置模板
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`

@@ -15,10 +15,12 @@ logger = logging.getLogger(__name__)
 
 # 禁用代理（本地连接不需要代理）
 # 这解决了系统代理配置导致的 python-socks 依赖问题
+
+
 def _disable_proxy_for_localhost():
     """为本地连接禁用代理"""
     # 清除代理环境变量，避免连接本地服务器时尝试使用代理
-    proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 
+    proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY',
                   'all_proxy', 'ALL_PROXY', 'socks_proxy', 'SOCKS_PROXY']
     for var in proxy_vars:
         if var in os.environ:
@@ -31,7 +33,7 @@ def _disable_proxy_for_localhost():
 
 class WebSocketClient:
     """WebSocket 客户端"""
-    
+
     def __init__(
         self,
         host: str,
@@ -47,18 +49,18 @@ class WebSocketClient:
         self.on_disconnected = on_disconnected
         self.ws: Optional[WebSocketClientProtocol] = None
         self.connected = False
-        
+
     @property
     def uri(self) -> str:
         return f"ws://{self.host}:{self.port}"
-        
+
     async def connect(self):
         """连接到服务器"""
         logger.info(f"正在连接到 {self.uri}...")
-        
+
         # 禁用代理（本地连接不需要代理）
         _disable_proxy_for_localhost()
-        
+
         try:
             # 明确禁用代理，使用 proxy=None 参数
             self.ws = await websockets.connect(
@@ -69,22 +71,22 @@ class WebSocketClient:
             )
             self.connected = True
             logger.info(f"已连接到 {self.uri}")
-            
+
             # 发送客户端标识
             await self.send({
                 "type": "client_identify",
                 "clientType": "python_agent",
                 "timestamp": int(asyncio.get_event_loop().time() * 1000)
             })
-            
+
             if self.on_connected:
                 self.on_connected()
-                
+
         except Exception as e:
             logger.error(f"连接失败: {e}")
             self.connected = False
             raise
-            
+
     async def close(self):
         """关闭连接"""
         if self.ws:
@@ -92,13 +94,13 @@ class WebSocketClient:
             self.ws = None
             self.connected = False
             logger.info("连接已关闭")
-            
+
     async def send(self, message: dict):
         """发送消息"""
         if not self.ws or not self.connected:
             logger.warning("未连接，无法发送消息")
             return False
-            
+
         try:
             data = json.dumps(message, ensure_ascii=False)
             await self.ws.send(data)
@@ -107,13 +109,13 @@ class WebSocketClient:
         except Exception as e:
             logger.error(f"发送消息失败: {e}")
             return False
-            
+
     async def listen(self):
         """监听消息"""
         if not self.ws:
             logger.error("未连接")
             return
-            
+
         try:
             async for message in self.ws:
                 try:
@@ -124,7 +126,7 @@ class WebSocketClient:
                     logger.error(f"消息解析错误: {e}")
                 except Exception as e:
                     logger.error(f"消息处理错误: {e}")
-                    
+
         except websockets.exceptions.ConnectionClosed as e:
             logger.info(f"连接关闭: {e}")
         except Exception as e:

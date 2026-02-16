@@ -269,6 +269,16 @@ class MessageHandler:
             from agent import ReActAgent
             from langchain_core.messages import HumanMessage
             
+            # 发送流式开始消息（让前端知道 conversationId）
+            if self.send_callback:
+                await self.send_callback({
+                    "type": "chat_stream_start",
+                    "id": msg_id,
+                    "timestamp": int(time.time() * 1000),
+                    "conversationId": conversation_id,
+                    "modelId": model_id,
+                })
+            
             # 创建 Agent 实例
             agent = ReActAgent(model_id=model_id)
             

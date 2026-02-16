@@ -165,8 +165,11 @@ const AIChatComponent: React.FC = () => {
           // 从最后一条 AI 消息的 metadata 中恢复 Agent 步骤
           const messages = conversation.messages || [];
           const lastAiMessage = [...messages].reverse().find(m => m.role === "assistant");
+          console.log("[AIChat] 加载消息，最后 AI 消息:", lastAiMessage);
+          console.log("[AIChat] metadata:", lastAiMessage?.metadata);
           if (lastAiMessage?.metadata?.agentSteps) {
             const steps = lastAiMessage.metadata.agentSteps as AgentStepItem[];
+            console.log("[AIChat] 恢复 Agent 步骤:", steps);
             setAgentSteps(steps);
             agentStepsRef.current = steps;
           } else {
@@ -230,11 +233,14 @@ const AIChatComponent: React.FC = () => {
           try {
             // 收集当前的 Agent 步骤（如果有）
             const currentAgentSteps = agentStepsRef.current;
+            console.log("[AIChat] 保存消息时 Agent 步骤:", currentAgentSteps);
             const metadata = currentAgentSteps.length > 0 
               ? { agentSteps: currentAgentSteps } 
               : undefined;
+            console.log("[AIChat] 保存消息 metadata:", metadata);
+            console.log("[AIChat] conversationId:", cid, "fullContent:", fullContent?.substring(0, 50));
             
-            await window.electronAPI.addMessage({
+            const savedMsg = await window.electronAPI.addMessage({
               conversationId: cid,
               role: "assistant",
               content: fullContent,
@@ -242,6 +248,7 @@ const AIChatComponent: React.FC = () => {
               timestamp: Date.now(),
               metadata,
             });
+            console.log("[AIChat] 消息已保存:", savedMsg);
             // 刷新消息列表
             await loadMessages(cid);
             // 刷新对话列表

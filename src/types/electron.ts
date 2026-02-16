@@ -23,6 +23,13 @@ export type {
   ChatStreamEndMessage,
   ChatErrorMessage,
   HistoryMessageItem,
+  // Agent 相关类型
+  AgentStepType,
+  AgentToolCallInfo,
+  AgentStepMessage,
+  AgentThoughtMessage,
+  AgentToolCallMessage,
+  AgentToolResultMessage,
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,

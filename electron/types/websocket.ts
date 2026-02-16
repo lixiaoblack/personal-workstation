@@ -21,6 +21,12 @@ export enum MessageType {
   CHAT_STREAM_CHUNK = "chat_stream_chunk", // 流式内容块
   CHAT_STREAM_END = "chat_stream_end", // 流式结束
 
+  // Agent 相关（ReAct 模式）
+  AGENT_THOUGHT = "agent_thought", // Agent 思考过程
+  AGENT_TOOL_CALL = "agent_tool_call", // Agent 工具调用
+  AGENT_TOOL_RESULT = "agent_tool_result", // 工具执行结果
+  AGENT_STEP = "agent_step", // Agent 步骤更新（通用）
+
   // 系统相关
   SYSTEM_STATUS = "system_status", // 系统状态
   SYSTEM_ERROR = "system_error", // 系统错误
@@ -203,6 +209,97 @@ export interface OllamaTestResponseMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== Agent 相关消息类型 ====================
+
+/**
+ * Agent 步骤类型
+ * 
+ * Agent 执行过程中的每一步都有对应的类型：
+ * - thought: 思考过程，Agent 在分析问题
+ * - tool_call: 调用工具，Agent 决定使用某个工具
+ * - tool_result: 工具结果，工具执行完毕返回的结果
+ * - answer: 最终答案，Agent 认为问题已解决
+ */
+export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer";
+
+/**
+ * 工具调用信息
+ * 
+ * 记录 Agent 调用工具的详细信息
+ */
+export interface AgentToolCallInfo {
+  /** 工具名称，如 "calculator" */
+  name: string;
+  /** 工具参数，如 {"expression": "2+2"} */
+  arguments: Record<string, unknown>;
+  /** 工具执行结果（仅在 tool_result 类型时有值） */
+  result?: string;
+  /** 执行状态 */
+  status?: "pending" | "success" | "error";
+}
+
+/**
+ * Agent 步骤消息（通用）
+ * 
+ * 用于通知前端 Agent 的执行进度。
+ * 每一步思考、工具调用、结果都会通过这个消息发送。
+ */
+export interface AgentStepMessage extends BaseMessage {
+  type: MessageType.AGENT_STEP;
+  /** 会话 ID */
+  conversationId: string;
+  /** 步骤类型 */
+  stepType: AgentStepType;
+  /** 步骤内容（人类可读的描述） */
+  content: string;
+  /** 工具调用信息（仅 tool_call 和 tool_result 类型时有值） */
+  toolCall?: AgentToolCallInfo;
+  /** 当前迭代次数 */
+  iteration?: number;
+}
+
+/**
+ * Agent 思考消息
+ * 
+ * Agent 在执行过程中的思考内容
+ */
+export interface AgentThoughtMessage extends BaseMessage {
+  type: MessageType.AGENT_THOUGHT;
+  conversationId: string;
+  /** 思考内容 */
+  thought: string;
+  /** 当前迭代次数 */
+  iteration: number;
+}
+
+/**
+ * Agent 工具调用消息
+ * 
+ * Agent 决定调用某个工具时发送
+ */
+export interface AgentToolCallMessage extends BaseMessage {
+  type: MessageType.AGENT_TOOL_CALL;
+  conversationId: string;
+  /** 工具调用信息 */
+  toolCall: AgentToolCallInfo;
+  /** 当前迭代次数 */
+  iteration: number;
+}
+
+/**
+ * Agent 工具结果消息
+ * 
+ * 工具执行完毕后发送
+ */
+export interface AgentToolResultMessage extends BaseMessage {
+  type: MessageType.AGENT_TOOL_RESULT;
+  conversationId: string;
+  /** 工具调用信息（包含结果） */
+  toolCall: AgentToolCallInfo;
+  /** 当前迭代次数 */
+  iteration: number;
+}
+
 // 联合类型
 export type WebSocketMessage =
   | ConnectionAckMessage
@@ -215,6 +312,10 @@ export type WebSocketMessage =
   | ChatStreamChunkMessage
   | ChatStreamEndMessage
   | ChatErrorMessage
+  | AgentStepMessage
+  | AgentThoughtMessage
+  | AgentToolCallMessage
+  | AgentToolResultMessage
   | SystemStatusMessage
   | PythonStatusMessage
   | PythonLogMessage

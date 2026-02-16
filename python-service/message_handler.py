@@ -28,6 +28,7 @@ class MessageHandler:
         self.handlers = {
             "ping": self._handle_ping,
             "chat_message": self._handle_chat_message,
+            "agent_chat": self._handle_agent_chat,  # Agent 聊天模式
             "system_status": self._handle_system_status,
             "model_register": self._handle_model_register,
             "model_unregister": self._handle_model_unregister,
@@ -233,6 +234,92 @@ class MessageHandler:
         except Exception as e:
             logger.error(f"流式聊天错误: {e}")
             # 发送错误消息
+            if self.send_callback:
+                await self.send_callback({
+                    "type": "chat_error",
+                    "id": msg_id,
+                    "timestamp": int(time.time() * 1000),
+                    "error": str(e),
+                    "conversationId": conversation_id,
+                })
+            return None
+
+    async def _handle_agent_chat(self, message: dict) -> Optional[dict]:
+        """
+        处理 Agent 聊天消息
+        
+        Agent 模式使用 ReAct (Reasoning + Acting) 循环：
+        1. 思考：分析用户问题，决定下一步行动
+        2. 行动：调用工具或给出答案
+        3. 观察：查看工具结果，继续思考
+        
+        每一步都会通过 WebSocket 发送 agent_step 消息给前端，
+        让用户看到 Agent 的思考过程。
+        """
+        content = message.get("content", "")
+        conversation_id = message.get("conversationId", "")
+        model_id = message.get("modelId")  # 可选，指定模型
+        incoming_history = message.get("history", [])  # 历史消息
+        msg_id = message.get("id")
+        
+        logger.info(f"[Agent] 收到消息: {content[:50]}...")
+        
+        try:
+            # 导入 Agent 模块
+            from agent import ReActAgent
+            from langchain_core.messages import HumanMessage
+            
+            # 创建 Agent 实例
+            agent = ReActAgent(model_id=model_id)
+            
+            # 构建消息列表
+            messages = []
+            if incoming_history:
+                for msg in incoming_history:
+                    if msg["role"] == "user":
+                        messages.append(HumanMessage(content=msg["content"]))
+                    # 其他角色的消息可以后续添加
+            
+            # 执行 Agent（流式输出思考过程）
+            async for event in agent.astream(
+                input_text=content,
+                messages=messages if messages else None,
+                conversation_id=conversation_id
+            ):
+                node_name = event.get("node", "")
+                state_update = event.get("update", {})
+                
+                # 发送 Agent 步骤消息
+                if self.send_callback:
+                    # 处理步骤更新
+                    if "steps" in state_update:
+                        new_steps = state_update["steps"]
+                        for step in new_steps:
+                            await self.send_callback({
+                                "type": "agent_step",
+                                "id": f"{msg_id}_step_{step.get('type', 'unknown')}",
+                                "timestamp": int(time.time() * 1000),
+                                "conversationId": conversation_id,
+                                "stepType": step.get("type", "thought"),
+                                "content": step.get("content", ""),
+                                "toolCall": step.get("tool_call"),
+                                "iteration": state_update.get("iteration_count", 0),
+                            })
+                    
+                    # 如果有最终输出，发送结束消息
+                    if state_update.get("output") and state_update.get("should_finish"):
+                        await self.send_callback({
+                            "type": "chat_stream_end",
+                            "id": f"{msg_id}_end",
+                            "timestamp": int(time.time() * 1000),
+                            "conversationId": conversation_id,
+                            "fullContent": state_update["output"],
+                        })
+            
+            return None  # 通过流式消息发送，不返回响应
+            
+        except Exception as e:
+            logger.error(f"[Agent] 处理消息错误: {e}")
             if self.send_callback:
                 await self.send_callback({
                     "type": "chat_error",

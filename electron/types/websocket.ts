@@ -222,32 +222,10 @@ export interface OllamaTestResponseMessage extends BaseMessage {
 
 // ==================== Agent 相关消息类型 ====================
 
-/**
- * Agent 步骤类型
- *
- * Agent 执行过程中的每一步都有对应的类型：
- * - thought: 思考过程，Agent 在分析问题
- * - tool_call: 调用工具，Agent 决定使用某个工具
- * - tool_result: 工具结果，工具执行完毕返回的结果
- * - answer: 最终答案，Agent 认为问题已解决
- */
-export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer";
+// 从 conversation.ts 重新导出，避免重复定义
+export type { AgentStepType, AgentToolCallInfo } from "./conversation";
 
-/**
- * 工具调用信息
- *
- * 记录 Agent 调用工具的详细信息
- */
-export interface AgentToolCallInfo {
-  /** 工具名称，如 "calculator" */
-  name: string;
-  /** 工具参数，如 {"expression": "2+2"} */
-  arguments: Record<string, unknown>;
-  /** 工具执行结果（仅在 tool_result 类型时有值） */
-  result?: string;
-  /** 执行状态 */
-  status?: "pending" | "success" | "error";
-}
+import type { AgentStepType, AgentToolCallInfo } from "./conversation";
 
 /**
  * Agent 步骤消息（通用）

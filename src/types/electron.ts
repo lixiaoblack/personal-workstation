@@ -29,6 +29,8 @@ export type {
   PythonServiceStopResult,
   ModelConfig,
   ModelConfigListItem,
+  ModelProvider,
+  ModelConfigStatus,
   CreateModelConfigInput,
   UpdateModelConfigInput,
 } from "../../electron/types";

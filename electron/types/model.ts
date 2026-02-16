@@ -3,12 +3,12 @@
  */
 
 // 模型提供商类型
-export type ModelProvider = 
-  | "openai"      // OpenAI API
-  | "bailian"     // 百炼（阿里云）
-  | "zhipu"       // 智谱 AI
-  | "ollama"      // Ollama 本地
-  | "custom";     // 自定义 API
+export type ModelProvider =
+  | "openai" // OpenAI API
+  | "bailian" // 百炼（阿里云）
+  | "zhipu" // 智谱 AI
+  | "ollama" // Ollama 本地
+  | "custom"; // 自定义 API
 
 // 模型配置状态
 export type ModelConfigStatus = "active" | "inactive" | "error";
@@ -17,13 +17,13 @@ export type ModelConfigStatus = "active" | "inactive" | "error";
 export interface BaseModelConfig {
   id: number;
   provider: ModelProvider;
-  name: string;               // 配置名称，如 "GPT-4", "Qwen-Max"
-  modelId: string;            // 模型 ID，如 "gpt-4-turbo", "qwen-max"
-  enabled: boolean;           // 是否启用
-  isDefault: boolean;         // 是否默认模型
-  priority: number;           // 优先级（用于降级策略）
-  status: ModelConfigStatus;  // 状态
-  lastError?: string;         // 最后错误信息
+  name: string; // 配置名称，如 "GPT-4", "Qwen-Max"
+  modelId: string; // 模型 ID，如 "gpt-4-turbo", "qwen-max"
+  enabled: boolean; // 是否启用
+  isDefault: boolean; // 是否默认模型
+  priority: number; // 优先级（用于降级策略）
+  status: ModelConfigStatus; // 状态
+  lastError?: string; // 最后错误信息
   createdAt: string;
   updatedAt: string;
 }
@@ -31,19 +31,19 @@ export interface BaseModelConfig {
 // 在线 API 模型配置
 export interface OnlineModelConfig extends BaseModelConfig {
   provider: "openai" | "bailian" | "zhipu" | "custom";
-  apiKey: string;             // API Key（加密存储）
-  apiBaseUrl?: string;        // 自定义 API 地址
-  organization?: string;      // OpenAI Organization ID
-  maxTokens?: number;         // 最大 token 数
-  temperature?: number;       // 温度参数
-  extraParams?: Record<string, unknown>;  // 额外参数
+  apiKey: string; // API Key（加密存储）
+  apiBaseUrl?: string; // 自定义 API 地址
+  organization?: string; // OpenAI Organization ID
+  maxTokens?: number; // 最大 token 数
+  temperature?: number; // 温度参数
+  extraParams?: Record<string, unknown>; // 额外参数
 }
 
 // Ollama 本地模型配置
 export interface OllamaModelConfig extends BaseModelConfig {
   provider: "ollama";
-  host: string;               // Ollama 服务地址，默认 http://127.0.0.1:11434
-  keepAlive?: string;         // 模型保持时间
+  host: string; // Ollama 服务地址，默认 http://127.0.0.1:11434
+  keepAlive?: string; // 模型保持时间
   maxTokens?: number;
   temperature?: number;
   extraParams?: Record<string, unknown>;
@@ -106,7 +106,7 @@ export interface ModelConfigListItem {
 // 模型测试结果
 export interface ModelTestResult {
   success: boolean;
-  latency?: number;           // 响应延迟（毫秒）
+  latency?: number; // 响应延迟（毫秒）
   error?: string;
   modelInfo?: {
     name: string;

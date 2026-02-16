@@ -1,3 +1,12 @@
+<!--
+ * @Author: wanglx
+ * @Date: 2026-02-15 22:05:03
+ * @LastEditors: wanglx
+ * @LastEditTime: 2026-02-16 13:37:54
+ * @Description: 
+ * 
+ * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved. 
+-->
 # AI 知识库与智能体功能 - 修改记录
 
 > 本文档独立记录 AI 功能开发的版本变更，与主项目修改日志互不关联
@@ -8,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.7 | 2026-02-17 | AI 设置页面模型配置 UI |
 | 0.5.6 | 2026-02-17 | 模型配置 SQLite 存储 |
 | 0.5.5 | 2026-02-17 | Python WebSocket 桥接 |
 | - | - | 暂无发布版本 |
@@ -52,6 +62,12 @@
   - SQLite 存储模型配置
   - CRUD 服务和 IPC API
   - 默认模型配置模板
+- AI 设置页面完善
+  - ModelConfigCard 组件（显示模型配置卡片）
+  - ModelConfigModal 组件（添加/编辑配置弹窗）
+  - 重构 AISettings 页面使用 SQLite 存储
+  - 支持启用/禁用、设为默认、优先级管理
+  - 测试连接功能预留
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`

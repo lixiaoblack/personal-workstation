@@ -10,7 +10,12 @@ import * as websocketService from "./services/websocketService";
 import * as pythonEnvService from "./services/pythonEnvService";
 import * as pythonProcessService from "./services/pythonProcessService";
 import * as modelConfigService from "./services/modelConfigService";
-import type { PythonDetectOptions, PythonServiceConfig, CreateModelConfigInput, UpdateModelConfigInput } from "./types";
+import type {
+  PythonDetectOptions,
+  PythonServiceConfig,
+  CreateModelConfigInput,
+  UpdateModelConfigInput,
+} from "./types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

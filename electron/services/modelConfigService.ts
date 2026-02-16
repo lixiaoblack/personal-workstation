@@ -106,7 +106,8 @@ function modelConfigToRow(
   if ("maxTokens" in input) row.max_tokens = input.maxTokens;
   if ("temperature" in input) row.temperature = input.temperature;
   if ("keepAlive" in input) row.keep_alive = input.keepAlive;
-  if ("extraParams" in input) row.extra_params = JSON.stringify(input.extraParams);
+  if ("extraParams" in input)
+    row.extra_params = JSON.stringify(input.extraParams);
 
   return row;
 }
@@ -145,9 +146,9 @@ export function getModelConfigs(): ModelConfigListItem[] {
  */
 export function getModelConfigById(id: number): ModelConfig | null {
   const db = getDatabase();
-  const row = db
-    .prepare("SELECT * FROM model_configs WHERE id = ?")
-    .get(id) as ModelConfigRow | undefined;
+  const row = db.prepare("SELECT * FROM model_configs WHERE id = ?").get(id) as
+    | ModelConfigRow
+    | undefined;
 
   return row ? rowToModelConfig(row) : null;
 }
@@ -188,9 +189,7 @@ export function getEnabledModelConfigs(): ModelConfig[] {
 /**
  * 创建模型配置
  */
-export function createModelConfig(
-  input: CreateModelConfigInput
-): ModelConfig {
+export function createModelConfig(input: CreateModelConfigInput): ModelConfig {
   const db = getDatabase();
   const row = modelConfigToRow(input);
 
@@ -263,7 +262,9 @@ export function updateModelConfig(
   updates.push("updated_at = datetime('now', 'localtime')");
 
   if (updates.length > 1) {
-    db.prepare(`UPDATE model_configs SET ${updates.join(", ")} WHERE id = @id`).run(values);
+    db.prepare(
+      `UPDATE model_configs SET ${updates.join(", ")} WHERE id = @id`
+    ).run(values);
   }
 
   return getModelConfigById(id);
@@ -294,7 +295,9 @@ export function setDefaultModelConfig(id: number): boolean {
     // 取消所有默认
     db.prepare("UPDATE model_configs SET is_default = 0").run();
     // 设置指定模型为默认
-    db.prepare("UPDATE model_configs SET is_default = 1, enabled = 1 WHERE id = ?").run(id);
+    db.prepare(
+      "UPDATE model_configs SET is_default = 1, enabled = 1 WHERE id = ?"
+    ).run(id);
   });
 
   transaction();
@@ -322,7 +325,9 @@ export function updateModelStatus(
  */
 export function initializeDefaultConfigs(): void {
   const db = getDatabase();
-  const count = db.prepare("SELECT COUNT(*) as count FROM model_configs").get() as {
+  const count = db
+    .prepare("SELECT COUNT(*) as count FROM model_configs")
+    .get() as {
     count: number;
   };
 

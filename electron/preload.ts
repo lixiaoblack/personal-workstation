@@ -135,9 +135,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("model:getDefault"),
   getEnabledModelConfigs: (): Promise<ModelConfig[]> =>
     ipcRenderer.invoke("model:getEnabled"),
-  createModelConfig: (
-    input: CreateModelConfigInput
-  ): Promise<ModelConfig> => ipcRenderer.invoke("model:create", input),
+  createModelConfig: (input: CreateModelConfigInput): Promise<ModelConfig> =>
+    ipcRenderer.invoke("model:create", input),
   updateModelConfig: (
     id: number,
     input: UpdateModelConfigInput

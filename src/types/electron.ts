@@ -61,6 +61,7 @@ export interface WsServerInfo {
   running: boolean;
   port: number;
   clientCount: number;
+  pythonConnected: boolean;
 }
 
 // Electron API 接口
@@ -104,9 +105,13 @@ export interface ElectronAPI {
   }>;
 
   // Python 服务管理
-  startPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  startPythonService: (
+    config?: PythonServiceConfig
+  ) => Promise<PythonServiceStartResult>;
   stopPythonService: () => Promise<PythonServiceStopResult>;
-  restartPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  restartPythonService: (
+    config?: PythonServiceConfig
+  ) => Promise<PythonServiceStartResult>;
   getPythonServiceInfo: () => Promise<PythonServiceInfo>;
 }
 

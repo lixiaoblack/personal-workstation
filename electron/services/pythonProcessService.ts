@@ -16,6 +16,7 @@ import type {
 } from "../types/python";
 import { DEFAULT_PYTHON_SERVICE_CONFIG } from "../types/python";
 import { detectPythonEnvironment } from "./pythonEnvService";
+import { getServerInfo } from "./websocketService";
 
 // 服务实例
 let serviceProcess: ChildProcess | null = null;
@@ -53,18 +54,20 @@ function getServiceDirectory(): string {
   // 开发环境：使用项目目录下的 python-service
   // 生产环境：使用应用资源目录
   const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
-  
+
   if (isDev) {
     return path.join(process.cwd(), "python-service");
   }
-  
+
   return path.join(process.resourcesPath, "python-service");
 }
 
 /**
  * 获取 Python 解释器路径
  */
-async function getPythonInterpreter(config: PythonServiceConfig): Promise<string> {
+async function getPythonInterpreter(
+  config: PythonServiceConfig
+): Promise<string> {
   // 1. 使用配置中的路径
   if (config.pythonPath && fs.existsSync(config.pythonPath)) {
     return config.pythonPath;
@@ -72,10 +75,11 @@ async function getPythonInterpreter(config: PythonServiceConfig): Promise<string
 
   // 2. 使用虚拟环境中的 Python
   if (config.venvPath) {
-    const venvPython = process.platform === "win32"
-      ? path.join(config.venvPath, "Scripts", "python.exe")
-      : path.join(config.venvPath, "bin", "python");
-    
+    const venvPython =
+      process.platform === "win32"
+        ? path.join(config.venvPath, "Scripts", "python.exe")
+        : path.join(config.venvPath, "bin", "python");
+
     if (fs.existsSync(venvPython)) {
       return venvPython;
     }
@@ -121,13 +125,17 @@ export async function startPythonService(
 
     // 获取服务目录
     const serviceDir = getServiceDirectory();
-    
+
     // 检查服务脚本是否存在
-    const scriptPath = serviceConfig.scriptPath || path.join(serviceDir, "main.py");
+    const scriptPath =
+      serviceConfig.scriptPath || path.join(serviceDir, "main.py");
     if (!fs.existsSync(scriptPath)) {
       // 如果脚本不存在，创建一个简单的测试服务
       await createTestService(serviceDir, scriptPath);
     }
+
+    // 获取 WebSocket 服务器信息
+    const wsInfo = getServerInfo();
 
     // 构建环境变量
     const env: NodeJS.ProcessEnv = {
@@ -135,6 +143,9 @@ export async function startPythonService(
       PYTHONUNBUFFERED: "1",
       PYTHONIOENCODING: "utf-8",
       SERVICE_PORT: String(serviceConfig.port || 8765),
+      // 传递 Electron WebSocket 服务器信息
+      WS_HOST: "127.0.0.1",
+      WS_PORT: String(wsInfo.port),
       ...serviceConfig.env,
     };
 
@@ -186,9 +197,16 @@ export async function startPythonService(
       }
 
       // 自动重启
-      if (wasRunning && serviceConfig.autoRestart && restartCount < (serviceConfig.maxRestarts || 3)) {
+      if (
+        wasRunning &&
+        serviceConfig.autoRestart &&
+        restartCount < (serviceConfig.maxRestarts || 3)
+      ) {
         restartCount++;
-        addLog("info", `自动重启服务 (${restartCount}/${serviceConfig.maxRestarts})...`);
+        addLog(
+          "info",
+          `自动重启服务 (${restartCount}/${serviceConfig.maxRestarts})...`
+        );
         setTimeout(() => {
           startPythonService(serviceConfig);
         }, 2000);
@@ -368,7 +386,10 @@ function stopHealthCheck(): void {
 /**
  * 创建测试服务脚本
  */
-async function createTestService(serviceDir: string, scriptPath: string): Promise<void> {
+async function createTestService(
+  serviceDir: string,
+  scriptPath: string
+): Promise<void> {
   // 确保目录存在
   if (!fs.existsSync(serviceDir)) {
     fs.mkdirSync(serviceDir, { recursive: true });

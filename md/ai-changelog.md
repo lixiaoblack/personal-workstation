@@ -8,6 +8,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.5 | 2026-02-17 | Python WebSocket 桥接 |
 | - | - | 暂无发布版本 |
 
 ---
@@ -28,6 +29,22 @@
   - AISettings AI 模型配置页面
   - 在线 API 配置 UI（OpenAI、百炼、智谱）
   - 本地 Ollama 配置 UI
+- WebSocket 通信层
+  - WebSocket 服务器（主进程）
+  - 消息协议定义
+  - 渲染进程客户端（useWebSocket Hook）
+- 聊天界面
+  - AIChat 页面布局
+  - 消息列表和输入框组件
+  - WebSocket 消息收发
+- Python 服务管理
+  - Python 环境检测（跨平台）
+  - Python 进程管理（启动/停止/重启）
+  - WebSocket 桥接
+    - Python 服务作为 WebSocket 客户端连接 Electron
+    - 客户端标识机制（renderer/python_agent）
+    - 消息路由：渲染进程 <-> Electron WS <-> Python 服务
+    - Python 服务状态广播
 - 技术方案文档 `md/ai-agent-tech-plan.md`
 - 任务清单文档 `md/ai-tasks.md`
 - 修改记录文档 `md/ai-changelog.md`
@@ -40,6 +57,6 @@
 
 ---
 
-*文档版本: v1.0*
+*文档版本: v1.1*
 *创建时间: 2026-02-13*
-*最后更新: 2026-02-13*
+*最后更新: 2026-02-17*

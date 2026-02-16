@@ -8,6 +8,8 @@ import {
   MessageType,
   type WebSocketMessage,
   type WebSocketClientInfo,
+  type ClientType,
+  type ChatMessage,
   createMessage,
 } from "../types/websocket";
 
@@ -24,6 +26,9 @@ let serverPort: number = 0;
 
 // 客户端连接映射
 const clients: Map<WebSocket, WebSocketClientInfo> = new Map();
+
+// Python 客户端连接（用于消息转发）
+let pythonClient: WebSocket | null = null;
 
 // 心跳定时器
 let heartbeatTimer: NodeJS.Timeout | null = null;
@@ -76,7 +81,8 @@ export function startWebSocketServer(
       const clientId = generateClientId();
       const clientInfo: WebSocketClientInfo = {
         id: clientId,
-        isRenderer: true, // 默认为渲染进程连接
+        clientType: "renderer", // 默认为渲染进程连接
+        isRenderer: true,
         connectedAt: Date.now(),
         lastActivity: Date.now(),
       };
@@ -105,6 +111,15 @@ export function startWebSocketServer(
             clients.size - 1
           }`
         );
+
+        // 清理 Python 客户端引用
+        if (pythonClient === ws) {
+          pythonClient = null;
+          console.log("[WebSocket] Python 客户端已断开");
+          // 通知所有渲染进程
+          broadcastPythonStatus("disconnected");
+        }
+
         clients.delete(ws);
       });
 
@@ -160,11 +175,13 @@ export function getServerInfo(): {
   running: boolean;
   port: number;
   clientCount: number;
+  pythonConnected: boolean;
 } {
   return {
     running: wss !== null,
     port: serverPort,
     clientCount: clients.size,
+    pythonConnected: isPythonConnected(),
   };
 }
 
@@ -178,6 +195,30 @@ export function broadcast(message: WebSocketMessage): void {
       ws.send(data);
     }
   });
+}
+
+/**
+ * 向所有渲染进程客户端广播消息
+ */
+function broadcastToRenderers(message: WebSocketMessage): void {
+  const data = JSON.stringify(message);
+  Array.from(clients.entries()).forEach(([ws, info]) => {
+    if (info.clientType === "renderer" && ws.readyState === WebSocket.OPEN) {
+      ws.send(data);
+    }
+  });
+}
+
+/**
+ * 广播 Python 服务状态
+ */
+function broadcastPythonStatus(
+  status: "connected" | "disconnected"
+): void {
+  const message = createMessage(MessageType.PYTHON_STATUS, {
+    status: status === "connected" ? "running" : "stopped",
+  });
+  broadcastToRenderers(message);
 }
 
 /**
@@ -195,6 +236,13 @@ export function sendToClient(
     }
   }
   return false;
+}
+
+/**
+ * 检查 Python 客户端是否已连接
+ */
+export function isPythonConnected(): boolean {
+  return pythonClient !== null && pythonClient.readyState === WebSocket.OPEN;
 }
 
 /**
@@ -217,20 +265,64 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
       return;
     }
 
-    // 处理聊天消息 - 简单回显（后续会接入 Python 服务）
-    if (message.type === MessageType.CHAT_MESSAGE) {
-      const chatMsg = message as Extract<
+    // 处理客户端标识
+    if (message.type === MessageType.CLIENT_IDENTIFY) {
+      const identifyMsg = message as Extract<
         WebSocketMessage,
-        { type: MessageType.CHAT_MESSAGE }
+        { type: MessageType.CLIENT_IDENTIFY }
       >;
+      const clientType = identifyMsg.clientType as ClientType;
 
-      // 模拟响应（后续替换为实际 AI 响应）
-      const response = createMessage(MessageType.CHAT_RESPONSE, {
-        content: `收到消息: ${chatMsg.content}`,
-        conversationId: chatMsg.conversationId,
-        success: true,
-      });
-      ws.send(JSON.stringify(response));
+      // 更新客户端信息
+      const clientInfo = clients.get(ws);
+      if (clientInfo) {
+        clientInfo.clientType = clientType;
+        clientInfo.isRenderer = clientType === "renderer";
+        clients.set(ws, clientInfo);
+      }
+
+      // 如果是 Python 客户端，保存引用
+      if (clientType === "python_agent") {
+        pythonClient = ws;
+        console.log("[WebSocket] Python 智能体已连接");
+        // 通知所有渲染进程
+        broadcastPythonStatus("connected");
+      }
+
+      return;
+    }
+
+    // 处理聊天消息 - 转发给 Python 服务或回显
+    if (message.type === MessageType.CHAT_MESSAGE) {
+      // 如果有 Python 客户端连接，转发消息
+      if (pythonClient && pythonClient.readyState === WebSocket.OPEN) {
+        pythonClient.send(JSON.stringify(message));
+        console.log("[WebSocket] 消息已转发给 Python 服务");
+      } else {
+        // 没有连接时返回提示
+        const response = createMessage(MessageType.CHAT_RESPONSE, {
+          content: "Python 服务未连接，消息无法处理。请先启动 Python 服务。",
+          conversationId: (message as ChatMessage).conversationId,
+          success: false,
+        });
+        ws.send(JSON.stringify(response));
+      }
+      return;
+    }
+
+    // 处理来自 Python 的响应 - 转发给对应的渲染进程
+    if (
+      message.type === MessageType.CHAT_RESPONSE ||
+      message.type === MessageType.CHAT_STREAM ||
+      message.type === MessageType.CHAT_ERROR
+    ) {
+      const clientInfo = clients.get(ws);
+      // 确保消息来自 Python 客户端
+      if (clientInfo?.clientType === "python_agent") {
+        // 广播给所有渲染进程客户端
+        broadcastToRenderers(message);
+      }
+      return;
     }
   } catch (error) {
     console.error("[WebSocket] 消息解析错误:", error);

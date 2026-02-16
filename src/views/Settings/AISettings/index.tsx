@@ -43,7 +43,9 @@ const AISettings: React.FC = () => {
   );
 
   // Python 服务状态
-  const [serviceInfo, setServiceInfo] = useState<PythonServiceInfo | null>(null);
+  const [serviceInfo, setServiceInfo] = useState<PythonServiceInfo | null>(
+    null
+  );
   const [serviceLoading, setServiceLoading] = useState(false);
   const [serviceConfig, setServiceConfig] = useState<PythonServiceConfig>({
     port: 8765,
@@ -167,7 +169,9 @@ const AISettings: React.FC = () => {
   const handleRestartService = async () => {
     setServiceLoading(true);
     try {
-      const result = await window.electronAPI.restartPythonService(serviceConfig);
+      const result = await window.electronAPI.restartPythonService(
+        serviceConfig
+      );
       if (result.success) {
         message.success("Python 服务已重启");
         await loadServiceInfo();
@@ -543,7 +547,8 @@ const AISettings: React.FC = () => {
     };
 
     const isRunning = serviceInfo?.status === "running";
-    const isStopped = serviceInfo?.status === "stopped" || serviceInfo?.status === "error";
+    const isStopped =
+      serviceInfo?.status === "stopped" || serviceInfo?.status === "error";
 
     return (
       <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
@@ -556,7 +561,9 @@ const AISettings: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-text-primary">Python 智能体服务</h3>
-              <p className="text-xs text-text-tertiary">管理 AI 智能体 Python 后端</p>
+              <p className="text-xs text-text-tertiary">
+                管理 AI 智能体 Python 后端
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -594,7 +601,8 @@ const AISettings: React.FC = () => {
               <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
                 <span className="text-xs text-text-tertiary">运行时长</span>
                 <span className="text-sm font-medium text-text-primary">
-                  {Math.floor(serviceInfo.uptime / 60)}分 {serviceInfo.uptime % 60}秒
+                  {Math.floor(serviceInfo.uptime / 60)}分{" "}
+                  {serviceInfo.uptime % 60}秒
                 </span>
               </div>
             )}
@@ -608,13 +616,18 @@ const AISettings: React.FC = () => {
 
         {/* 端口配置 */}
         <div className="mb-6">
-          <label className="text-xs text-text-tertiary mb-2 block">服务端口</label>
+          <label className="text-xs text-text-tertiary mb-2 block">
+            服务端口
+          </label>
           <input
             type="number"
             className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-sm text-text-primary outline-none focus:border-primary"
             value={serviceConfig.port || 8765}
             onChange={(e) =>
-              setServiceConfig({ ...serviceConfig, port: parseInt(e.target.value) || 8765 })
+              setServiceConfig({
+                ...serviceConfig,
+                port: parseInt(e.target.value) || 8765,
+              })
             }
             disabled={isRunning}
             placeholder="8765"
@@ -632,7 +645,9 @@ const AISettings: React.FC = () => {
               {serviceLoading ? (
                 <Spin size="small" />
               ) : (
-                <span className="material-symbols-outlined text-base">play_arrow</span>
+                <span className="material-symbols-outlined text-base">
+                  play_arrow
+                </span>
               )}
               启动服务
             </button>
@@ -646,7 +661,9 @@ const AISettings: React.FC = () => {
                 {serviceLoading ? (
                   <Spin size="small" />
                 ) : (
-                  <span className="material-symbols-outlined text-base">stop</span>
+                  <span className="material-symbols-outlined text-base">
+                    stop
+                  </span>
                 )}
                 停止
               </button>
@@ -658,7 +675,9 @@ const AISettings: React.FC = () => {
                 {serviceLoading ? (
                   <Spin size="small" />
                 ) : (
-                  <span className="material-symbols-outlined text-base">refresh</span>
+                  <span className="material-symbols-outlined text-base">
+                    refresh
+                  </span>
                 )}
                 重启
               </button>

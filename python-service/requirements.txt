@@ -1,0 +1,14 @@
+# AI Agent Python Service Dependencies
+# WebSocket 客户端
+websockets>=12.0
+
+# AI 智能体框架（后续启用）
+# langgraph>=1.0.0
+# langchain>=0.3.0
+# langchain-community>=0.3.0
+
+# 向量数据库（后续启用）
+# lancedb>=0.8.0
+
+# MCP 协议（后续启用）
+# mcp>=1.0.0

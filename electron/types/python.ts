@@ -104,12 +104,12 @@ export const AI_AGENT_REQUIREMENTS = {
 // ============ Python 进程管理类型 ============
 
 // Python 服务状态
-export type PythonServiceStatus = 
-  | "stopped"     // 已停止
-  | "starting"    // 启动中
-  | "running"     // 运行中
-  | "stopping"    // 停止中
-  | "error";      // 错误
+export type PythonServiceStatus =
+  | "stopped" // 已停止
+  | "starting" // 启动中
+  | "running" // 运行中
+  | "stopping" // 停止中
+  | "error"; // 错误
 
 // Python 服务配置
 export interface PythonServiceConfig {

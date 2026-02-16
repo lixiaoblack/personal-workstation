@@ -9,6 +9,7 @@ export enum MessageType {
   CONNECTION_ACK = "connection_ack", // 连接确认
   PING = "ping", // 心跳请求
   PONG = "pong", // 心跳响应
+  CLIENT_IDENTIFY = "client_identify", // 客户端标识
 
   // 聊天相关
   CHAT_MESSAGE = "chat_message", // 聊天消息
@@ -107,6 +108,7 @@ export type WebSocketMessage =
   | ConnectionAckMessage
   | PingMessage
   | PongMessage
+  | ClientIdentifyMessage
   | ChatMessage
   | ChatResponseMessage
   | ChatStreamMessage
@@ -124,12 +126,22 @@ export enum ConnectionState {
   ERROR = "error",
 }
 
+// WebSocket 客户端类型
+export type ClientType = "renderer" | "python_agent";
+
 // WebSocket 客户端信息
 export interface WebSocketClientInfo {
   id: string;
-  isRenderer: boolean; // 是否是渲染进程
+  clientType: ClientType; // 客户端类型
+  isRenderer: boolean; // 是否是渲染进程（兼容旧字段）
   connectedAt: number;
   lastActivity: number;
+}
+
+// 客户端标识消息
+export interface ClientIdentifyMessage extends BaseMessage {
+  type: MessageType.CLIENT_IDENTIFY;
+  clientType: ClientType;
 }
 
 // 生成唯一 ID

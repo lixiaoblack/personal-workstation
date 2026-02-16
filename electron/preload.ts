@@ -25,6 +25,7 @@ export interface WsServerInfo {
   running: boolean;
   port: number;
   clientCount: number;
+  pythonConnected: boolean;
 }
 
 // 重新导出类型供外部使用
@@ -104,11 +105,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   }> => ipcRenderer.invoke("python:checkDependencies"),
 
   // Python 服务管理
-  startPythonService: (config?: PythonServiceConfig): Promise<PythonServiceStartResult> =>
+  startPythonService: (
+    config?: PythonServiceConfig
+  ): Promise<PythonServiceStartResult> =>
     ipcRenderer.invoke("python:service:start", config),
   stopPythonService: (): Promise<PythonServiceStopResult> =>
     ipcRenderer.invoke("python:service:stop"),
-  restartPythonService: (config?: PythonServiceConfig): Promise<PythonServiceStartResult> =>
+  restartPythonService: (
+    config?: PythonServiceConfig
+  ): Promise<PythonServiceStartResult> =>
     ipcRenderer.invoke("python:service:restart", config),
   getPythonServiceInfo: (): Promise<PythonServiceInfo> =>
     ipcRenderer.invoke("python:service:getInfo"),
@@ -155,9 +160,13 @@ export interface ElectronAPI {
   }>;
 
   // Python 服务管理
-  startPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  startPythonService: (
+    config?: PythonServiceConfig
+  ) => Promise<PythonServiceStartResult>;
   stopPythonService: () => Promise<PythonServiceStopResult>;
-  restartPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  restartPythonService: (
+    config?: PythonServiceConfig
+  ) => Promise<PythonServiceStartResult>;
   getPythonServiceInfo: () => Promise<PythonServiceInfo>;
 }
 

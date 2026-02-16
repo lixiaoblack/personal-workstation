@@ -23,6 +23,10 @@ export type {
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,
+  PythonServiceConfig,
+  PythonServiceInfo,
+  PythonServiceStartResult,
+  PythonServiceStopResult,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -46,6 +50,10 @@ import type {
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,
+  PythonServiceConfig,
+  PythonServiceInfo,
+  PythonServiceStartResult,
+  PythonServiceStopResult,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -90,7 +98,16 @@ export interface ElectronAPI {
   // Python 环境检测
   detectPython: (options?: PythonDetectOptions) => Promise<PythonEnvironment>;
   getPythonInstallGuide: () => Promise<PythonInstallGuide>;
-  checkAIDependencies: () => Promise<{ installed: string[]; missing: string[] }>;
+  checkAIDependencies: () => Promise<{
+    installed: string[];
+    missing: string[];
+  }>;
+
+  // Python 服务管理
+  startPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  stopPythonService: () => Promise<PythonServiceStopResult>;
+  restartPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  getPythonServiceInfo: () => Promise<PythonServiceInfo>;
 }
 
 declare global {

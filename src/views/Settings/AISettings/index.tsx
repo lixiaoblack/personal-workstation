@@ -1,11 +1,16 @@
 /**
  * AISettings AI 模型设置页面
- * 包含 Python 环境检测、在线API接入和本地模型接入配置
+ * 包含 Python 环境检测、服务管理、在线API接入和本地模型接入配置
  */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { App, Spin } from "antd";
-import type { PythonEnvironment, PythonInstallGuide } from "@/types/electron";
+import type {
+  PythonEnvironment,
+  PythonInstallGuide,
+  PythonServiceInfo,
+  PythonServiceConfig,
+} from "@/types/electron";
 
 // 模型配置类型
 interface ModelConfig {
@@ -33,7 +38,16 @@ const AISettings: React.FC = () => {
   // Python 环境状态
   const [pythonEnv, setPythonEnv] = useState<PythonEnvironment | null>(null);
   const [pythonLoading, setPythonLoading] = useState(false);
-  const [installGuide, setInstallGuide] = useState<PythonInstallGuide | null>(null);
+  const [installGuide, setInstallGuide] = useState<PythonInstallGuide | null>(
+    null
+  );
+
+  // Python 服务状态
+  const [serviceInfo, setServiceInfo] = useState<PythonServiceInfo | null>(null);
+  const [serviceLoading, setServiceLoading] = useState(false);
+  const [serviceConfig, setServiceConfig] = useState<PythonServiceConfig>({
+    port: 8765,
+  });
 
   // 在线 API 配置
   const [onlineConfigs, setOnlineConfigs] = useState<
@@ -61,8 +75,12 @@ const AISettings: React.FC = () => {
     const initPython = async () => {
       await handleDetectPython();
       await loadInstallGuide();
+      await loadServiceInfo();
     };
     initPython();
+    // 定时刷新服务状态
+    const interval = setInterval(loadServiceInfo, 5000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,6 +112,73 @@ const AISettings: React.FC = () => {
       message.error("检测 Python 环境失败");
     } finally {
       setPythonLoading(false);
+    }
+  };
+
+  // 加载服务信息
+  const loadServiceInfo = async () => {
+    try {
+      const info = await window.electronAPI.getPythonServiceInfo();
+      setServiceInfo(info);
+    } catch (error) {
+      console.error("获取服务信息失败:", error);
+    }
+  };
+
+  // 启动服务
+  const handleStartService = async () => {
+    setServiceLoading(true);
+    try {
+      const result = await window.electronAPI.startPythonService(serviceConfig);
+      if (result.success) {
+        message.success(`Python 服务已启动，PID: ${result.pid}`);
+        await loadServiceInfo();
+      } else {
+        message.error(`启动失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("启动服务失败:", error);
+      message.error("启动服务失败");
+    } finally {
+      setServiceLoading(false);
+    }
+  };
+
+  // 停止服务
+  const handleStopService = async () => {
+    setServiceLoading(true);
+    try {
+      const result = await window.electronAPI.stopPythonService();
+      if (result.success) {
+        message.success("Python 服务已停止");
+        await loadServiceInfo();
+      } else {
+        message.error(`停止失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("停止服务失败:", error);
+      message.error("停止服务失败");
+    } finally {
+      setServiceLoading(false);
+    }
+  };
+
+  // 重启服务
+  const handleRestartService = async () => {
+    setServiceLoading(true);
+    try {
+      const result = await window.electronAPI.restartPythonService(serviceConfig);
+      if (result.success) {
+        message.success("Python 服务已重启");
+        await loadServiceInfo();
+      } else {
+        message.error(`重启失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("重启服务失败:", error);
+      message.error("重启服务失败");
+    } finally {
+      setServiceLoading(false);
     }
   };
 
@@ -259,7 +344,9 @@ const AISettings: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-blue-500">terminal</span>
+            <span className="material-symbols-outlined text-blue-500">
+              terminal
+            </span>
           </div>
           <div>
             <h3 className="font-bold text-text-primary">Python 环境</h3>
@@ -271,7 +358,11 @@ const AISettings: React.FC = () => {
           onClick={handleDetectPython}
           disabled={pythonLoading}
         >
-          <span className={`material-symbols-outlined text-sm ${pythonLoading ? "animate-spin" : ""}`}>
+          <span
+            className={`material-symbols-outlined text-sm ${
+              pythonLoading ? "animate-spin" : ""
+            }`}
+          >
             {pythonLoading ? "progress_activity" : "refresh"}
           </span>
           重新检测
@@ -281,16 +372,21 @@ const AISettings: React.FC = () => {
       {pythonLoading ? (
         <div className="flex items-center justify-center py-8">
           <Spin />
-          <span className="ml-3 text-text-tertiary">正在检测 Python 环境...</span>
+          <span className="ml-3 text-text-tertiary">
+            正在检测 Python 环境...
+          </span>
         </div>
       ) : pythonEnv ? (
         <div className="space-y-4">
           {/* 系统信息 */}
           <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-            <span className="material-symbols-outlined text-text-tertiary">computer</span>
+            <span className="material-symbols-outlined text-text-tertiary">
+              computer
+            </span>
             <div className="flex-1">
               <p className="text-sm font-medium text-text-primary">
-                {getOSDisplayName(pythonEnv.os)} {pythonEnv.osVersion.split(" ")[1]}
+                {getOSDisplayName(pythonEnv.os)}{" "}
+                {pythonEnv.osVersion.split(" ")[1]}
               </p>
               <p className="text-xs text-text-tertiary">操作系统</p>
             </div>
@@ -298,7 +394,9 @@ const AISettings: React.FC = () => {
 
           {/* Python 版本 */}
           <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-            <span className="material-symbols-outlined text-text-tertiary">code</span>
+            <span className="material-symbols-outlined text-text-tertiary">
+              code
+            </span>
             <div className="flex-1">
               <p className="text-sm font-medium text-text-primary">
                 {pythonEnv.pythonInstalled
@@ -325,7 +423,9 @@ const AISettings: React.FC = () => {
           {/* 包管理器 */}
           {pythonEnv.packageManagers.length > 0 && (
             <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-              <span className="material-symbols-outlined text-text-tertiary">package</span>
+              <span className="material-symbols-outlined text-text-tertiary">
+                package
+              </span>
               <div className="flex-1">
                 <p className="text-sm font-medium text-text-primary">
                   {pythonEnv.packageManagers.map((pm) => pm.type).join(", ")}
@@ -338,7 +438,9 @@ const AISettings: React.FC = () => {
           {/* 虚拟环境 */}
           {pythonEnv.virtualEnv.active && (
             <div className="flex items-center gap-4 p-3 bg-success/5 border border-success/20 rounded-lg">
-              <span className="material-symbols-outlined text-success">check_circle</span>
+              <span className="material-symbols-outlined text-success">
+                check_circle
+              </span>
               <div className="flex-1">
                 <p className="text-sm font-medium text-text-primary">
                   {pythonEnv.virtualEnv.name}
@@ -357,7 +459,9 @@ const AISettings: React.FC = () => {
               <ul className="text-xs text-text-secondary space-y-1">
                 {pythonEnv.recommendations.map((rec, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <span className="material-symbols-outlined text-xs text-warning mt-0.5">arrow_right</span>
+                    <span className="material-symbols-outlined text-xs text-warning mt-0.5">
+                      arrow_right
+                    </span>
                     {rec}
                   </li>
                 ))}
@@ -368,21 +472,33 @@ const AISettings: React.FC = () => {
           {/* 安装引导 */}
           {!pythonEnv.pythonInstalled && installGuide && (
             <div className="mt-4 p-4 bg-bg-tertiary rounded-lg">
-              <p className="text-sm font-medium text-text-primary mb-3">安装方式</p>
+              <p className="text-sm font-medium text-text-primary mb-3">
+                安装方式
+              </p>
               <div className="space-y-2">
                 {installGuide.methods.map((method, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg hover:bg-bg-hover cursor-pointer transition-colors"
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      method.recommended ? "bg-primary/10 text-primary" : "bg-bg-tertiary text-text-tertiary"
-                    }`}>
-                      <span className="material-symbols-outlined text-sm">download</span>
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        method.recommended
+                          ? "bg-primary/10 text-primary"
+                          : "bg-bg-tertiary text-text-tertiary"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        download
+                      </span>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-text-primary">{method.name}</p>
-                      <p className="text-xs text-text-tertiary">{method.description}</p>
+                      <p className="text-sm font-medium text-text-primary">
+                        {method.name}
+                      </p>
+                      <p className="text-xs text-text-tertiary">
+                        {method.description}
+                      </p>
                     </div>
                     {method.recommended && (
                       <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded">
@@ -390,7 +506,9 @@ const AISettings: React.FC = () => {
                       </span>
                     )}
                     {method.url && (
-                      <span className="material-symbols-outlined text-text-tertiary">open_in_new</span>
+                      <span className="material-symbols-outlined text-text-tertiary">
+                        open_in_new
+                      </span>
                     )}
                   </div>
                 ))}
@@ -405,6 +523,193 @@ const AISettings: React.FC = () => {
       )}
     </div>
   );
+
+  // 渲染 Python 服务管理卡片
+  const renderPythonServiceCard = () => {
+    const statusColors: Record<string, string> = {
+      stopped: "bg-text-tertiary",
+      starting: "bg-warning animate-pulse",
+      running: "bg-success",
+      stopping: "bg-warning animate-pulse",
+      error: "bg-error",
+    };
+
+    const statusTexts: Record<string, string> = {
+      stopped: "已停止",
+      starting: "启动中",
+      running: "运行中",
+      stopping: "停止中",
+      error: "错误",
+    };
+
+    const isRunning = serviceInfo?.status === "running";
+    const isStopped = serviceInfo?.status === "stopped" || serviceInfo?.status === "error";
+
+    return (
+      <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-emerald-500">
+                smart_toy
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-text-primary">Python 智能体服务</h3>
+              <p className="text-xs text-text-tertiary">管理 AI 智能体 Python 后端</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                statusColors[serviceInfo?.status || "stopped"]
+              }`}
+            ></span>
+            <span className="text-xs text-text-secondary">
+              {statusTexts[serviceInfo?.status || "stopped"]}
+            </span>
+          </div>
+        </div>
+
+        {/* 服务信息 */}
+        {serviceInfo && (
+          <div className="space-y-3 mb-6">
+            {serviceInfo.pid && (
+              <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
+                <span className="text-xs text-text-tertiary">进程 ID</span>
+                <span className="text-sm font-medium text-text-primary">
+                  {serviceInfo.pid}
+                </span>
+              </div>
+            )}
+            {serviceInfo.port && (
+              <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
+                <span className="text-xs text-text-tertiary">服务端口</span>
+                <span className="text-sm font-medium text-text-primary">
+                  {serviceInfo.port}
+                </span>
+              </div>
+            )}
+            {serviceInfo.uptime !== null && (
+              <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
+                <span className="text-xs text-text-tertiary">运行时长</span>
+                <span className="text-sm font-medium text-text-primary">
+                  {Math.floor(serviceInfo.uptime / 60)}分 {serviceInfo.uptime % 60}秒
+                </span>
+              </div>
+            )}
+            {serviceInfo.lastError && (
+              <div className="p-3 bg-error/5 border border-error/20 rounded-lg">
+                <p className="text-xs text-error">{serviceInfo.lastError}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 端口配置 */}
+        <div className="mb-6">
+          <label className="text-xs text-text-tertiary mb-2 block">服务端口</label>
+          <input
+            type="number"
+            className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-sm text-text-primary outline-none focus:border-primary"
+            value={serviceConfig.port || 8765}
+            onChange={(e) =>
+              setServiceConfig({ ...serviceConfig, port: parseInt(e.target.value) || 8765 })
+            }
+            disabled={isRunning}
+            placeholder="8765"
+          />
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="flex items-center gap-3">
+          {isStopped ? (
+            <button
+              className="flex-1 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              onClick={handleStartService}
+              disabled={serviceLoading || !pythonEnv?.meetsRequirements}
+            >
+              {serviceLoading ? (
+                <Spin size="small" />
+              ) : (
+                <span className="material-symbols-outlined text-base">play_arrow</span>
+              )}
+              启动服务
+            </button>
+          ) : (
+            <>
+              <button
+                className="flex-1 py-3 bg-error hover:bg-error/80 text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                onClick={handleStopService}
+                disabled={serviceLoading}
+              >
+                {serviceLoading ? (
+                  <Spin size="small" />
+                ) : (
+                  <span className="material-symbols-outlined text-base">stop</span>
+                )}
+                停止
+              </button>
+              <button
+                className="flex-1 py-3 bg-bg-tertiary hover:bg-bg-hover text-text-primary rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                onClick={handleRestartService}
+                disabled={serviceLoading}
+              >
+                {serviceLoading ? (
+                  <Spin size="small" />
+                ) : (
+                  <span className="material-symbols-outlined text-base">refresh</span>
+                )}
+                重启
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* 最近日志 */}
+        {serviceInfo?.recentLogs && serviceInfo.recentLogs.length > 0 && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-text-tertiary">最近日志</span>
+              <span className="text-xs text-text-tertiary">
+                {serviceInfo.recentLogs.length} 条
+              </span>
+            </div>
+            <div className="bg-bg-tertiary rounded-lg p-3 max-h-32 overflow-y-auto custom-scrollbar">
+              {serviceInfo.recentLogs.slice(-5).map((log, index) => (
+                <div key={index} className="text-xs mb-1 last:mb-0">
+                  <span
+                    className={
+                      log.level === "error"
+                        ? "text-error"
+                        : log.level === "warn"
+                        ? "text-warning"
+                        : "text-text-tertiary"
+                    }
+                  >
+                    [{log.level.toUpperCase()}]
+                  </span>{" "}
+                  <span className="text-text-secondary">{log.message}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 提示 */}
+        {!pythonEnv?.meetsRequirements && (
+          <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-lg flex items-center gap-2">
+            <span className="material-symbols-outlined text-warning text-sm">
+              warning
+            </span>
+            <span className="text-xs text-warning">
+              Python 环境不满足要求，请先安装 Python 3.9+
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-bg-primary">
@@ -434,11 +739,22 @@ const AISettings: React.FC = () => {
               <span className="material-symbols-outlined text-primary">
                 memory
               </span>
-              <h2 className="text-xl font-bold text-text-primary">
-                运行环境
-              </h2>
+              <h2 className="text-xl font-bold text-text-primary">运行环境</h2>
             </div>
             {renderPythonEnvCard()}
+          </section>
+
+          {/* Python 服务管理 */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-primary">
+                smart_toy
+              </span>
+              <h2 className="text-xl font-bold text-text-primary">
+                智能体服务
+              </h2>
+            </div>
+            {renderPythonServiceCard()}
           </section>
 
           {/* 在线 API 接入 */}

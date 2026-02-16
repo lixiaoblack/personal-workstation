@@ -14,6 +14,10 @@ import type {
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,
+  PythonServiceConfig,
+  PythonServiceInfo,
+  PythonServiceStartResult,
+  PythonServiceStopResult,
 } from "./types";
 
 // WebSocket 服务器信息
@@ -39,6 +43,10 @@ export type {
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,
+  PythonServiceConfig,
+  PythonServiceInfo,
+  PythonServiceStartResult,
+  PythonServiceStopResult,
 };
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -90,8 +98,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("python:detect", options),
   getPythonInstallGuide: (): Promise<PythonInstallGuide> =>
     ipcRenderer.invoke("python:getInstallGuide"),
-  checkAIDependencies: (): Promise<{ installed: string[]; missing: string[] }> =>
-    ipcRenderer.invoke("python:checkDependencies"),
+  checkAIDependencies: (): Promise<{
+    installed: string[];
+    missing: string[];
+  }> => ipcRenderer.invoke("python:checkDependencies"),
+
+  // Python 服务管理
+  startPythonService: (config?: PythonServiceConfig): Promise<PythonServiceStartResult> =>
+    ipcRenderer.invoke("python:service:start", config),
+  stopPythonService: (): Promise<PythonServiceStopResult> =>
+    ipcRenderer.invoke("python:service:stop"),
+  restartPythonService: (config?: PythonServiceConfig): Promise<PythonServiceStartResult> =>
+    ipcRenderer.invoke("python:service:restart", config),
+  getPythonServiceInfo: (): Promise<PythonServiceInfo> =>
+    ipcRenderer.invoke("python:service:getInfo"),
 });
 
 // 类型声明
@@ -129,7 +149,16 @@ export interface ElectronAPI {
   // Python 环境检测
   detectPython: (options?: PythonDetectOptions) => Promise<PythonEnvironment>;
   getPythonInstallGuide: () => Promise<PythonInstallGuide>;
-  checkAIDependencies: () => Promise<{ installed: string[]; missing: string[] }>;
+  checkAIDependencies: () => Promise<{
+    installed: string[];
+    missing: string[];
+  }>;
+
+  // Python 服务管理
+  startPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  stopPythonService: () => Promise<PythonServiceStopResult>;
+  restartPythonService: (config?: PythonServiceConfig) => Promise<PythonServiceStartResult>;
+  getPythonServiceInfo: () => Promise<PythonServiceInfo>;
 }
 
 declare global {

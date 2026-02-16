@@ -8,7 +8,8 @@ import * as storageService from "./services/storageService";
 import * as avatarService from "./services/avatarService";
 import * as websocketService from "./services/websocketService";
 import * as pythonEnvService from "./services/pythonEnvService";
-import type { PythonDetectOptions } from "./types";
+import * as pythonProcessService from "./services/pythonProcessService";
+import type { PythonDetectOptions, PythonServiceConfig } from "./types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -165,9 +166,12 @@ function registerIpcHandlers() {
   });
 
   // Python 环境检测
-  ipcMain.handle("python:detect", async (_event, options?: PythonDetectOptions) => {
-    return pythonEnvService.detectPythonEnvironment(options);
-  });
+  ipcMain.handle(
+    "python:detect",
+    async (_event, options?: PythonDetectOptions) => {
+      return pythonEnvService.detectPythonEnvironment(options);
+    }
+  );
 
   ipcMain.handle("python:getInstallGuide", async () => {
     return pythonEnvService.getPythonInstallGuide();
@@ -175,6 +179,29 @@ function registerIpcHandlers() {
 
   ipcMain.handle("python:checkDependencies", async () => {
     return pythonEnvService.checkAIDependencies();
+  });
+
+  // Python 服务管理
+  ipcMain.handle(
+    "python:service:start",
+    async (_event, config?: PythonServiceConfig) => {
+      return pythonProcessService.startPythonService(config);
+    }
+  );
+
+  ipcMain.handle("python:service:stop", async () => {
+    return pythonProcessService.stopPythonService();
+  });
+
+  ipcMain.handle(
+    "python:service:restart",
+    async (_event, config?: PythonServiceConfig) => {
+      return pythonProcessService.restartPythonService(config);
+    }
+  );
+
+  ipcMain.handle("python:service:getInfo", async () => {
+    return pythonProcessService.getPythonServiceInfo();
   });
 }
 
@@ -206,6 +233,9 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", async () => {
+  // 停止 Python 服务
+  pythonProcessService.cleanup();
+
   // 关闭 WebSocket 服务器
   await websocketService.stopWebSocketServer();
 
@@ -219,6 +249,7 @@ app.on("window-all-closed", async () => {
 
 app.on("before-quit", async () => {
   // 应用退出前清理
+  pythonProcessService.cleanup();
   await websocketService.stopWebSocketServer();
   closeDatabase();
 });

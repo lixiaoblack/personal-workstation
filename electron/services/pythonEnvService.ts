@@ -55,9 +55,10 @@ function getOSVersion(): string {
  */
 function parsePythonVersion(versionStr: string): PythonVersion | null {
   // 匹配版本号模式: Python 3.11.5 或 3.11.5
-  const match = versionStr.match(/Python\s+(\d+)\.(\d+)\.(\d+)/i) ||
-                versionStr.match(/^(\d+)\.(\d+)\.(\d+)$/);
-  
+  const match =
+    versionStr.match(/Python\s+(\d+)\.(\d+)\.(\d+)/i) ||
+    versionStr.match(/^(\d+)\.(\d+)\.(\d+)$/);
+
   if (match) {
     return {
       major: parseInt(match[1], 10),
@@ -66,7 +67,7 @@ function parsePythonVersion(versionStr: string): PythonVersion | null {
       raw: `${match[1]}.${match[2]}.${match[3]}`,
     };
   }
-  
+
   return null;
 }
 
@@ -118,7 +119,7 @@ async function detectPythonPath(
     if (pythonResult?.stdout) {
       pythonPath = pythonResult.stdout.split("\n")[0].trim();
     }
-    
+
     const python3Result = await safeExec("where python3", timeout);
     if (python3Result?.stdout) {
       python3Path = python3Result.stdout.split("\n")[0].trim();
@@ -129,7 +130,7 @@ async function detectPythonPath(
     if (pythonResult?.stdout) {
       pythonPath = pythonResult.stdout.trim();
     }
-    
+
     const python3Result = await safeExec("which python3", timeout);
     if (python3Result?.stdout) {
       python3Path = python3Result.stdout.trim();
@@ -202,7 +203,7 @@ async function detectPackageManagers(
     if (poetryResult?.stdout) {
       const versionMatch = poetryResult.stdout.match(/(\d+\.\d+\.\d+)/);
       let poetryPath: string | null = null;
-      
+
       if (osType === "win32") {
         const whereResult = await safeExec("where poetry", timeout);
         poetryPath = whereResult?.stdout?.split("\n")[0].trim() || null;
@@ -210,7 +211,7 @@ async function detectPackageManagers(
         const whichResult = await safeExec("which poetry", timeout);
         poetryPath = whichResult?.stdout?.trim() || null;
       }
-      
+
       managers.push({
         type: "poetry",
         version: versionMatch ? versionMatch[1] : null,
@@ -247,7 +248,7 @@ function detectVirtualEnv(): VirtualEnvInfo {
     // 检测虚拟环境类型
     const venvPath = path.join(virtualEnv, "pyvenv.cfg");
     const hasVenvCfg = fs.existsSync(venvPath);
-    
+
     return {
       type: hasVenvCfg ? "venv" : "virtualenv",
       active: true,
@@ -276,17 +277,19 @@ function detectVirtualEnv(): VirtualEnvInfo {
 /**
  * 获取默认包管理器
  */
-function getDefaultPackageManager(managers: PackageManagerInfo[]): PackageManagerType {
+function getDefaultPackageManager(
+  managers: PackageManagerInfo[]
+): PackageManagerType {
   if (managers.length === 0) return "none";
-  
+
   // 优先级: pip3 > pip > poetry > conda
   const priority: PackageManagerType[] = ["pip3", "pip", "poetry", "conda"];
-  
+
   for (const type of priority) {
     const found = managers.find((m) => m.type === type);
     if (found) return found.type;
   }
-  
+
   return managers[0].type;
 }
 
@@ -298,16 +301,26 @@ function generateRecommendations(env: PythonEnvironment): string[] {
 
   if (!env.pythonInstalled) {
     if (env.os === "darwin") {
-      recommendations.push("使用 Homebrew 安装 Python: brew install python@3.11");
-      recommendations.push("或从官网下载: https://www.python.org/downloads/macos/");
+      recommendations.push(
+        "使用 Homebrew 安装 Python: brew install python@3.11"
+      );
+      recommendations.push(
+        "或从官网下载: https://www.python.org/downloads/macos/"
+      );
     } else if (env.os === "win32") {
-      recommendations.push("从官网下载 Python: https://www.python.org/downloads/windows/");
+      recommendations.push(
+        "从官网下载 Python: https://www.python.org/downloads/windows/"
+      );
       recommendations.push("安装时请勾选 'Add Python to PATH'");
     } else {
-      recommendations.push("使用包管理器安装: sudo apt install python3 python3-pip");
+      recommendations.push(
+        "使用包管理器安装: sudo apt install python3 python3-pip"
+      );
     }
   } else if (!env.meetsRequirements) {
-    recommendations.push(`Python 版本过低，建议升级到 ${AI_AGENT_REQUIREMENTS.pythonMinVersion} 或更高版本`);
+    recommendations.push(
+      `Python 版本过低，建议升级到 ${AI_AGENT_REQUIREMENTS.pythonMinVersion} 或更高版本`
+    );
   }
 
   if (env.pythonInstalled && env.packageManagers.length === 0) {
@@ -349,7 +362,9 @@ export async function detectPythonEnvironment(
   // 检查是否满足要求
   let meetsRequirements = false;
   if (pythonVersion) {
-    meetsRequirements = compareVersions(pythonVersion, AI_AGENT_REQUIREMENTS.pythonMinVersion) >= 0;
+    meetsRequirements =
+      compareVersions(pythonVersion, AI_AGENT_REQUIREMENTS.pythonMinVersion) >=
+      0;
   }
 
   const environment: PythonEnvironment = {
@@ -422,7 +437,8 @@ export function getPythonInstallGuide(): PythonInstallGuide {
       name: "apt (Ubuntu/Debian)",
       description: "Debian 系包管理器",
       url: "",
-      command: "sudo apt update && sudo apt install python3 python3-pip python3-venv",
+      command:
+        "sudo apt update && sudo apt install python3 python3-pip python3-venv",
       recommended: true,
     });
     methods.push({

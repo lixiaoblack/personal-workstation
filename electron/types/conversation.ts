@@ -5,6 +5,31 @@
 // 消息角色
 export type MessageRole = "user" | "assistant" | "system";
 
+// Agent 步骤类型
+export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer";
+
+// Agent 工具调用信息
+export interface AgentToolCallInfo {
+  name: string;
+  arguments: Record<string, unknown>;
+  result?: string;
+  status?: "pending" | "success" | "error";
+}
+
+// Agent 步骤（用于存储在消息 metadata 中）
+export interface AgentStepData {
+  type: AgentStepType;
+  content: string;
+  toolCall?: AgentToolCallInfo;
+  iteration?: number;
+  timestamp: number;
+}
+
+// 消息元数据
+export interface MessageMetadata {
+  agentSteps?: AgentStepData[];
+}
+
 // 消息对象
 export interface Message {
   id: number;
@@ -14,6 +39,7 @@ export interface Message {
   tokensUsed?: number;
   timestamp: number;
   createdAt: string;
+  metadata?: MessageMetadata;
 }
 
 // 对话对象
@@ -59,6 +85,7 @@ export interface CreateMessageInput {
   content: string;
   tokensUsed?: number;
   timestamp: number;
+  metadata?: MessageMetadata;
 }
 
 // 对话分组（按日期）

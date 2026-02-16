@@ -11,6 +11,7 @@ import type {
   CreateConversationInput,
   UpdateConversationInput,
   CreateMessageInput,
+  MessageMetadata,
 } from "../types/conversation";
 
 // 数据库行类型
@@ -32,6 +33,7 @@ interface MessageRow {
   tokens_used: number | null;
   timestamp: number;
   created_at: string;
+  metadata: string | null;
 }
 
 /**
@@ -53,6 +55,15 @@ function rowToConversation(row: ConversationRow): Conversation {
  * 将数据库行转换为消息对象
  */
 function rowToMessage(row: MessageRow): Message {
+  let metadata: MessageMetadata | undefined;
+  if (row.metadata) {
+    try {
+      metadata = JSON.parse(row.metadata) as MessageMetadata;
+    } catch (e) {
+      console.error("[ConversationService] 解析 metadata 失败:", e);
+    }
+  }
+  
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -61,6 +72,7 @@ function rowToMessage(row: MessageRow): Message {
     tokensUsed: row.tokens_used || undefined,
     timestamp: row.timestamp,
     createdAt: row.created_at,
+    metadata,
   };
 }
 
@@ -136,7 +148,7 @@ export function getConversationById(id: number): Conversation | null {
   // 获取消息列表
   const messages = db
     .prepare(
-      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at
+      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at, metadata
        FROM messages WHERE conversation_id = ?
        ORDER BY timestamp ASC`
     )
@@ -235,8 +247,8 @@ export function deleteConversation(id: number): boolean {
 export function addMessage(input: CreateMessageInput): Message {
   const db = getDatabase();
   const stmt = db.prepare(`
-    INSERT INTO messages (conversation_id, role, content, tokens_used, timestamp)
-    VALUES (@conversationId, @role, @content, @tokensUsed, @timestamp)
+    INSERT INTO messages (conversation_id, role, content, tokens_used, timestamp, metadata)
+    VALUES (@conversationId, @role, @content, @tokensUsed, @timestamp, @metadata)
   `);
 
   const result = stmt.run({
@@ -245,6 +257,7 @@ export function addMessage(input: CreateMessageInput): Message {
     content: input.content,
     tokensUsed: input.tokensUsed || null,
     timestamp: input.timestamp,
+    metadata: input.metadata ? JSON.stringify(input.metadata) : null,
   });
 
   // 更新对话的消息数量和更新时间
@@ -258,7 +271,7 @@ export function addMessage(input: CreateMessageInput): Message {
   // 获取新创建的消息
   const row = db
     .prepare(
-      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at
+      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at, metadata
        FROM messages WHERE id = ?`
     )
     .get(result.lastInsertRowid) as MessageRow;
@@ -273,7 +286,7 @@ export function getMessagesByConversationId(conversationId: number): Message[] {
   const db = getDatabase();
   const rows = db
     .prepare(
-      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at
+      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at, metadata
        FROM messages WHERE conversation_id = ?
        ORDER BY timestamp ASC`
     )
@@ -293,7 +306,7 @@ export function getRecentMessages(
   const db = getDatabase();
   const rows = db
     .prepare(
-      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at
+      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at, metadata
        FROM messages WHERE conversation_id = ?
        ORDER BY timestamp DESC
        LIMIT ?`

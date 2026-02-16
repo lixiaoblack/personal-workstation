@@ -184,6 +184,20 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
     CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
   `);
+
+  // 数据迁移：为 messages 表添加 metadata 列（如果不存在）
+  try {
+    const columns = database
+      .prepare("PRAGMA table_info(messages)")
+      .all() as Array<{ name: string }>;
+    const hasMetadata = columns.some((col) => col.name === "metadata");
+    if (!hasMetadata) {
+      database.exec(`ALTER TABLE messages ADD COLUMN metadata TEXT`);
+      console.log("[Database] 已添加 messages.metadata 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 metadata 列失败:", error);
+  }
 }
 
 export default {

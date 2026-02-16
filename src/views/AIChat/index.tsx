@@ -133,6 +133,7 @@ const AIChatComponent: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const loadingRef = useRef(false);
+  const agentStepsRef = useRef<AgentStepItem[]>([]);
 
   // ===== 数据加载 =====
   // 加载对话分组列表
@@ -159,6 +160,18 @@ const AIChatComponent: React.FC = () => {
           if (conversation.modelId) {
             const model = models.find((m) => m.id === conversation.modelId);
             if (model) setCurrentModel(model);
+          }
+          
+          // 从最后一条 AI 消息的 metadata 中恢复 Agent 步骤
+          const messages = conversation.messages || [];
+          const lastAiMessage = [...messages].reverse().find(m => m.role === "assistant");
+          if (lastAiMessage?.metadata?.agentSteps) {
+            const steps = lastAiMessage.metadata.agentSteps as AgentStepItem[];
+            setAgentSteps(steps);
+            agentStepsRef.current = steps;
+          } else {
+            setAgentSteps([]);
+            agentStepsRef.current = [];
           }
         }
       } catch (error) {
@@ -210,17 +223,24 @@ const AIChatComponent: React.FC = () => {
       const streamEnd = lastMessage as ChatStreamEndMessage;
       const fullContent = streamEnd.fullContent;
 
-      // 保存 AI 消息到数据库
+      // 保存 AI 消息到数据库（附带 Agent 步骤）
       const cid = streamState.conversationId;
       if (cid && fullContent) {
         (async () => {
           try {
+            // 收集当前的 Agent 步骤（如果有）
+            const currentAgentSteps = agentStepsRef.current;
+            const metadata = currentAgentSteps.length > 0 
+              ? { agentSteps: currentAgentSteps } 
+              : undefined;
+            
             await window.electronAPI.addMessage({
               conversationId: cid,
               role: "assistant",
               content: fullContent,
               tokensUsed: streamEnd.tokensUsed,
               timestamp: Date.now(),
+              metadata,
             });
             // 刷新消息列表
             await loadMessages(cid);
@@ -282,6 +302,7 @@ const AIChatComponent: React.FC = () => {
         conversationId: null,
       });
       setAgentSteps([]); // 清空 Agent 步骤
+      agentStepsRef.current = [];
       loadingRef.current = false;
       return;
     }
@@ -291,16 +312,20 @@ const AIChatComponent: React.FC = () => {
       const agentStep = lastMessage as AgentStepMessage;
       console.log("[AIChat] 收到 Agent 步骤:", agentStep);
       // 添加新的 Agent 步骤
-      setAgentSteps((prev) => [
-        ...prev,
-        {
-          type: agentStep.stepType,
-          content: agentStep.content,
-          toolCall: agentStep.toolCall,
-          iteration: agentStep.iteration,
-          timestamp: agentStep.timestamp,
-        },
-      ]);
+      setAgentSteps((prev) => {
+        const newSteps = [
+          ...prev,
+          {
+            type: agentStep.stepType,
+            content: agentStep.content,
+            toolCall: agentStep.toolCall,
+            iteration: agentStep.iteration,
+            timestamp: agentStep.timestamp,
+          },
+        ];
+        agentStepsRef.current = newSteps;
+        return newSteps;
+      });
       return;
     }
   }, [
@@ -326,6 +351,7 @@ const AIChatComponent: React.FC = () => {
       setActiveConversation(conversation);
       setMessages([]);
       setAgentSteps([]); // 清空 Agent 步骤
+      agentStepsRef.current = [];
       await loadConversations();
     } catch (error) {
       console.error("创建对话失败:", error);
@@ -404,8 +430,7 @@ const AIChatComponent: React.FC = () => {
         message.warning("正在生成回复，请稍后再切换对话");
         return;
       }
-      // 清空 Agent 步骤
-      setAgentSteps([]);
+      // loadMessages 会从数据库恢复 agentSteps
       await loadMessages(conversationId);
     },
     [loadMessages, streamState.status]
@@ -446,6 +471,7 @@ const AIChatComponent: React.FC = () => {
 
     // 清空之前的 Agent 步骤
     setAgentSteps([]);
+    agentStepsRef.current = [];
 
     // 添加用户消息
     const userMessage: Message = {

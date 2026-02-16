@@ -31,6 +31,9 @@ export type {
   AgentThoughtMessage,
   AgentToolCallMessage,
   AgentToolResultMessage,
+  // 消息元数据类型
+  MessageMetadata,
+  AgentStepData,
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,

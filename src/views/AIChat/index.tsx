@@ -165,11 +165,8 @@ const AIChatComponent: React.FC = () => {
           // 从最后一条 AI 消息的 metadata 中恢复 Agent 步骤
           const messages = conversation.messages || [];
           const lastAiMessage = [...messages].reverse().find(m => m.role === "assistant");
-          console.log("[AIChat] 加载消息，最后 AI 消息:", lastAiMessage);
-          console.log("[AIChat] metadata:", lastAiMessage?.metadata);
           if (lastAiMessage?.metadata?.agentSteps) {
             const steps = lastAiMessage.metadata.agentSteps as AgentStepItem[];
-            console.log("[AIChat] 恢复 Agent 步骤:", steps);
             setAgentSteps(steps);
             agentStepsRef.current = steps;
           } else {
@@ -233,14 +230,11 @@ const AIChatComponent: React.FC = () => {
           try {
             // 收集当前的 Agent 步骤（如果有）
             const currentAgentSteps = agentStepsRef.current;
-            console.log("[AIChat] 保存消息时 Agent 步骤:", currentAgentSteps);
             const metadata = currentAgentSteps.length > 0 
               ? { agentSteps: currentAgentSteps } 
               : undefined;
-            console.log("[AIChat] 保存消息 metadata:", metadata);
-            console.log("[AIChat] conversationId:", cid, "fullContent:", fullContent?.substring(0, 50));
             
-            const savedMsg = await window.electronAPI.addMessage({
+            await window.electronAPI.addMessage({
               conversationId: cid,
               role: "assistant",
               content: fullContent,
@@ -248,7 +242,6 @@ const AIChatComponent: React.FC = () => {
               timestamp: Date.now(),
               metadata,
             });
-            console.log("[AIChat] 消息已保存:", savedMsg);
             // 刷新消息列表
             await loadMessages(cid);
             // 刷新对话列表
@@ -317,7 +310,6 @@ const AIChatComponent: React.FC = () => {
     // Agent 步骤消息（思考过程）
     if (lastMessage.type === MessageType.AGENT_STEP) {
       const agentStep = lastMessage as AgentStepMessage;
-      console.log("[AIChat] 收到 Agent 步骤:", agentStep);
       // 添加新的 Agent 步骤
       setAgentSteps((prev) => {
         const newSteps = [
@@ -906,7 +898,9 @@ const AIChatComponent: React.FC = () => {
 
   // 渲染 Agent 思考步骤
   const renderAgentSteps = () => {
-    if (agentSteps.length === 0) return null;
+    // 过滤掉 answer 类型（答案在消息列表中显示）
+    const thinkingSteps = agentSteps.filter(step => step.type !== "answer");
+    if (thinkingSteps.length === 0) return null;
 
     // 判断是否还在执行中
     const isStreaming = streamState.status === "streaming" || loadingRef.current;
@@ -933,7 +927,7 @@ const AIChatComponent: React.FC = () => {
 
             {/* 步骤列表 */}
             <div className="bg-bg-secondary border border-border rounded-lg p-3 space-y-2">
-              {agentSteps.map((step, index) => (
+              {thinkingSteps.map((step, index) => (
                 <div
                   key={`${step.timestamp}-${index}`}
                   className="flex items-start gap-2 text-sm"

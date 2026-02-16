@@ -32,6 +32,9 @@ import type {
   Message,
   StreamStatus,
   HistoryMessageItem,
+  AgentStepMessage,
+  AgentStepType,
+  AgentToolCallInfo,
 } from "@/types/electron";
 
 // 提供商显示名称映射
@@ -45,6 +48,21 @@ const PROVIDER_LABELS: Record<string, { name: string; color: string }> = {
 
 // 上下文配置：默认保留最近 N 条消息
 const DEFAULT_CONTEXT_LIMIT = 20;
+
+// Agent 步骤显示配置
+const AGENT_STEP_ICONS: Record<AgentStepType, string> = {
+  thought: "💭",      // 思考
+  tool_call: "🔧",    // 调用工具
+  tool_result: "📊",  // 工具结果
+  answer: "💬",       // 最终答案
+};
+
+const AGENT_STEP_LABELS: Record<AgentStepType, string> = {
+  thought: "思考中",
+  tool_call: "调用工具",
+  tool_result: "工具结果",
+  answer: "回答",
+};
 
 // 格式化时间
 const formatTime = (timestamp: number) => {
@@ -89,6 +107,16 @@ const AIChatComponent: React.FC = () => {
     content: "",
     conversationId: null,
   });
+
+  // Agent 步骤状态（用于显示思考过程）
+  interface AgentStepItem {
+    type: AgentStepType;
+    content: string;
+    toolCall?: AgentToolCallInfo;
+    iteration?: number;
+    timestamp: number;
+  }
+  const [agentSteps, setAgentSteps] = useState<AgentStepItem[]>([]);
 
   // 输入内容
   const [inputValue, setInputValue] = useState("");
@@ -206,6 +234,7 @@ const AIChatComponent: React.FC = () => {
         content: "",
         conversationId: null,
       });
+      setAgentSteps([]); // 清空 Agent 步骤
       loadingRef.current = false;
       return;
     }
@@ -248,7 +277,25 @@ const AIChatComponent: React.FC = () => {
         content: "",
         conversationId: null,
       });
+      setAgentSteps([]); // 清空 Agent 步骤
       loadingRef.current = false;
+      return;
+    }
+
+    // Agent 步骤消息（思考过程）
+    if (lastMessage.type === MessageType.AGENT_STEP) {
+      const agentStep = lastMessage as AgentStepMessage;
+      // 添加新的 Agent 步骤
+      setAgentSteps((prev) => [
+        ...prev,
+        {
+          type: agentStep.stepType,
+          content: agentStep.content,
+          toolCall: agentStep.toolCall,
+          iteration: agentStep.iteration,
+          timestamp: agentStep.timestamp,
+        },
+      ]);
       return;
     }
   }, [
@@ -801,6 +848,83 @@ const AIChatComponent: React.FC = () => {
     );
   };
 
+  // 渲染 Agent 思考步骤
+  const renderAgentSteps = () => {
+    if (agentSteps.length === 0) return null;
+
+    return (
+      <div className="flex justify-start mb-4">
+        <div className="flex gap-3 max-w-[85%]">
+          {/* AI 头像 */}
+          <div className="size-8 rounded-lg bg-bg-tertiary border border-border flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-lg text-text-secondary">
+              smart_toy
+            </span>
+          </div>
+
+          {/* 思考过程容器 */}
+          <div className="flex flex-col gap-2 flex-1">
+            {/* 标题 */}
+            <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
+              <span className="text-primary">AI 助手</span>
+              <span className="animate-pulse text-warning">思考中...</span>
+            </div>
+
+            {/* 步骤列表 */}
+            <div className="bg-bg-secondary border border-border rounded-lg p-3 space-y-2">
+              {agentSteps.map((step, index) => (
+                <div
+                  key={`${step.timestamp}-${index}`}
+                  className="flex items-start gap-2 text-sm"
+                >
+                  {/* 步骤图标 */}
+                  <span className="shrink-0 text-base">
+                    {AGENT_STEP_ICONS[step.type]}
+                  </span>
+
+                  {/* 步骤内容 */}
+                  <div className="flex flex-col gap-1 flex-1 min-w-0">
+                    {/* 步骤标签和迭代次数 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-text-secondary">
+                        {AGENT_STEP_LABELS[step.type]}
+                      </span>
+                      {step.iteration !== undefined && step.iteration > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-tertiary">
+                          迭代 #{step.iteration}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 思考内容 */}
+                    <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
+                      {step.type === "tool_call" && step.toolCall ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-primary font-medium">
+                            {step.toolCall.name}
+                          </span>
+                          <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
+                            {JSON.stringify(step.toolCall.arguments, null, 2)}
+                          </code>
+                        </div>
+                      ) : step.type === "tool_result" ? (
+                        <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-32 overflow-auto">
+                          {step.content}
+                        </code>
+                      ) : (
+                        step.content
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // 渲染空状态
   const renderEmptyState = () => (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
@@ -932,11 +1056,12 @@ const AIChatComponent: React.FC = () => {
 
         {/* 消息列表 */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 max-w-4xl mx-auto w-full">
-          {messages.length === 0 && streamState.status !== "streaming" ? (
+          {messages.length === 0 && streamState.status !== "streaming" && agentSteps.length === 0 ? (
             renderEmptyState()
           ) : (
             <div className="space-y-8">
               {messages.map(renderMessage)}
+              {renderAgentSteps()}
               {renderStreamingMessage()}
               <div ref={messagesEndRef} />
             </div>

@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 19 |
-| 待处理 | 21 |
+| 已完成 | 20 |
+| 待处理 | 20 |
 
 ---
 
@@ -154,6 +154,11 @@
   - 实现 ReActAgent 基于 LangGraph 的 ReAct 循环
   - 扩展 WebSocket 消息协议支持 agent_step 等消息类型
   - 集成 agent_chat 消息处理到 message_handler
+  - **前端思考过程展示**
+  - AIChat 页面添加 agentSteps 状态管理
+  - 创建 renderAgentSteps 组件显示思考步骤
+  - 支持显示 thought/tool_call/tool_result/answer 四种步骤类型
+  - 工具调用详情展示（工具名、参数、结果）
 
 ### 待处理
 
@@ -173,7 +178,6 @@
 
 ### 待处理
 
-- [ ] AI-018: LangGraph 智能体 - ReAct Agent 基础实现 | 创建时间: 2026-02-17
 - [ ] AI-019: LangGraph 智能体 - Deep Agents 集成 | 创建时间: 2026-02-17
 - [ ] AI-020: LangGraph 智能体 - 多轮对话状态管理 | 创建时间: 2026-02-17
 - [ ] AI-021: MCP 集成 - MCP 客户端实现 | 创建时间: 2026-02-17

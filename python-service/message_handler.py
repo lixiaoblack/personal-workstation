@@ -413,7 +413,7 @@ class MessageHandler:
     async def _handle_ollama_status(self, message: dict) -> dict:
         """处理 Ollama 状态查询"""
         host = message.get("host", "http://127.0.0.1:11434")
-        
+
         try:
             status = await check_ollama_status(host)
             return {
@@ -436,7 +436,7 @@ class MessageHandler:
     async def _handle_ollama_models(self, message: dict) -> dict:
         """处理 Ollama 模型列表查询"""
         host = message.get("host", "http://127.0.0.1:11434")
-        
+
         try:
             models = await get_ollama_models(host)
             return {
@@ -464,7 +464,7 @@ class MessageHandler:
     async def _handle_ollama_test(self, message: dict) -> dict:
         """处理 Ollama 连接测试"""
         host = message.get("host", "http://127.0.0.1:11434")
-        
+
         try:
             client = get_ollama_client(host)
             result = await client.test_connection()

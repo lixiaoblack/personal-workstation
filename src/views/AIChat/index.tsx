@@ -2,6 +2,7 @@
  * AIChat AI 聊天页面
  * 基于 ant-design-x 构建的专业 AI 对话界面
  * 支持流式传输、对话历史、模型选择
+ * 使用 MobX 管理模型状态
  */
 import React, {
   useState,
@@ -11,8 +12,10 @@ import React, {
   useCallback,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { Modal, Input, message, Dropdown } from "antd";
+import { Modal, Input, message, Dropdown, Tag, Tooltip } from "antd";
+import { observer } from "mobx-react-lite";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { modelStore } from "@/stores";
 import { ConnectionState, MessageType } from "@/types/electron";
 import type {
   ChatStreamStartMessage,
@@ -21,11 +24,21 @@ import type {
   ChatResponseMessage,
   ChatErrorMessage,
   ModelConfig,
+  OllamaModelConfig,
   ConversationGroup,
   Conversation,
   Message,
   StreamStatus,
 } from "@/types/electron";
+
+// 提供商显示名称映射
+const PROVIDER_LABELS: Record<string, { name: string; color: string }> = {
+  openai: { name: "OpenAI", color: "processing" },
+  bailian: { name: "百炼", color: "cyan" },
+  zhipu: { name: "智谱", color: "purple" },
+  ollama: { name: "Ollama", color: "success" },
+  custom: { name: "自定义", color: "default" },
+};
 
 // 格式化时间
 const formatTime = (timestamp: number) => {
@@ -36,17 +49,19 @@ const formatTime = (timestamp: number) => {
   });
 };
 
-const AIChat: React.FC = () => {
+// 检查是否为 Ollama 模型配置
+const isOllamaModel = (model: ModelConfig): model is OllamaModelConfig => {
+  return model.provider === "ollama";
+};
+
+const AIChatComponent: React.FC = () => {
   const navigate = useNavigate();
   const { connectionState, sendChat, lastMessage } = useWebSocket({
     autoConnect: true,
   });
 
-  // ===== 状态定义 =====
-  // 模型列表（从数据库加载）
-  const [models, setModels] = useState<ModelConfig[]>([]);
-  // 当前选中的模型
-  const [currentModel, setCurrentModel] = useState<ModelConfig | null>(null);
+  // 从 MobX Store 获取模型状态
+  const { models, currentModel, setCurrentModel } = modelStore;
 
   // 对话分组列表
   const [conversationGroups, setConversationGroups] = useState<
@@ -83,23 +98,6 @@ const AIChat: React.FC = () => {
   const loadingRef = useRef(false);
 
   // ===== 数据加载 =====
-  // 加载已启用的模型配置
-  const loadModels = useCallback(async () => {
-    try {
-      const enabledModels = await window.electronAPI.getEnabledModelConfigs();
-      setModels(enabledModels);
-      // 如果有默认模型，设置为当前模型
-      const defaultModel = enabledModels.find((m) => m.isDefault);
-      if (defaultModel) {
-        setCurrentModel(defaultModel);
-      } else if (enabledModels.length > 0) {
-        setCurrentModel(enabledModels[0]);
-      }
-    } catch (error) {
-      console.error("加载模型配置失败:", error);
-    }
-  }, []);
-
   // 加载对话分组列表
   const loadConversations = useCallback(async () => {
     try {
@@ -135,9 +133,9 @@ const AIChat: React.FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    loadModels();
+    modelStore.loadModels();
     loadConversations();
-  }, [loadModels, loadConversations]);
+  }, [loadConversations]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -435,18 +433,41 @@ const AIChat: React.FC = () => {
 
   // 模型选择下拉菜单
   const modelMenuItems = useMemo(() => {
-    return models.map((model) => ({
-      key: String(model.id),
-      label: (
-        <div className="flex items-center justify-between w-full">
-          <span>{model.name}</span>
-          {model.isDefault && (
-            <span className="text-xs text-primary ml-2">默认</span>
-          )}
-        </div>
-      ),
-      onClick: () => setCurrentModel(model),
-    }));
+    return models.map((model) => {
+      const providerInfo = PROVIDER_LABELS[model.provider] || {
+        name: model.provider,
+        color: "default",
+      };
+      const isOllama = isOllamaModel(model);
+
+      return {
+        key: String(model.id),
+        label: (
+          <div className="flex items-center justify-between w-full gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{model.name}</span>
+              <Tag
+                color={providerInfo.color}
+                className="text-[10px] leading-tight px-1.5 py-0 m-0"
+              >
+                {providerInfo.name}
+              </Tag>
+              {isOllama && (
+                <Tooltip title={`本地运行: ${model.host}`}>
+                  <span className="material-symbols-outlined text-xs text-success">
+                    offline_bolt
+                  </span>
+                </Tooltip>
+              )}
+            </div>
+            {model.isDefault && (
+              <span className="text-xs text-primary">默认</span>
+            )}
+          </div>
+        ),
+        onClick: () => setCurrentModel(model),
+      };
+    });
   }, [models]);
 
   // 连接状态渲染
@@ -774,6 +795,16 @@ const AIChat: React.FC = () => {
                     <span className="text-xs font-semibold text-text-secondary uppercase tracking-tighter">
                       {currentModel.name}
                     </span>
+                    <Tag
+                      color={
+                        PROVIDER_LABELS[currentModel.provider]?.color ||
+                        "default"
+                      }
+                      className="text-[9px] leading-tight px-1 py-0 m-0"
+                    >
+                      {PROVIDER_LABELS[currentModel.provider]?.name ||
+                        currentModel.provider}
+                    </Tag>
                     <span className="material-symbols-outlined text-base text-text-tertiary">
                       expand_more
                     </span>
@@ -781,19 +812,29 @@ const AIChat: React.FC = () => {
                 </Dropdown>
               )}
               {/* 其他模型快捷入口 */}
-              <div className="flex items-center gap-4 text-xs font-medium text-text-tertiary">
+              <div className="flex items-center gap-3 text-xs font-medium text-text-tertiary">
                 {models
                   .filter((m) => m.id !== currentModel?.id)
                   .slice(0, 3)
-                  .map((model) => (
-                    <button
-                      key={model.id}
-                      className="hover:text-primary transition-colors"
-                      onClick={() => setCurrentModel(model)}
-                    >
-                      {model.name}
-                    </button>
-                  ))}
+                  .map((model) => {
+                    const isOllama = isOllamaModel(model);
+                    return (
+                      <button
+                        key={model.id}
+                        className="flex items-center gap-1 hover:text-primary transition-colors"
+                        onClick={() => setCurrentModel(model)}
+                      >
+                        <span>{model.name}</span>
+                        {isOllama && (
+                          <Tooltip title="本地模型">
+                            <span className="material-symbols-outlined text-[10px] text-success">
+                              offline_bolt
+                            </span>
+                          </Tooltip>
+                        )}
+                      </button>
+                    );
+                  })}
               </div>
             </div>
           </div>
@@ -937,4 +978,4 @@ const AIChat: React.FC = () => {
   );
 };
 
-export { AIChat };
+export const AIChat = observer(AIChatComponent);

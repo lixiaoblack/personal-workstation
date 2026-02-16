@@ -10,10 +10,18 @@ import {
   type WebSocketClientInfo,
   type ClientType,
   type ChatMessage,
+  type OllamaStatusResponseMessage,
+  type OllamaModelsResponseMessage,
+  type OllamaTestResponseMessage,
   createMessage,
 } from "../types/websocket";
 import { getEnabledModelConfigs } from "./modelConfigService";
 import type { OnlineModelConfig, OllamaModelConfig } from "../types/model";
+import type {
+  OllamaStatus,
+  OllamaModel,
+  OllamaTestResult,
+} from "../types/ollama";
 
 // WebSocket 服务器配置
 interface WebSocketServerConfig {
@@ -34,6 +42,17 @@ let pythonClient: WebSocket | null = null;
 
 // 心跳定时器
 let heartbeatTimer: NodeJS.Timeout | null = null;
+
+// Ollama 请求响应 Promise 缓存
+interface PendingOllamaRequest {
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+  timeout: NodeJS.Timeout;
+}
+const pendingOllamaRequests: Map<string, PendingOllamaRequest> = new Map();
+
+// Ollama 请求超时时间（毫秒）
+const OLLAMA_REQUEST_TIMEOUT = 30000;
 
 // 默认配置
 const DEFAULT_CONFIG: Required<WebSocketServerConfig> = {
@@ -380,6 +399,31 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
       }
       return;
     }
+
+    // 处理来自 Python 的 Ollama 响应
+    if (
+      message.type === MessageType.OLLAMA_STATUS_RESPONSE ||
+      message.type === MessageType.OLLAMA_MODELS_RESPONSE ||
+      message.type === MessageType.OLLAMA_TEST_RESPONSE
+    ) {
+      const clientInfo = clients.get(ws);
+      // 确保消息来自 Python 客户端
+      if (clientInfo?.clientType === "python_agent") {
+        const msgId = message.id;
+        if (msgId) {
+          const pending = pendingOllamaRequests.get(msgId);
+          if (pending) {
+            clearTimeout(pending.timeout);
+            pendingOllamaRequests.delete(msgId);
+            pending.resolve(message);
+            console.log(`[WebSocket] Ollama 响应已处理: ${msgId}`);
+          } else {
+            console.warn(`[WebSocket] 未找到对应的 Ollama 请求: ${msgId}`);
+          }
+        }
+      }
+      return;
+    }
   } catch (error) {
     console.error("[WebSocket] 消息解析错误:", error);
   }
@@ -413,4 +457,139 @@ function startHeartbeat(interval: number): void {
  */
 function generateClientId(): string {
   return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * 生成消息 ID
+ */
+function generateMessageId(): string {
+  return `ollama_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * 发送 Ollama 请求并等待响应
+ */
+async function sendOllamaRequest<T>(
+  messageType: MessageType,
+  host?: string
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (!pythonClient || pythonClient.readyState !== WebSocket.OPEN) {
+      reject(new Error("Python 服务未连接"));
+      return;
+    }
+
+    const messageId = generateMessageId();
+    const message = createMessage(messageType as never, { host });
+
+    // 设置超时
+    const timeout = setTimeout(() => {
+      pendingOllamaRequests.delete(messageId);
+      reject(new Error("请求超时"));
+    }, OLLAMA_REQUEST_TIMEOUT);
+
+    // 存储等待响应的 Promise
+    pendingOllamaRequests.set(messageId, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      timeout,
+    });
+
+    // 发送消息（使用生成的 messageId）
+    const messageWithId = {
+      ...message,
+      id: messageId,
+    };
+    pythonClient.send(JSON.stringify(messageWithId));
+  });
+}
+
+/**
+ * 获取 Ollama 服务状态
+ */
+export async function getOllamaStatus(host?: string): Promise<OllamaStatus> {
+  try {
+    const response = await sendOllamaRequest<OllamaStatusResponseMessage>(
+      MessageType.OLLAMA_STATUS,
+      host
+    );
+    return {
+      running: response.running,
+      host: response.host,
+      version: response.version,
+      error: response.error,
+      models:
+        response.models?.map((m) => ({
+          name: m.name,
+          modifiedAt: m.modifiedAt,
+          size: m.size,
+          sizeGB: m.sizeGB,
+          sizeMB: m.sizeMB,
+          digest: m.digest,
+        })) || [],
+      modelCount: response.modelCount || 0,
+    };
+  } catch (error) {
+    const defaultHost = host || "http://127.0.0.1:11434";
+    return {
+      running: false,
+      host: defaultHost,
+      error: error instanceof Error ? error.message : "未知错误",
+      models: [],
+      modelCount: 0,
+    };
+  }
+}
+
+/**
+ * 获取 Ollama 模型列表
+ */
+export async function getOllamaModels(host?: string): Promise<OllamaModel[]> {
+  try {
+    const response = await sendOllamaRequest<OllamaModelsResponseMessage>(
+      MessageType.OLLAMA_MODELS,
+      host
+    );
+    if (response.success && response.models) {
+      return response.models.map((m) => ({
+        name: m.name,
+        modifiedAt: m.modifiedAt,
+        size: m.size,
+        sizeGB: m.sizeGB,
+        sizeMB: m.sizeMB,
+        digest: m.digest,
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("[WebSocket] 获取 Ollama 模型列表失败:", error);
+    return [];
+  }
+}
+
+/**
+ * 测试 Ollama 连接
+ */
+export async function testOllamaConnection(
+  host?: string
+): Promise<OllamaTestResult> {
+  try {
+    const response = await sendOllamaRequest<OllamaTestResponseMessage>(
+      MessageType.OLLAMA_TEST,
+      host
+    );
+    return {
+      success: response.success,
+      latency: response.latency,
+      host: response.host,
+      modelCount: response.modelCount,
+      error: response.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      host: host || "http://127.0.0.1:11434",
+      error: error instanceof Error ? error.message : "未知错误",
+    };
+  }
 }

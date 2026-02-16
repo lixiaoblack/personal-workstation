@@ -28,6 +28,14 @@ export enum MessageType {
   // Python 服务相关
   PYTHON_STATUS = "python_status", // Python 服务状态
   PYTHON_LOG = "python_log", // Python 日志
+
+  // Ollama 相关
+  OLLAMA_STATUS = "ollama_status", // Ollama 状态查询
+  OLLAMA_STATUS_RESPONSE = "ollama_status_response", // Ollama 状态响应
+  OLLAMA_MODELS = "ollama_models", // Ollama 模型列表查询
+  OLLAMA_MODELS_RESPONSE = "ollama_models_response", // Ollama 模型列表响应
+  OLLAMA_TEST = "ollama_test", // Ollama 连接测试
+  OLLAMA_TEST_RESPONSE = "ollama_test_response", // Ollama 测试响应
 }
 
 // 基础消息结构
@@ -123,6 +131,69 @@ export interface PythonLogMessage extends BaseMessage {
   message: string;
 }
 
+// Ollama 状态查询消息
+export interface OllamaStatusMessage extends BaseMessage {
+  type: MessageType.OLLAMA_STATUS;
+  host?: string;
+}
+
+// Ollama 状态响应消息
+export interface OllamaStatusResponseMessage extends BaseMessage {
+  type: MessageType.OLLAMA_STATUS_RESPONSE;
+  running: boolean;
+  host: string;
+  version?: string;
+  error?: string;
+  models?: Array<{
+    name: string;
+    modifiedAt: string;
+    size: number;
+    sizeGB: number;
+    sizeMB: number;
+    digest: string;
+  }>;
+  modelCount?: number;
+}
+
+// Ollama 模型列表查询消息
+export interface OllamaModelsMessage extends BaseMessage {
+  type: MessageType.OLLAMA_MODELS;
+  host?: string;
+}
+
+// Ollama 模型列表响应消息
+export interface OllamaModelsResponseMessage extends BaseMessage {
+  type: MessageType.OLLAMA_MODELS_RESPONSE;
+  success: boolean;
+  host: string;
+  models?: Array<{
+    name: string;
+    modifiedAt: string;
+    size: number;
+    sizeGB: number;
+    sizeMB: number;
+    digest: string;
+  }>;
+  count?: number;
+  error?: string;
+}
+
+// Ollama 连接测试消息
+export interface OllamaTestMessage extends BaseMessage {
+  type: MessageType.OLLAMA_TEST;
+  host?: string;
+}
+
+// Ollama 测试响应消息
+export interface OllamaTestResponseMessage extends BaseMessage {
+  type: MessageType.OLLAMA_TEST_RESPONSE;
+  success: boolean;
+  host: string;
+  latency?: number;
+  modelCount?: number;
+  error?: string;
+}
+
 // 联合类型
 export type WebSocketMessage =
   | ConnectionAckMessage
@@ -137,7 +208,13 @@ export type WebSocketMessage =
   | ChatErrorMessage
   | SystemStatusMessage
   | PythonStatusMessage
-  | PythonLogMessage;
+  | PythonLogMessage
+  | OllamaStatusMessage
+  | OllamaStatusResponseMessage
+  | OllamaModelsMessage
+  | OllamaModelsResponseMessage
+  | OllamaTestMessage
+  | OllamaTestResponseMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

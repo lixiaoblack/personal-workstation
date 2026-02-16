@@ -309,43 +309,43 @@ function registerIpcHandlers() {
 
   // Ollama 相关
   ipcMain.handle("ollama:getStatus", async (_, host?: string) => {
-    // 通过 WebSocket 发送消息到 Python 服务
     const wsInfo = websocketService.getServerInfo();
-    const hostOrLocal = host || "http://127.0.0.1:11434";
-      
+
     if (!wsInfo.running || !wsInfo.pythonConnected) {
       return {
         running: false,
-        host: hostOrLocal,
+        host: host || "http://127.0.0.1:11434",
         error: "Python 服务未连接",
         models: [],
         modelCount: 0,
       };
     }
-      
-    // TODO: 通过 WebSocket 发送消息获取 Ollama 状态
-    // 暂时返回模拟数据
-    return {
-      running: true,
-      host: hostOrLocal,
-      version: "0.1.0",
-      models: [],
-      modelCount: 0,
-    };
+
+    return websocketService.getOllamaStatus(host);
   });
-  
-  ipcMain.handle("ollama:getModels", async () => {
-    // TODO: 通过 WebSocket 获取模型列表
-    return [];
+
+  ipcMain.handle("ollama:getModels", async (_, host?: string) => {
+    const wsInfo = websocketService.getServerInfo();
+
+    if (!wsInfo.running || !wsInfo.pythonConnected) {
+      return [];
+    }
+
+    return websocketService.getOllamaModels(host);
   });
-  
-  ipcMain.handle("ollama:testConnection", async () => {
-    // TODO: 通过 WebSocket 测试连接
-    return {
-      success: false,
-      host: "http://127.0.0.1:11434",
-      error: "未实现",
-    };
+
+  ipcMain.handle("ollama:testConnection", async (_, host?: string) => {
+    const wsInfo = websocketService.getServerInfo();
+
+    if (!wsInfo.running || !wsInfo.pythonConnected) {
+      return {
+        success: false,
+        host: host || "http://127.0.0.1:11434",
+        error: "Python 服务未连接",
+      };
+    }
+
+    return websocketService.testOllamaConnection(host);
   });
 }
 

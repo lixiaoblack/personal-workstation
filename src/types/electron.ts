@@ -31,6 +31,8 @@ export type {
   PythonServiceStopResult,
   ModelConfig,
   ModelConfigListItem,
+  OnlineModelConfig,
+  OllamaModelConfig,
   ModelProvider,
   ModelConfigStatus,
   CreateModelConfigInput,
@@ -86,6 +88,9 @@ import type {
   UpdateConversationInput,
   Message,
   CreateMessageInput,
+  OllamaStatus,
+  OllamaModel,
+  OllamaTestResult,
 } from "../../electron/types";
 
 // WebSocket 服务器信息

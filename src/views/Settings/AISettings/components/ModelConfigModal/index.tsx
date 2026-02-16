@@ -1,12 +1,13 @@
 /**
  * ModelConfigModal 模型配置编辑弹窗组件
  */
-import React, { useState, useEffect } from "react";
-import { Modal, Input, Select, InputNumber, App } from "antd";
+import React, { useState, useEffect, useCallback } from "react";
+import { Modal, Input, Select, InputNumber, App, Button, Spin } from "antd";
 import type {
   ModelConfig,
   ModelProvider,
   CreateModelConfigInput,
+  OllamaModel,
 } from "@/types/electron";
 
 interface ModelConfigModalProps {
@@ -25,6 +26,17 @@ const maskApiKey = (key: string): string => {
   return `${key.slice(0, 4)}${"*".repeat(
     Math.min(key.length - 8, 20)
   )}${key.slice(-4)}`;
+};
+
+// 格式化模型大小
+const formatModelSize = (bytes: number): string => {
+  if (bytes >= 1024 ** 3) {
+    return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+  }
+  if (bytes >= 1024 ** 2) {
+    return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
+  }
+  return `${(bytes / 1024).toFixed(0)} KB`;
 };
 
 const providerOptions: { value: ModelProvider; label: string }[] = [
@@ -64,6 +76,32 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
   const [maxTokens, setMaxTokens] = useState<number | null>(4096);
   const [temperature, setTemperature] = useState<number | null>(0.7);
 
+  // Ollama 模型列表状态
+  const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
+  const [ollamaLoading, setOllamaLoading] = useState(false);
+  const [ollamaError, setOllamaError] = useState<string | null>(null);
+
+  // 获取 Ollama 模型列表
+  const fetchOllamaModels = useCallback(async (hostUrl: string) => {
+    setOllamaLoading(true);
+    setOllamaError(null);
+    try {
+      const models = await window.electronAPI.getOllamaModels(hostUrl);
+      setOllamaModels(models);
+      if (models.length === 0) {
+        setOllamaError("未找到模型，请先使用 ollama pull 拉取模型");
+      }
+    } catch (error) {
+      console.error("获取 Ollama 模型列表失败:", error);
+      setOllamaModels([]);
+      setOllamaError(
+        "无法连接 Ollama 服务，请确保 Ollama 已启动并运行在 " + hostUrl
+      );
+    } finally {
+      setOllamaLoading(false);
+    }
+  }, []);
+
   // 初始化表单
   useEffect(() => {
     if (config) {
@@ -102,7 +140,17 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       setMaxTokens(4096);
       setTemperature(0.7);
     }
+    // 重置 Ollama 状态
+    setOllamaModels([]);
+    setOllamaError(null);
   }, [config, open]);
+
+  // 当选择 Ollama 或 host 变化时，自动获取模型列表
+  useEffect(() => {
+    if (provider === "ollama" && open) {
+      fetchOllamaModels(host);
+    }
+  }, [provider, host, open, fetchOllamaModels]);
 
   // 提供商变更时更新默认 API 地址
   const handleProviderChange = (value: ModelProvider) => {
@@ -114,6 +162,20 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
     }
   };
 
+  // 选择 Ollama 模型时自动填充名称
+  const handleOllamaModelSelect = (value: string) => {
+    setModelId(value);
+    // 自动填充名称（如果名称为空）
+    if (!name.trim()) {
+      const selectedModel = ollamaModels.find((m) => m.name === value);
+      if (selectedModel) {
+        // 提取模型名称（去掉 :latest 等标签）
+        const modelName = selectedModel.name.split(":")[0];
+        setName(modelName);
+      }
+    }
+  };
+
   // 保存
   const handleSave = async () => {
     if (!name.trim()) {
@@ -121,7 +183,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       return;
     }
     if (!modelId.trim()) {
-      message.warning("请输入模型 ID");
+      message.warning("请选择或输入模型 ID");
       return;
     }
     // 编辑时：如果已有 apiKey 且用户没有输入新的，则不传 apiKey（保留原值）
@@ -166,6 +228,19 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
 
   const isOllama = provider === "ollama";
 
+  // Ollama 模型选项
+  const ollamaModelOptions = ollamaModels.map((m) => ({
+    value: m.name,
+    label: (
+      <div className="flex items-center justify-between w-full">
+        <span>{m.name}</span>
+        <span className="text-xs text-text-tertiary">
+          {formatModelSize(m.size)}
+        </span>
+      </div>
+    ),
+  }));
+
   return (
     <Modal
       title={config ? "编辑模型配置" : "添加模型配置"}
@@ -203,18 +278,72 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
           />
         </div>
 
-        {/* 模型 ID */}
+        {/* 模型 ID / Ollama 模型选择 */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-text-tertiary">
-            模型 ID <span className="text-error">*</span>
+            模型 <span className="text-error">*</span>
           </label>
-          <Input
-            placeholder={
-              isOllama ? "例如: llama3, qwen2" : "例如: gpt-4o, qwen-max"
-            }
-            value={modelId}
-            onChange={(e) => setModelId(e.target.value)}
-          />
+          {isOllama ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Select
+                  className="flex-1"
+                  placeholder={
+                    ollamaLoading
+                      ? "正在获取模型列表..."
+                      : ollamaModels.length > 0
+                      ? "选择模型"
+                      : "暂无可用模型"
+                  }
+                  value={modelId || undefined}
+                  onChange={handleOllamaModelSelect}
+                  options={ollamaModelOptions}
+                  loading={ollamaLoading}
+                  disabled={ollamaLoading || ollamaModels.length === 0}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.value as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase()) || false
+                  }
+                />
+                <Button
+                  onClick={() => fetchOllamaModels(host)}
+                  loading={ollamaLoading}
+                  icon={
+                    <span className="material-symbols-outlined text-sm">
+                      refresh
+                    </span>
+                  }
+                />
+              </div>
+              {ollamaLoading && (
+                <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                  <Spin size="small" />
+                  <span>正在连接 Ollama 服务...</span>
+                </div>
+              )}
+              {ollamaError && (
+                <p className="text-xs text-warning flex items-start gap-1">
+                  <span className="material-symbols-outlined text-sm">
+                    warning
+                  </span>
+                  <span>{ollamaError}</span>
+                </p>
+              )}
+              {ollamaModels.length > 0 && (
+                <p className="text-xs text-text-tertiary">
+                  已发现 {ollamaModels.length} 个模型
+                </p>
+              )}
+            </div>
+          ) : (
+            <Input
+              placeholder="例如: gpt-4o, qwen-max"
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+            />
+          )}
         </div>
 
         {/* Ollama 配置 */}
@@ -228,6 +357,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
               value={host}
               onChange={(e) => setHost(e.target.value)}
             />
+            <p className="text-xs text-text-tertiary">
+              修改地址后自动刷新模型列表
+            </p>
           </div>
         ) : (
           <>

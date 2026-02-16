@@ -98,7 +98,7 @@ class OllamaClient:
     async def check_status(self) -> OllamaStatus:
         """
         检查 Ollama 服务状态
-        
+
         Returns:
             OllamaStatus: 服务状态信息
         """
@@ -169,7 +169,7 @@ class OllamaClient:
     async def list_models(self) -> List[OllamaModel]:
         """
         获取可用模型列表
-        
+
         Returns:
             List[OllamaModel]: 模型列表
         """
@@ -199,10 +199,10 @@ class OllamaClient:
     async def get_model_info(self, model_name: str) -> Optional[Dict[str, Any]]:
         """
         获取模型详细信息
-        
+
         Args:
             model_name: 模型名称
-            
+
         Returns:
             Dict: 模型详细信息
         """
@@ -225,7 +225,7 @@ class OllamaClient:
     async def test_connection(self) -> Dict[str, Any]:
         """
         测试 Ollama 连接
-        
+
         Returns:
             Dict: 测试结果
         """
@@ -275,11 +275,11 @@ class OllamaClient:
     async def pull_model(self, model_name: str, stream: bool = False) -> Dict[str, Any]:
         """
         拉取模型（下载模型）
-        
+
         Args:
             model_name: 模型名称
             stream: 是否流式返回进度
-            
+
         Returns:
             Dict: 拉取结果
         """
@@ -307,10 +307,10 @@ _ollama_clients: Dict[str, OllamaClient] = {}
 def get_ollama_client(host: str = DEFAULT_OLLAMA_HOST) -> OllamaClient:
     """
     获取 Ollama 客户端实例
-    
+
     Args:
         host: Ollama 服务地址
-        
+
     Returns:
         OllamaClient: 客户端实例
     """
@@ -323,10 +323,10 @@ def get_ollama_client(host: str = DEFAULT_OLLAMA_HOST) -> OllamaClient:
 async def check_ollama_status(host: str = DEFAULT_OLLAMA_HOST) -> OllamaStatus:
     """
     检查 Ollama 服务状态（便捷函数）
-    
+
     Args:
         host: Ollama 服务地址
-        
+
     Returns:
         OllamaStatus: 服务状态
     """
@@ -337,10 +337,10 @@ async def check_ollama_status(host: str = DEFAULT_OLLAMA_HOST) -> OllamaStatus:
 async def get_ollama_models(host: str = DEFAULT_OLLAMA_HOST) -> List[OllamaModel]:
     """
     获取 Ollama 模型列表（便捷函数）
-    
+
     Args:
         host: Ollama 服务地址
-        
+
     Returns:
         List[OllamaModel]: 模型列表
     """

@@ -1,6 +1,7 @@
 /**
  * AISettings AI 模型设置页面
  * 包含 Python 环境检测、服务管理、模型配置管理
+ * 配置变更后自动同步 MobX Store
  */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +15,7 @@ import type {
   ModelConfigListItem,
   CreateModelConfigInput,
 } from "@/types/electron";
+import { modelStore } from "@/stores";
 import { ModelConfigCard } from "./components/ModelConfigCard";
 import { ModelConfigModal } from "./components/ModelConfigModal";
 
@@ -205,6 +207,8 @@ const AISettings: React.FC = () => {
         await window.electronAPI.createModelConfig(input);
       }
       await loadModelConfigs();
+      // 同步更新 MobX Store，通知其他页面
+      modelStore.loadModels();
       return true;
     } catch (error) {
       message.error("保存配置失败");
@@ -218,6 +222,8 @@ const AISettings: React.FC = () => {
       await window.electronAPI.deleteModelConfig(id);
       message.success("配置已删除");
       await loadModelConfigs();
+      // 同步更新 MobX Store
+      modelStore.loadModels();
     } catch (error) {
       message.error("删除失败");
     }
@@ -227,6 +233,8 @@ const AISettings: React.FC = () => {
   const handleToggleEnabled = async (id: number, enabled: boolean) => {
     await window.electronAPI.updateModelConfig(id, { enabled });
     await loadModelConfigs();
+    // 同步更新 MobX Store
+    modelStore.loadModels();
   };
 
   // 设为默认
@@ -234,6 +242,8 @@ const AISettings: React.FC = () => {
     await window.electronAPI.setDefaultModelConfig(id);
     message.success("已设为默认模型");
     await loadModelConfigs();
+    // 同步更新 MobX Store
+    modelStore.loadModels();
   };
 
   // 测试连接

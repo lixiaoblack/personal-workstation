@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 15 |
-| 待处理 | 24 |
+| 已完成 | 17 |
+| 待处理 | 22 |
 
 ---
 
@@ -123,10 +123,24 @@
   - **修复**：模型配置同步到 Python 服务
   - **修复**：ModelConfig 缺少 id 字段
 
+- [x] AI-015: 模型路由 - Ollama 连接 | 完成时间: 2026-02-16 15:30
+  - 扩展 WebSocket 消息类型，添加 Ollama 相关消息类型
+  - 实现 Electron IPC 处理器，通过 WebSocket 转发 Ollama 请求到 Python
+  - 扩展 WebSocket 服务消息路由，支持 Ollama 消息转发和响应处理
+  - AIChat 页面集成 Ollama 模型选择交互，显示提供商标签
+  - 支持获取 Ollama 状态、模型列表、连接测试
+  - ModelConfigModal 添加 Ollama 模型自动发现功能，下拉选择已有模型
+
+- [x] AI-016: 模型状态管理 - MobX 集成 | 完成时间: 2026-02-16 16:30
+  - 安装 mobx 和 mobx-react-lite 依赖
+  - 创建 modelStore 管理模型列表和当前选中模型
+  - AIChat 页面使用 MobX observer 自动响应状态变化
+  - AISettings 页面配置变更后自动同步 MobX Store
+  - 解决模型配置后 AIChat 页面不刷新的问题
+
 ### 待处理
 
-- [ ] AI-015: 模型路由 - Ollama 连接 | 创建时间: 2026-02-17
-- [ ] AI-016: 模型路由 - 降级策略实现 | 创建时间: 2026-02-17
+暂无
 
 ---
 

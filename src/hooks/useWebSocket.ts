@@ -7,6 +7,7 @@ import { MessageType, ConnectionState, createMessage } from "@/types/electron";
 import type {
   WebSocketMessage,
   ChatMessage,
+  AgentChatMessage,
   HistoryMessageItem,
 } from "@/types/electron";
 
@@ -31,6 +32,7 @@ interface UseWebSocketReturn {
   disconnect: () => void;
   send: (message: WebSocketMessage) => boolean;
   sendChat: (options: SendChatOptions) => boolean;
+  sendAgentChat: (options: SendChatOptions) => boolean;
   lastMessage: WebSocketMessage | null;
 }
 
@@ -180,6 +182,26 @@ export function useWebSocket(
     [send]
   );
 
+  // 发送 Agent 聊天消息（触发 ReAct 智能体）
+  const sendAgentChat = useCallback(
+    (options: SendChatOptions): boolean => {
+      const {
+        content,
+        conversationId,
+        modelId,
+        history,
+      } = options;
+      const message = createMessage<AgentChatMessage>(MessageType.AGENT_CHAT, {
+        content,
+        conversationId,
+        modelId,
+        history,
+      });
+      return send(message);
+    },
+    [send]
+  );
+
   // 自动连接
   useEffect(() => {
     if (autoConnect) {
@@ -197,6 +219,7 @@ export function useWebSocket(
     disconnect,
     send,
     sendChat,
+    sendAgentChat,
     lastMessage,
   };
 }

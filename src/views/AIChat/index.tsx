@@ -12,7 +12,7 @@ import React, {
   useCallback,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { Modal, Input, message, Dropdown, Tag, Tooltip } from "antd";
+import { Modal, Input, message, Dropdown, Tag, Tooltip, Switch } from "antd";
 import { Bubble } from "@ant-design/x";
 import { observer } from "mobx-react-lite";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -80,12 +80,15 @@ const isOllamaModel = (model: ModelConfig): model is OllamaModelConfig => {
 
 const AIChatComponent: React.FC = () => {
   const navigate = useNavigate();
-  const { connectionState, sendChat, lastMessage } = useWebSocket({
+  const { connectionState, sendChat, sendAgentChat, lastMessage } = useWebSocket({
     autoConnect: true,
   });
 
   // 从 MobX Store 获取模型状态
   const { models, currentModel, setCurrentModel } = modelStore;
+
+  // Agent 模式开关（测试用）
+  const [agentMode, setAgentMode] = useState(false);
 
   // 对话分组列表
   const [conversationGroups, setConversationGroups] = useState<
@@ -483,13 +486,23 @@ const AIChatComponent: React.FC = () => {
     }
 
     // 发送到 WebSocket（携带历史消息）
-    sendChat({
-      content,
-      conversationId: String(conversationId),
-      modelId: currentModel.id,
-      history,
-      stream: true,
-    });
+    // 根据 agentMode 选择发送方式
+    if (agentMode) {
+      sendAgentChat({
+        content,
+        conversationId: String(conversationId),
+        modelId: currentModel.id,
+        history,
+      });
+    } else {
+      sendChat({
+        content,
+        conversationId: String(conversationId),
+        modelId: currentModel.id,
+        history,
+        stream: true,
+      });
+    }
   }, [
     inputValue,
     connectionState,
@@ -497,6 +510,8 @@ const AIChatComponent: React.FC = () => {
     activeConversation,
     streamState.status,
     sendChat,
+    sendAgentChat,
+    agentMode,
     loadConversations,
   ]);
 
@@ -1101,6 +1116,22 @@ const AIChatComponent: React.FC = () => {
                     </span>
                     <span>快捷模板</span>
                   </button>
+                  <div className="h-4 w-[1px] bg-border mx-1"></div>
+                  {/* Agent 模式开关 */}
+                  <Tooltip title={agentMode ? "Agent 模式：智能体将使用工具完成任务" : "普通模式：直接对话"}>
+                    <div className="flex items-center gap-2 px-2">
+                      <Switch
+                        size="small"
+                        checked={agentMode}
+                        onChange={setAgentMode}
+                        checkedChildren="🤖"
+                        unCheckedChildren="💬"
+                      />
+                      <span className={`text-xs font-medium ${agentMode ? "text-primary" : "text-text-tertiary"}`}>
+                        {agentMode ? "Agent" : "对话"}
+                      </span>
+                    </div>
+                  </Tooltip>
                 </div>
                 <div className="text-[10px] text-text-tertiary font-medium">
                   按 Enter 发送，Shift + Enter 换行

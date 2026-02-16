@@ -17,6 +17,7 @@ export type {
   AvatarSelectResult,
   WebSocketMessage,
   ChatMessage,
+  AgentChatMessage,
   ChatResponseMessage,
   ChatStreamStartMessage,
   ChatStreamChunkMessage,

@@ -22,6 +22,7 @@ export enum MessageType {
   CHAT_STREAM_END = "chat_stream_end", // 流式结束
 
   // Agent 相关（ReAct 模式）
+  AGENT_CHAT = "agent_chat", // Agent 聊天消息（触发智能体）
   AGENT_THOUGHT = "agent_thought", // Agent 思考过程
   AGENT_TOOL_CALL = "agent_tool_call", // Agent 工具调用
   AGENT_TOOL_RESULT = "agent_tool_result", // 工具执行结果
@@ -82,6 +83,16 @@ export interface ChatMessage extends BaseMessage {
   history?: HistoryMessageItem[]; // 历史消息（滑动窗口）
   maxHistoryTokens?: number; // 最大上下文 token 数（可选）
   metadata?: Record<string, unknown>; // 额外元数据
+}
+
+// Agent 聊天消息（触发 ReAct 智能体）
+export interface AgentChatMessage extends BaseMessage {
+  type: MessageType.AGENT_CHAT;
+  content: string;
+  conversationId?: string; // 会话 ID
+  modelId?: number; // 模型配置 ID
+  history?: HistoryMessageItem[]; // 历史消息（滑动窗口）
+  maxIterations?: number; // 最大迭代次数，默认 5
 }
 
 // 聊天响应
@@ -307,6 +318,7 @@ export type WebSocketMessage =
   | PongMessage
   | ClientIdentifyMessage
   | ChatMessage
+  | AgentChatMessage
   | ChatResponseMessage
   | ChatStreamStartMessage
   | ChatStreamChunkMessage

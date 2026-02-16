@@ -10,6 +10,7 @@ import {
   type WebSocketClientInfo,
   type ClientType,
   type ChatMessage,
+  type AgentChatMessage,
   type OllamaStatusResponseMessage,
   type OllamaModelsResponseMessage,
   type OllamaTestResponseMessage,
@@ -383,13 +384,32 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
       return;
     }
 
+    // 处理 Agent 聊天消息 - 转发给 Python 服务
+    if (message.type === MessageType.AGENT_CHAT) {
+      if (pythonClient && pythonClient.readyState === WebSocket.OPEN) {
+        pythonClient.send(JSON.stringify(message));
+        console.log("[WebSocket] Agent 消息已转发给 Python 服务");
+      } else {
+        const response = createMessage(MessageType.CHAT_ERROR, {
+          error: "Python 服务未连接，Agent 消息无法处理。请先启动 Python 服务。",
+          conversationId: (message as AgentChatMessage).conversationId,
+        });
+        ws.send(JSON.stringify(response));
+      }
+      return;
+    }
+
     // 处理来自 Python 的响应 - 转发给对应的渲染进程
     if (
       message.type === MessageType.CHAT_RESPONSE ||
       message.type === MessageType.CHAT_STREAM_START ||
       message.type === MessageType.CHAT_STREAM_CHUNK ||
       message.type === MessageType.CHAT_STREAM_END ||
-      message.type === MessageType.CHAT_ERROR
+      message.type === MessageType.CHAT_ERROR ||
+      message.type === MessageType.AGENT_STEP ||
+      message.type === MessageType.AGENT_THOUGHT ||
+      message.type === MessageType.AGENT_TOOL_CALL ||
+      message.type === MessageType.AGENT_TOOL_RESULT
     ) {
       const clientInfo = clients.get(ws);
       // 确保消息来自 Python 客户端

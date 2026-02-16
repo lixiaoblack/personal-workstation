@@ -19,7 +19,9 @@ const CodeBlock: React.FC<{
   children: string;
 }> = ({ language, children }) => {
   return (
-    <CodeHighlighter lang={language || "text"}>{children.trim()}</CodeHighlighter>
+    <CodeHighlighter lang={language || "text"}>
+      {children.trim()}
+    </CodeHighlighter>
   );
 };
 
@@ -48,7 +50,9 @@ const components: Components = {
     );
   },
   // 段落
-  p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
+  p: ({ children }) => (
+    <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>
+  ),
   // 标题
   h1: ({ children }) => (
     <h1 className="text-2xl font-bold mb-4 mt-6 first:mt-0">{children}</h1>
@@ -92,9 +96,7 @@ const components: Components = {
       </table>
     </div>
   ),
-  thead: ({ children }) => (
-    <thead className="bg-bg-tertiary">{children}</thead>
-  ),
+  thead: ({ children }) => <thead className="bg-bg-tertiary">{children}</thead>,
   th: ({ children }) => (
     <th className="px-4 py-2 text-left border-b border-border font-medium">
       {children}

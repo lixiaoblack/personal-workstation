@@ -98,7 +98,7 @@ class MessageHandler:
         try:
             # 构建消息列表
             messages = []
-            
+
             if incoming_history:
                 # 使用传入的历史记录
                 for msg in incoming_history:
@@ -113,7 +113,7 @@ class MessageHandler:
                         "role": msg["role"],
                         "content": msg["content"]
                     })
-            
+
             # 添加当前用户消息
             messages.append({"role": "user", "content": content})
 

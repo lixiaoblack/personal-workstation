@@ -682,7 +682,11 @@ const AIChatComponent: React.FC = () => {
         key={msg.id}
         className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}
       >
-        <div className={`flex gap-3 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
+        <div
+          className={`flex gap-3 max-w-[85%] ${
+            isUser ? "flex-row-reverse" : ""
+          }`}
+        >
           {/* 头像 */}
           <div
             className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${

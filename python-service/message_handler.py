@@ -9,6 +9,7 @@ import time
 from typing import Any, Dict, Optional
 
 from model_router import model_router, ModelConfig, ModelProvider
+from ollama_client import check_ollama_status, get_ollama_models, get_ollama_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ class MessageHandler:
             "model_test": self._handle_model_test,
             "model_config_sync": self._handle_model_config_sync,
             "connection_ack": self._handle_connection_ack,
+            # Ollama 相关
+            "ollama_status": self._handle_ollama_status,
+            "ollama_models": self._handle_ollama_models,
+            "ollama_test": self._handle_ollama_test,
         }
         # 会话存储（后续可替换为持久化存储）
         self.conversations: Dict[str, list] = {}
@@ -402,3 +407,80 @@ class MessageHandler:
             "error": error,
             "code": "PROCESSING_ERROR"
         }
+
+    # ===== Ollama 相关处理器 =====
+
+    async def _handle_ollama_status(self, message: dict) -> dict:
+        """处理 Ollama 状态查询"""
+        host = message.get("host", "http://127.0.0.1:11434")
+        
+        try:
+            status = await check_ollama_status(host)
+            return {
+                "type": "ollama_status_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                **status.to_dict()
+            }
+        except Exception as e:
+            logger.error(f"检查 Ollama 状态失败: {e}")
+            return {
+                "type": "ollama_status_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "running": False,
+                "host": host,
+                "error": str(e),
+            }
+
+    async def _handle_ollama_models(self, message: dict) -> dict:
+        """处理 Ollama 模型列表查询"""
+        host = message.get("host", "http://127.0.0.1:11434")
+        
+        try:
+            models = await get_ollama_models(host)
+            return {
+                "type": "ollama_models_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "host": host,
+                "models": [m.to_dict() for m in models],
+                "count": len(models),
+            }
+        except Exception as e:
+            logger.error(f"获取 Ollama 模型列表失败: {e}")
+            return {
+                "type": "ollama_models_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "host": host,
+                "error": str(e),
+                "models": [],
+                "count": 0,
+            }
+
+    async def _handle_ollama_test(self, message: dict) -> dict:
+        """处理 Ollama 连接测试"""
+        host = message.get("host", "http://127.0.0.1:11434")
+        
+        try:
+            client = get_ollama_client(host)
+            result = await client.test_connection()
+            return {
+                "type": "ollama_test_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                **result
+            }
+        except Exception as e:
+            logger.error(f"测试 Ollama 连接失败: {e}")
+            return {
+                "type": "ollama_test_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "host": host,
+                "error": str(e),
+            }

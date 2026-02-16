@@ -29,6 +29,9 @@ import type {
   UpdateConversationInput,
   Message,
   CreateMessageInput,
+  OllamaModel,
+  OllamaStatus,
+  OllamaTestResult,
 } from "./types";
 
 // WebSocket 服务器信息
@@ -183,6 +186,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("message:add", input),
   autoSetConversationTitle: (conversationId: number): Promise<string | null> =>
     ipcRenderer.invoke("message:autoSetTitle", conversationId),
+
+  // Ollama 相关
+  getOllamaStatus: (host?: string): Promise<OllamaStatus> =>
+    ipcRenderer.invoke("ollama:getStatus", host),
+  getOllamaModels: (host?: string): Promise<OllamaModel[]> =>
+    ipcRenderer.invoke("ollama:getModels", host),
+  testOllamaConnection: (host?: string): Promise<OllamaTestResult> =>
+    ipcRenderer.invoke("ollama:testConnection", host),
 });
 
 // 类型声明
@@ -262,6 +273,11 @@ export interface ElectronAPI {
   // 消息管理
   addMessage: (input: CreateMessageInput) => Promise<Message>;
   autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
+
+  // Ollama 相关
+  getOllamaStatus: (host?: string) => Promise<OllamaStatus>;
+  getOllamaModels: (host?: string) => Promise<OllamaModel[]>;
+  testOllamaConnection: (host?: string) => Promise<OllamaTestResult>;
 }
 
 declare global {

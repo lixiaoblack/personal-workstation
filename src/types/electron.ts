@@ -45,6 +45,9 @@ export type {
   MessageRole,
   StreamStatus,
   StreamState,
+  OllamaModel,
+  OllamaStatus,
+  OllamaTestResult,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -170,6 +173,11 @@ export interface ElectronAPI {
   // 消息管理
   addMessage: (input: CreateMessageInput) => Promise<Message>;
   autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
+
+  // Ollama 相关 API
+  getOllamaStatus: (host?: string) => Promise<OllamaStatus>;
+  getOllamaModels: (host?: string) => Promise<OllamaModel[]>;
+  testOllamaConnection: (host?: string) => Promise<OllamaTestResult>;
 }
 
 declare global {

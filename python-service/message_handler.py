@@ -79,11 +79,13 @@ class MessageHandler:
         conversation_id = message.get("conversationId")
         model_id = message.get("modelId")  # 可选，指定模型
         stream = message.get("stream", False)  # 是否流式输出
+        # 优先使用传入的历史记录（滑动窗口策略）
+        incoming_history = message.get("history", [])
 
         logger.info(f"收到聊天消息: {content[:50]}...")
 
-        # 存储会话历史
-        if conversation_id:
+        # 如果没有传入历史记录，使用内存中的会话历史（兼容旧客户端）
+        if not incoming_history and conversation_id:
             if conversation_id not in self.conversations:
                 self.conversations[conversation_id] = []
             self.conversations[conversation_id].append({
@@ -96,13 +98,23 @@ class MessageHandler:
         try:
             # 构建消息列表
             messages = []
-            if conversation_id and conversation_id in self.conversations:
-                # 添加历史消息
+            
+            if incoming_history:
+                # 使用传入的历史记录
+                for msg in incoming_history:
+                    messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
+            elif conversation_id and conversation_id in self.conversations:
+                # 兼容旧客户端：使用内存中的历史消息
                 for msg in self.conversations[conversation_id][:-1]:  # 不包括刚添加的用户消息
                     messages.append({
                         "role": msg["role"],
                         "content": msg["content"]
                     })
+            
+            # 添加当前用户消息
             messages.append({"role": "user", "content": content})
 
             # 调用模型
@@ -115,8 +127,8 @@ class MessageHandler:
                     model_id=model_id
                 )
 
-                # 存储响应
-                if conversation_id:
+                # 存储响应（仅在没有传入历史时使用内存存储）
+                if not incoming_history and conversation_id:
                     self.conversations[conversation_id].append({
                         "role": "assistant",
                         "content": response_content,
@@ -137,7 +149,7 @@ class MessageHandler:
             logger.warning(f"模型未注册，使用模拟响应: {e}")
             response_content = await self._generate_mock_response(content)
 
-            if conversation_id:
+            if not incoming_history and conversation_id:
                 self.conversations[conversation_id].append({
                     "role": "assistant",
                     "content": response_content,
@@ -163,6 +175,8 @@ class MessageHandler:
         """处理流式聊天"""
         conversation_id = message.get("conversationId")
         msg_id = message.get("id")
+        # 是否使用传入的历史记录
+        incoming_history = message.get("history", [])
 
         # 发送流式开始消息
         if self.send_callback:
@@ -194,8 +208,8 @@ class MessageHandler:
                         "chunkIndex": chunk_index,
                     })
 
-            # 存储完整响应
-            if conversation_id:
+            # 存储完整响应（仅在没有传入历史时使用内存存储）
+            if not incoming_history and conversation_id:
                 if conversation_id not in self.conversations:
                     self.conversations[conversation_id] = []
                 self.conversations[conversation_id].append({

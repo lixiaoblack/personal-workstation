@@ -60,12 +60,21 @@ export interface PongMessage extends BaseMessage {
   type: MessageType.PONG;
 }
 
+// 历史消息项（用于上下文传递）
+export interface HistoryMessageItem {
+  role: "user" | "assistant" | "system";
+  content: string;
+}
+
 // 聊天消息
 export interface ChatMessage extends BaseMessage {
   type: MessageType.CHAT_MESSAGE;
   content: string;
   conversationId?: string; // 会话 ID
+  modelId?: number; // 模型配置 ID
   stream?: boolean; // 是否流式输出，默认 false
+  history?: HistoryMessageItem[]; // 历史消息（滑动窗口）
+  maxHistoryTokens?: number; // 最大上下文 token 数（可选）
   metadata?: Record<string, unknown>; // 额外元数据
 }
 

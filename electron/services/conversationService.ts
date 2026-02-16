@@ -283,6 +283,28 @@ export function getMessagesByConversationId(conversationId: number): Message[] {
 }
 
 /**
+ * 获取对话最近 N 条消息（用于上下文传递）
+ * 滑动窗口策略：只保留最近的消息，减少 token 消耗
+ */
+export function getRecentMessages(
+  conversationId: number,
+  limit: number = 20
+): Message[] {
+  const db = getDatabase();
+  const rows = db
+    .prepare(
+      `SELECT id, conversation_id, role, content, tokens_used, timestamp, created_at
+       FROM messages WHERE conversation_id = ?
+       ORDER BY timestamp DESC
+       LIMIT ?`
+    )
+    .all(conversationId, limit) as MessageRow[];
+
+  // 按时间正序返回（先发送的在前面）
+  return rows.map(rowToMessage).reverse();
+}
+
+/**
  * 获取对话的第一条用户消息（用于自动设置标题）
  */
 export function getFirstUserMessage(conversationId: number): Message | null {

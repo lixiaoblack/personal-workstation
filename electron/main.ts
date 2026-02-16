@@ -307,6 +307,14 @@ function registerIpcHandlers() {
     }
   );
 
+  // 获取对话最近消息（用于上下文传递）
+  ipcMain.handle(
+    "message:getRecent",
+    async (_event, conversationId: number, limit?: number) => {
+      return conversationService.getRecentMessages(conversationId, limit);
+    }
+  );
+
   // Ollama 相关
   ipcMain.handle("ollama:getStatus", async (_, host?: string) => {
     const wsInfo = websocketService.getServerInfo();

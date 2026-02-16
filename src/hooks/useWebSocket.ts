@@ -4,12 +4,24 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageType, ConnectionState, createMessage } from "@/types/electron";
-import type { WebSocketMessage, ChatMessage } from "@/types/electron";
+import type {
+  WebSocketMessage,
+  ChatMessage,
+  HistoryMessageItem,
+} from "@/types/electron";
 
 interface UseWebSocketOptions {
   autoConnect?: boolean; // 自动连接，默认 true
   reconnectAttempts?: number; // 重连次数，默认 5
   reconnectInterval?: number; // 重连间隔（毫秒），默认 3000
+}
+
+interface SendChatOptions {
+  content: string;
+  conversationId?: string;
+  modelId?: number;
+  history?: HistoryMessageItem[];
+  stream?: boolean;
 }
 
 interface UseWebSocketReturn {
@@ -18,7 +30,7 @@ interface UseWebSocketReturn {
   connect: () => Promise<void>;
   disconnect: () => void;
   send: (message: WebSocketMessage) => boolean;
-  sendChat: (content: string, conversationId?: string) => boolean;
+  sendChat: (options: SendChatOptions) => boolean;
   lastMessage: WebSocketMessage | null;
 }
 
@@ -148,14 +160,19 @@ export function useWebSocket(
 
   // 发送聊天消息
   const sendChat = useCallback(
-    (
-      content: string,
-      conversationId?: string,
-      stream: boolean = true
-    ): boolean => {
+    (options: SendChatOptions): boolean => {
+      const {
+        content,
+        conversationId,
+        modelId,
+        history,
+        stream = true,
+      } = options;
       const message = createMessage<ChatMessage>(MessageType.CHAT_MESSAGE, {
         content,
         conversationId,
+        modelId,
+        history,
         stream,
       });
       return send(message);

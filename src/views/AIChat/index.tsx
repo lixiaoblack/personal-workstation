@@ -31,6 +31,7 @@ import type {
   Conversation,
   Message,
   StreamStatus,
+  HistoryMessageItem,
 } from "@/types/electron";
 
 // 提供商显示名称映射
@@ -41,6 +42,9 @@ const PROVIDER_LABELS: Record<string, { name: string; color: string }> = {
   ollama: { name: "Ollama", color: "success" },
   custom: { name: "自定义", color: "default" },
 };
+
+// 上下文配置：默认保留最近 N 条消息
+const DEFAULT_CONTEXT_LIMIT = 20;
 
 // 格式化时间
 const formatTime = (timestamp: number) => {
@@ -413,8 +417,32 @@ const AIChatComponent: React.FC = () => {
       console.error("保存用户消息失败:", error);
     }
 
-    // 发送到 WebSocket
-    sendChat(content, String(conversationId));
+    // 获取历史消息（滑动窗口策略）
+    let history: HistoryMessageItem[] = [];
+    try {
+      const recentMessages = await window.electronAPI.getRecentMessages(
+        conversationId!,
+        DEFAULT_CONTEXT_LIMIT
+      );
+      // 转换为 WebSocket 消息格式（排除当前用户消息，因为已经单独发送）
+      history = recentMessages
+        .filter((msg) => msg.id !== userMessage.id)
+        .map((msg) => ({
+          role: msg.role as "user" | "assistant" | "system",
+          content: msg.content,
+        }));
+    } catch (error) {
+      console.error("获取历史消息失败:", error);
+    }
+
+    // 发送到 WebSocket（携带历史消息）
+    sendChat({
+      content,
+      conversationId: String(conversationId),
+      modelId: currentModel.id,
+      history,
+      stream: true,
+    });
   }, [
     inputValue,
     connectionState,

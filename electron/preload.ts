@@ -186,6 +186,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("message:add", input),
   autoSetConversationTitle: (conversationId: number): Promise<string | null> =>
     ipcRenderer.invoke("message:autoSetTitle", conversationId),
+  getRecentMessages: (
+    conversationId: number,
+    limit?: number
+  ): Promise<Message[]> =>
+    ipcRenderer.invoke("message:getRecent", conversationId, limit),
 
   // Ollama 相关
   getOllamaStatus: (host?: string): Promise<OllamaStatus> =>
@@ -273,6 +278,10 @@ export interface ElectronAPI {
   // 消息管理
   addMessage: (input: CreateMessageInput) => Promise<Message>;
   autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
+  getRecentMessages: (
+    conversationId: number,
+    limit?: number
+  ) => Promise<Message[]>;
 
   // Ollama 相关
   getOllamaStatus: (host?: string) => Promise<OllamaStatus>;

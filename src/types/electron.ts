@@ -22,6 +22,7 @@ export type {
   ChatStreamChunkMessage,
   ChatStreamEndMessage,
   ChatErrorMessage,
+  HistoryMessageItem,
   PythonEnvironment,
   PythonDetectOptions,
   PythonInstallGuide,
@@ -178,6 +179,10 @@ export interface ElectronAPI {
   // 消息管理
   addMessage: (input: CreateMessageInput) => Promise<Message>;
   autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
+  getRecentMessages: (
+    conversationId: number,
+    limit?: number
+  ) => Promise<Message[]>;
 
   // Ollama 相关 API
   getOllamaStatus: (host?: string) => Promise<OllamaStatus>;

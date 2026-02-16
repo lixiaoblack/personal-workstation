@@ -1,7 +1,7 @@
 /**
  * AIChat AI 聊天页面
  * 基于 ant-design-x 构建的专业 AI 对话界面
- * 支持流式传输、对话历史、模型选择
+ * 支持流式传输、对话历史、模型选择、Markdown 渲染
  * 使用 MobX 管理模型状态
  */
 import React, {
@@ -13,9 +13,11 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Input, message, Dropdown, Tag, Tooltip } from "antd";
+import { Bubble } from "@ant-design/x";
 import { observer } from "mobx-react-lite";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { modelStore } from "@/stores";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { ConnectionState, MessageType } from "@/types/electron";
 import type {
   ChatStreamStartMessage,
@@ -650,49 +652,72 @@ const AIChatComponent: React.FC = () => {
     return (
       <div
         key={msg.id}
-        className={`flex flex-col ${
-          isUser ? "items-end" : "items-start"
-        } gap-2`}
+        className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}
       >
-        {/* 时间戳 */}
-        <div
-          className={`flex items-center gap-2 text-[11px] font-medium text-text-tertiary ${
-            isUser ? "mr-2" : "ml-2"
-          }`}
-        >
-          {isUser ? (
-            <>
-              <span>{formatTime(msg.timestamp)}</span>
-              <span>我</span>
-            </>
-          ) : (
-            <>
-              <span className="text-primary">
-                AI 助手 ({currentModel?.name || "未知模型"})
-              </span>
-              <span>{formatTime(msg.timestamp)}</span>
-            </>
-          )}
-        </div>
+        <div className={`flex gap-3 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
+          {/* 头像 */}
+          <div
+            className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
+              isUser
+                ? "bg-primary/10 border border-primary/20"
+                : "bg-bg-tertiary border border-border"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-lg ${
+                isUser ? "text-primary" : "text-text-secondary"
+              }`}
+            >
+              {isUser ? "person" : "smart_toy"}
+            </span>
+          </div>
 
-        {isUser ? (
-          // 用户消息
-          <div className="max-w-[80%] bg-primary px-5 py-3 rounded-2xl rounded-tr-none text-white text-sm shadow-lg shadow-primary/10 leading-relaxed">
-            {msg.content}
-          </div>
-        ) : (
-          // AI 消息
-          <div className="max-w-[90%] flex gap-4">
-            <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-primary text-lg">
-                smart_toy
-              </span>
+          {/* 消息内容 */}
+          <div className="flex flex-col gap-1">
+            {/* 时间戳 */}
+            <div
+              className={`flex items-center gap-2 text-[11px] font-medium text-text-tertiary ${
+                isUser ? "justify-end" : ""
+              }`}
+            >
+              {isUser ? (
+                <>
+                  <span>{formatTime(msg.timestamp)}</span>
+                  <span>我</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-primary">
+                    AI 助手 ({currentModel?.name || "未知模型"})
+                  </span>
+                  <span>{formatTime(msg.timestamp)}</span>
+                </>
+              )}
             </div>
-            <div className="flex flex-col gap-3 text-text-primary text-sm leading-relaxed">
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-            </div>
+
+            {/* 消息气泡 */}
+            <Bubble
+              placement={isUser ? "end" : "start"}
+              variant="filled"
+              shape="default"
+              content={msg.content}
+              contentRender={(content) => {
+                if (isUser) {
+                  return <span className="whitespace-pre-wrap">{content}</span>;
+                }
+                return <MarkdownRenderer content={content as string} />;
+              }}
+              styles={{
+                content: isUser
+                  ? { backgroundColor: "var(--color-primary)", color: "#fff" }
+                  : {
+                      backgroundColor: "var(--color-bg-secondary)",
+                      border: "1px solid var(--color-border)",
+                    },
+              }}
+            />
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -702,22 +727,42 @@ const AIChatComponent: React.FC = () => {
     if (streamState.status !== "streaming" || !streamState.content) return null;
 
     return (
-      <div className="flex flex-col items-start gap-2">
-        <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary ml-2">
-          <span className="text-primary">
-            AI 助手 ({currentModel?.name || "未知模型"})
-          </span>
-          <span className="animate-pulse">正在生成...</span>
-        </div>
-        <div className="max-w-[90%] flex gap-4">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-lg">
+      <div className="flex justify-start mb-6">
+        <div className="flex gap-3 max-w-[85%]">
+          {/* AI 头像 */}
+          <div className="size-8 rounded-lg bg-bg-tertiary border border-border flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-lg text-text-secondary">
               smart_toy
             </span>
           </div>
-          <div className="flex flex-col gap-3 text-text-primary text-sm leading-relaxed">
-            <p className="whitespace-pre-wrap">{streamState.content}</p>
-            <span className="inline-block w-2 h-4 bg-primary animate-pulse rounded-sm" />
+
+          {/* 消息内容 */}
+          <div className="flex flex-col gap-1">
+            {/* 时间戳 */}
+            <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
+              <span className="text-primary">
+                AI 助手 ({currentModel?.name || "未知模型"})
+              </span>
+              <span className="animate-pulse">正在生成...</span>
+            </div>
+
+            {/* 流式消息气泡 */}
+            <Bubble
+              placement="start"
+              variant="filled"
+              shape="default"
+              streaming
+              content={streamState.content}
+              contentRender={(content) => (
+                <MarkdownRenderer content={content as string} />
+              )}
+              styles={{
+                content: {
+                  backgroundColor: "var(--color-bg-secondary)",
+                  border: "1px solid var(--color-border)",
+                },
+              }}
+            />
           </div>
         </div>
       </div>

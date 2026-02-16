@@ -50,3 +50,14 @@ temp/
 
 # Reference files (stitch generated)
 statch/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+*.egg-info/
+.eggs/

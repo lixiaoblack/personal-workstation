@@ -319,7 +319,9 @@ class MessageHandler:
             return None  # 通过流式消息发送，不返回响应
             
         except Exception as e:
+            import traceback
             logger.error(f"[Agent] 处理消息错误: {e}")
+            logger.error(f"[Agent] 错误堆栈: {traceback.format_exc()}")
             if self.send_callback:
                 await self.send_callback({
                     "type": "chat_error",

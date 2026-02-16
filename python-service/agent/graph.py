@@ -85,7 +85,7 @@ REACT_SYSTEM_PROMPT = """你是一个智能助手，使用 ReAct (Reasoning + Ac
 ```
 Thought: [你的思考过程]
 Action: [工具名称]
-Action Input: {"参数名": "参数值"}
+Action Input: {"param": "value"}
 ```
 
 当你认为问题已经解决时，请按以下格式给出最终答案：
@@ -274,7 +274,17 @@ def parse_llm_output(
             
             # 解析 JSON 参数
             import json
-            tool_args = json.loads(input_str)
+            try:
+                tool_args = json.loads(input_str)
+            except json.JSONDecodeError as e:
+                logger.error(f"[Agent] JSON 解析失败: {e}, 原始字符串: {input_str}")
+                # 尝试修复常见问题（中文引号、单引号等）
+                input_str_fixed = input_str.replace('"', '"').replace('"', '"').replace("'", '"')
+                try:
+                    tool_args = json.loads(input_str_fixed)
+                    logger.info(f"[Agent] JSON 修复成功")
+                except json.JSONDecodeError:
+                    raise ValueError(f"无法解析工具参数: {input_str}")
             
             # 提取思考过程
             thought = ""

@@ -368,7 +368,9 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
     // 处理来自 Python 的响应 - 转发给对应的渲染进程
     if (
       message.type === MessageType.CHAT_RESPONSE ||
-      message.type === MessageType.CHAT_STREAM ||
+      message.type === MessageType.CHAT_STREAM_START ||
+      message.type === MessageType.CHAT_STREAM_CHUNK ||
+      message.type === MessageType.CHAT_STREAM_END ||
       message.type === MessageType.CHAT_ERROR
     ) {
       const clientInfo = clients.get(ws);

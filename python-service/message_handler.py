@@ -16,7 +16,14 @@ logger = logging.getLogger(__name__)
 class MessageHandler:
     """消息处理器"""
 
-    def __init__(self):
+    def __init__(self, send_callback=None):
+        """
+        初始化消息处理器
+        
+        Args:
+            send_callback: 发送消息的异步回调函数，用于流式消息
+        """
+        self.send_callback = send_callback
         self.handlers = {
             "ping": self._handle_ping,
             "chat_message": self._handle_chat_message,
@@ -148,16 +155,74 @@ class MessageHandler:
     async def _handle_stream_chat(
         self, message: dict, messages: list, model_id: Optional[int]
     ) -> dict:
-        """处理流式聊天（返回流式开始消息，后续通过回调发送）"""
-        # 注意：实际的流式内容需要通过 WebSocket 连接直接发送
-        # 这里返回一个流式开始的消息，让前端知道要接收流式数据
-        return {
-            "type": "chat_stream_start",
-            "id": message.get("id"),
-            "timestamp": int(time.time() * 1000),
-            "conversationId": message.get("conversationId"),
-            "modelId": model_id,
-        }
+        """处理流式聊天"""
+        conversation_id = message.get("conversationId")
+        msg_id = message.get("id")
+        
+        # 发送流式开始消息
+        if self.send_callback:
+            await self.send_callback({
+                "type": "chat_stream_start",
+                "id": msg_id,
+                "timestamp": int(time.time() * 1000),
+                "conversationId": conversation_id,
+                "modelId": model_id,
+            })
+        
+        full_content = ""
+        chunk_index = 0
+        
+        try:
+            # 流式调用模型
+            async for chunk in model_router.chat_stream_async(messages, model_id):
+                full_content += chunk
+                chunk_index += 1
+                
+                # 发送流式内容块
+                if self.send_callback:
+                    await self.send_callback({
+                        "type": "chat_stream_chunk",
+                        "id": f"{msg_id}_chunk_{chunk_index}",
+                        "timestamp": int(time.time() * 1000),
+                        "conversationId": conversation_id,
+                        "content": chunk,
+                        "chunkIndex": chunk_index,
+                    })
+            
+            # 存储完整响应
+            if conversation_id:
+                if conversation_id not in self.conversations:
+                    self.conversations[conversation_id] = []
+                self.conversations[conversation_id].append({
+                    "role": "assistant",
+                    "content": full_content,
+                    "timestamp": int(time.time() * 1000)
+                })
+            
+            # 发送流式结束消息
+            if self.send_callback:
+                await self.send_callback({
+                    "type": "chat_stream_end",
+                    "id": f"{msg_id}_end",
+                    "timestamp": int(time.time() * 1000),
+                    "conversationId": conversation_id,
+                    "fullContent": full_content,
+                })
+            
+            return None  # 不返回响应，已通过流式消息发送
+            
+        except Exception as e:
+            logger.error(f"流式聊天错误: {e}")
+            # 发送错误消息
+            if self.send_callback:
+                await self.send_callback({
+                    "type": "chat_error",
+                    "id": msg_id,
+                    "timestamp": int(time.time() * 1000),
+                    "error": str(e),
+                    "conversationId": conversation_id,
+                })
+            return None
 
     async def _handle_system_status(self, message: dict) -> dict:
         """处理系统状态查询"""

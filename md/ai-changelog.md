@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.11 | 2026-02-17 | 对话历史持久化、流式消息传输 |
 | 0.5.10 | 2026-02-17 | 模型配置同步修复 |
 | 0.5.9 | 2026-02-17 | AI-014 架构重构：Python 端 LangChain |
 | 0.5.8 | 2026-02-17 | 模型路由在线 API 连接（已废弃） |
@@ -97,6 +98,26 @@
 - 模型状态默认值逻辑：有 API Key/host 时自动标记为 active
 - 数据迁移：更新已有模型配置状态
 
+### 新增 (Added) - v0.5.11
+
+- **对话历史持久化**
+  - 数据库新增 conversations、messages 表
+  - ConversationService 服务：对话 CRUD、消息存储
+  - IPC API：getConversationList、getGroupedConversations、createConversation 等
+  - 对话分组：今天/昨天/本周/更早
+  - 自动标题：从用户第一条消息生成对话标题
+- **流式消息传输**
+  - WebSocket 类型：chat_stream_start、chat_stream_chunk、chat_stream_end
+  - Python 端：LangChain astream() 流式输出
+  - send_callback 回调机制：支持流式消息发送
+  - Electron 端：流式消息处理和转发
+  - 消息存储：流式完成后才存储到数据库
+- **AIChat 页面重构**
+  - 模型选择：从已启用模型配置加载
+  - 对话列表：分组展示、新建/编辑/删除
+  - 流式显示：实时显示 AI 回复
+  - 空状态提示：引导用户配置模型
+
 ---
 
 ## 版本历史
@@ -105,6 +126,6 @@
 
 ---
 
-*文档版本: v1.2*
+*文档版本: v1.3*
 *创建时间: 2026-02-13*
 *最后更新: 2026-02-17*

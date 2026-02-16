@@ -13,9 +13,13 @@ export enum MessageType {
 
   // 聊天相关
   CHAT_MESSAGE = "chat_message", // 聊天消息
-  CHAT_RESPONSE = "chat_response", // 聊天响应
-  CHAT_STREAM = "chat_stream", // 流式响应
+  CHAT_RESPONSE = "chat_response", // 聊天响应（非流式）
   CHAT_ERROR = "chat_error", // 聊天错误
+
+  // 流式响应
+  CHAT_STREAM_START = "chat_stream_start", // 流式开始
+  CHAT_STREAM_CHUNK = "chat_stream_chunk", // 流式内容块
+  CHAT_STREAM_END = "chat_stream_end", // 流式结束
 
   // 系统相关
   SYSTEM_STATUS = "system_status", // 系统状态
@@ -64,13 +68,28 @@ export interface ChatResponseMessage extends BaseMessage {
   success: boolean;
 }
 
-// 流式响应
-export interface ChatStreamMessage extends BaseMessage {
-  type: MessageType.CHAT_STREAM;
-  content: string;
-  conversationId?: string;
-  done: boolean; // 是否结束
-  chunkIndex: number; // 分块索引
+// 流式响应开始
+export interface ChatStreamStartMessage extends BaseMessage {
+  type: MessageType.CHAT_STREAM_START;
+  conversationId: number;
+  modelId?: number;
+  modelName?: string;
+}
+
+// 流式响应内容块
+export interface ChatStreamChunkMessage extends BaseMessage {
+  type: MessageType.CHAT_STREAM_CHUNK;
+  conversationId: number;
+  content: string; // 内容块
+  chunkIndex: number; // 块索引
+}
+
+// 流式响应结束
+export interface ChatStreamEndMessage extends BaseMessage {
+  type: MessageType.CHAT_STREAM_END;
+  conversationId: number;
+  fullContent: string; // 完整内容
+  tokensUsed?: number; // 消耗的 token 数
 }
 
 // 聊天错误
@@ -111,7 +130,9 @@ export type WebSocketMessage =
   | ClientIdentifyMessage
   | ChatMessage
   | ChatResponseMessage
-  | ChatStreamMessage
+  | ChatStreamStartMessage
+  | ChatStreamChunkMessage
+  | ChatStreamEndMessage
   | ChatErrorMessage
   | SystemStatusMessage
   | PythonStatusMessage

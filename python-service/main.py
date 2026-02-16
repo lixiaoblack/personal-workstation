@@ -37,14 +37,16 @@ class AgentService:
         self.message_handler: Optional[MessageHandler] = None
         self.running = False
 
+    async def _send_message(self, message: dict):
+        """发送消息的回调函数"""
+        if self.ws_client:
+            await self.ws_client.send(message)
+
     async def start(self, ws_host: str, ws_port: int):
         """启动服务"""
         logger.info(f"启动 AI 智能体服务，连接到 ws://{ws_host}:{ws_port}")
 
-        # 初始化消息处理器
-        self.message_handler = MessageHandler()
-
-        # 初始化 WebSocket 客户端
+        # 先初始化 WebSocket 客户端
         self.ws_client = WebSocketClient(
             host=ws_host,
             port=ws_port,
@@ -52,6 +54,9 @@ class AgentService:
             on_connected=self.on_connected,
             on_disconnected=self.on_disconnected
         )
+
+        # 初始化消息处理器，传递发送消息的回调
+        self.message_handler = MessageHandler(send_callback=self._send_message)
 
         self.running = True
 

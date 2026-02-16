@@ -18,7 +18,9 @@ export type {
   WebSocketMessage,
   ChatMessage,
   ChatResponseMessage,
-  ChatStreamMessage,
+  ChatStreamStartMessage,
+  ChatStreamChunkMessage,
+  ChatStreamEndMessage,
   ChatErrorMessage,
   PythonEnvironment,
   PythonDetectOptions,
@@ -33,6 +35,16 @@ export type {
   ModelConfigStatus,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  Conversation,
+  ConversationListItem,
+  ConversationGroup,
+  CreateConversationInput,
+  UpdateConversationInput,
+  Message,
+  CreateMessageInput,
+  MessageRole,
+  StreamStatus,
+  StreamState,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -64,6 +76,13 @@ import type {
   ModelConfigListItem,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  Conversation,
+  ConversationListItem,
+  ConversationGroup,
+  CreateConversationInput,
+  UpdateConversationInput,
+  Message,
+  CreateMessageInput,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -136,6 +155,21 @@ export interface ElectronAPI {
   ) => Promise<ModelConfig | null>;
   deleteModelConfig: (id: number) => Promise<boolean>;
   setDefaultModelConfig: (id: number) => Promise<boolean>;
+
+  // 对话管理
+  getConversationList: () => Promise<ConversationListItem[]>;
+  getGroupedConversations: () => Promise<ConversationGroup[]>;
+  getConversationById: (id: number) => Promise<Conversation | null>;
+  createConversation: (input: CreateConversationInput) => Promise<Conversation>;
+  updateConversation: (
+    id: number,
+    input: UpdateConversationInput
+  ) => Promise<Conversation | null>;
+  deleteConversation: (id: number) => Promise<boolean>;
+
+  // 消息管理
+  addMessage: (input: CreateMessageInput) => Promise<Message>;
+  autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
 }
 
 declare global {

@@ -10,11 +10,15 @@ import * as websocketService from "./services/websocketService";
 import * as pythonEnvService from "./services/pythonEnvService";
 import * as pythonProcessService from "./services/pythonProcessService";
 import * as modelConfigService from "./services/modelConfigService";
+import * as conversationService from "./services/conversationService";
 import type {
   PythonDetectOptions,
   PythonServiceConfig,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  CreateConversationInput,
+  UpdateConversationInput,
+  CreateMessageInput,
 } from "./types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -259,6 +263,48 @@ function registerIpcHandlers() {
     // 同步模型配置到 Python 服务
     websocketService.syncModelConfigsToPython();
     return result;
+  });
+
+  // 对话管理
+  ipcMain.handle("conversation:getList", async () => {
+    return conversationService.getConversationList();
+  });
+
+  ipcMain.handle("conversation:getGrouped", async () => {
+    return conversationService.getGroupedConversations();
+  });
+
+  ipcMain.handle("conversation:getById", async (_event, id: number) => {
+    return conversationService.getConversationById(id);
+  });
+
+  ipcMain.handle(
+    "conversation:create",
+    async (_event, input: CreateConversationInput) => {
+      return conversationService.createConversation(input);
+    }
+  );
+
+  ipcMain.handle(
+    "conversation:update",
+    async (_event, id: number, input: UpdateConversationInput) => {
+      return conversationService.updateConversation(id, input);
+    }
+  );
+
+  ipcMain.handle("conversation:delete", async (_event, id: number) => {
+    return conversationService.deleteConversation(id);
+  });
+
+  ipcMain.handle(
+    "message:add",
+    async (_event, input: CreateMessageInput) => {
+      return conversationService.addMessage(input);
+    }
+  );
+
+  ipcMain.handle("message:autoSetTitle", async (_event, conversationId: number) => {
+    return conversationService.autoSetConversationTitle(conversationId);
   });
 }
 

@@ -22,6 +22,13 @@ import type {
   ModelConfigListItem,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  Conversation,
+  ConversationListItem,
+  ConversationGroup,
+  CreateConversationInput,
+  UpdateConversationInput,
+  Message,
+  CreateMessageInput,
 } from "./types";
 
 // WebSocket 服务器信息
@@ -56,6 +63,13 @@ export type {
   ModelConfigListItem,
   CreateModelConfigInput,
   UpdateModelConfigInput,
+  Conversation,
+  ConversationListItem,
+  ConversationGroup,
+  CreateConversationInput,
+  UpdateConversationInput,
+  Message,
+  CreateMessageInput,
 };
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -146,6 +160,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("model:delete", id),
   setDefaultModelConfig: (id: number): Promise<boolean> =>
     ipcRenderer.invoke("model:setDefault", id),
+
+  // 对话管理
+  getConversationList: (): Promise<ConversationListItem[]> =>
+    ipcRenderer.invoke("conversation:getList"),
+  getGroupedConversations: (): Promise<ConversationGroup[]> =>
+    ipcRenderer.invoke("conversation:getGrouped"),
+  getConversationById: (id: number): Promise<Conversation | null> =>
+    ipcRenderer.invoke("conversation:getById", id),
+  createConversation: (
+    input: CreateConversationInput
+  ): Promise<Conversation> => ipcRenderer.invoke("conversation:create", input),
+  updateConversation: (
+    id: number,
+    input: UpdateConversationInput
+  ): Promise<Conversation | null> =>
+    ipcRenderer.invoke("conversation:update", id, input),
+  deleteConversation: (id: number): Promise<boolean> =>
+    ipcRenderer.invoke("conversation:delete", id),
+
+  // 消息管理
+  addMessage: (input: CreateMessageInput): Promise<Message> =>
+    ipcRenderer.invoke("message:add", input),
+  autoSetConversationTitle: (conversationId: number): Promise<string | null> =>
+    ipcRenderer.invoke("message:autoSetTitle", conversationId),
 });
 
 // 类型声明
@@ -210,6 +248,21 @@ export interface ElectronAPI {
   ) => Promise<ModelConfig | null>;
   deleteModelConfig: (id: number) => Promise<boolean>;
   setDefaultModelConfig: (id: number) => Promise<boolean>;
+
+  // 对话管理
+  getConversationList: () => Promise<ConversationListItem[]>;
+  getGroupedConversations: () => Promise<ConversationGroup[]>;
+  getConversationById: (id: number) => Promise<Conversation | null>;
+  createConversation: (input: CreateConversationInput) => Promise<Conversation>;
+  updateConversation: (
+    id: number,
+    input: UpdateConversationInput
+  ) => Promise<Conversation | null>;
+  deleteConversation: (id: number) => Promise<boolean>;
+
+  // 消息管理
+  addMessage: (input: CreateMessageInput) => Promise<Message>;
+  autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
 }
 
 declare global {

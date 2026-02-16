@@ -148,6 +148,42 @@ function runMigrations(database: Database.Database): void {
     WHERE status = 'inactive' 
     AND (api_key IS NOT NULL AND api_key != '' OR host IS NOT NULL AND host != '')
   `);
+
+  // AI 对话表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT,
+      model_id INTEGER,
+      model_name TEXT,
+      message_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      updated_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (model_id) REFERENCES model_configs(id) ON DELETE SET NULL
+    );
+  `);
+
+  // AI 消息表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tokens_used INTEGER,
+      timestamp INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 对话和消息索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_conversations_model_id ON conversations(model_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+  `);
 }
 
 export default {

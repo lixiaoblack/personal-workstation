@@ -57,6 +57,7 @@ export interface ChatMessage extends BaseMessage {
   type: MessageType.CHAT_MESSAGE;
   content: string;
   conversationId?: string; // 会话 ID
+  stream?: boolean; // 是否流式输出，默认 false
   metadata?: Record<string, unknown>; // 额外元数据
 }
 

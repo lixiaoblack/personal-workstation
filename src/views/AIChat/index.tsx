@@ -12,6 +12,7 @@ import type {
   ChatStreamStartMessage,
   ChatStreamChunkMessage,
   ChatStreamEndMessage,
+  ChatResponseMessage,
   ChatErrorMessage,
   ModelConfig,
   ConversationGroup,
@@ -189,6 +190,35 @@ const AIChat: React.FC = () => {
       return;
     }
 
+    // 非流式响应（备用处理）
+    if (lastMessage.type === MessageType.CHAT_RESPONSE) {
+      const response = lastMessage as ChatResponseMessage;
+      if (response.success && response.content) {
+        const activeConvId = activeConversation?.id;
+        // 保存 AI 消息到数据库
+        if (activeConvId) {
+          (async () => {
+            try {
+              await window.electronAPI.addMessage({
+                conversationId: activeConvId,
+                role: "assistant",
+                content: response.content,
+                timestamp: Date.now(),
+              });
+              // 刷新消息列表
+              await loadMessages(activeConvId);
+              // 刷新对话列表
+              await loadConversations();
+            } catch (error) {
+              console.error("保存 AI 消息失败:", error);
+            }
+          })();
+        }
+      }
+      loadingRef.current = false;
+      return;
+    }
+
     // 错误消息
     if (lastMessage.type === MessageType.CHAT_ERROR) {
       const error = lastMessage as ChatErrorMessage;
@@ -201,7 +231,7 @@ const AIChat: React.FC = () => {
       loadingRef.current = false;
       return;
     }
-  }, [lastMessage, streamState.conversationId, loadMessages, loadConversations]);
+  }, [lastMessage, streamState.conversationId, loadMessages, loadConversations, activeConversation?.id]);
 
   // ===== 对话管理 =====
   // 创建新对话

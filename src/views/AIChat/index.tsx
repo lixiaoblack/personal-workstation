@@ -325,6 +325,7 @@ const AIChatComponent: React.FC = () => {
       });
       setActiveConversation(conversation);
       setMessages([]);
+      setAgentSteps([]); // 清空 Agent 步骤
       await loadConversations();
     } catch (error) {
       console.error("创建对话失败:", error);
@@ -403,6 +404,8 @@ const AIChatComponent: React.FC = () => {
         message.warning("正在生成回复，请稍后再切换对话");
         return;
       }
+      // 清空 Agent 步骤
+      setAgentSteps([]);
       await loadMessages(conversationId);
     },
     [loadMessages, streamState.status]
@@ -872,6 +875,9 @@ const AIChatComponent: React.FC = () => {
   const renderAgentSteps = () => {
     if (agentSteps.length === 0) return null;
 
+    // 判断是否还在执行中
+    const isStreaming = streamState.status === "streaming" || loadingRef.current;
+
     return (
       <div className="flex justify-start mb-4">
         <div className="flex gap-3 max-w-[85%]">
@@ -887,7 +893,9 @@ const AIChatComponent: React.FC = () => {
             {/* 标题 */}
             <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
               <span className="text-primary">AI 助手</span>
-              <span className="animate-pulse text-warning">思考中...</span>
+              <span className={isStreaming ? "animate-pulse text-warning" : "text-success"}>
+                {isStreaming ? "思考中..." : "思考完成"}
+              </span>
             </div>
 
             {/* 步骤列表 */}

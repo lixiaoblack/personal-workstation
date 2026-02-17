@@ -17,6 +17,8 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.22 | 2026-02-17 | 知识库智能匹配与全库搜索 |
+| 0.5.21 | 2026-02-16 | AIChat 页面组件拆分与知识库集成 |
 | 0.5.20 | 2026-02-17 | RAG 知识库功能完整实现 |
 | 0.5.19 | 2026-02-17 | Skills 前端 UI 集成与 Agent 消息优化 |
 | 0.5.18 | 2026-02-17 | Skills 技能系统框架 |
@@ -40,6 +42,43 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.22
+
+- **知识库智能匹配功能**
+  - 不指定知识库时自动搜索所有知识库，按相关度排序返回结果
+  - 根据查询关键词自动匹配知识库名称/描述（如"腾讯云"匹配含"腾讯"的知识库）
+  - 前端发送消息时携带知识库元数据（name、description）
+  - KnowledgeRetrieverTool 支持设置元数据进行智能匹配
+
+### 修复 (Fixed) - v0.5.22
+
+- vectorstore.search() 参数错误：应使用 query + embedding_service 而非 query_embedding
+- EmbeddingService 方法名错误：embed_text -> get_embedding
+- Agent 流式输出：添加 chunk-by-chunk 流式传输最终答案
+- asyncio 模块未导入导致 sleep 调用失败
+
+### 新增 (Added) - v0.5.21
+
+- **知识库与 Agent 集成**
+  - 创建 python-service/agent/knowledge_tool.py
+  - KnowledgeRetrieverTool：从知识库检索信息的工具
+  - KnowledgeListTool：列出可用知识库的工具
+  - AgentChatMessage 添加 knowledgeId 字段
+  - Python 端处理 knowledgeId 设置默认知识库
+  - 前端 AIChatInput 添加知识库选择器（Agent 模式下可见）
+
+- **AIChat 页面组件拆分**
+  - 创建 config.ts 存放常量和类型定义
+  - 拆分 AIChatSidebar 侧边栏组件
+  - 拆分 AIChatHeader 头部组件
+  - 拆分 AIChatMessage 消息渲染组件
+  - 拆分 AIChatAgentSteps 思考过程组件
+  - 拆分 AIChatStreamingMessage 流式消息组件
+  - 拆分 AIChatEmptyState 空状态组件
+  - 拆分 AIChatInput 输入区域组件
+  - 创建 components/index.ts 组件导出索引
+  - 主文件从 1360 行精简到约 500 行
 
 ### 新增 (Added) - v0.5.20
 
@@ -323,6 +362,6 @@
 
 ---
 
-*文档版本: v1.7*
+*文档版本: v1.8*
 *创建时间: 2026-02-13*
 *最后更新: 2026-02-17*

@@ -3,6 +3,7 @@
 消息处理器
 处理来自 Electron 的消息并返回响应
 """
+import asyncio
 import json
 import logging
 import time
@@ -273,6 +274,8 @@ class MessageHandler:
         conversation_id = message.get("conversationId", "")
         model_id = message.get("modelId")  # 可选，指定模型
         incoming_history = message.get("history", [])  # 历史消息
+        knowledge_id = message.get("knowledgeId")  # 知识库 ID（可选）
+        knowledge_metadata = message.get("knowledgeMetadata")  # 知识库元数据
         msg_id = message.get("id")
 
         logger.info(f"[Agent] 收到消息: {content[:50]}...")
@@ -281,6 +284,19 @@ class MessageHandler:
             # 导入 Agent 模块
             from agent import ReActAgent
             from langchain_core.messages import HumanMessage
+            from agent.knowledge_tool import KnowledgeRetrieverTool
+
+            # 设置知识库元数据（用于智能匹配）
+            if knowledge_metadata:
+                KnowledgeRetrieverTool.set_knowledge_metadata(knowledge_metadata)
+                logger.info(f"[Agent] 已设置知识库元数据: {list(knowledge_metadata.keys())}")
+
+            # 如果指定了知识库，设置默认知识库
+            if knowledge_id:
+                KnowledgeRetrieverTool.set_default_knowledge(knowledge_id)
+                logger.info(f"[Agent] 已设置默认知识库: {knowledge_id}")
+            else:
+                KnowledgeRetrieverTool.set_default_knowledge(None)
 
             # 发送流式开始消息（让前端知道 conversationId）
             if self.send_callback:
@@ -339,14 +355,32 @@ class MessageHandler:
                                 f"[Agent] 发送步骤: {step_data['stepType']}, content={step_data['content'][:50] if step_data['content'] else 'empty'}")
                             await self.send_callback(step_data)
 
-                    # 如果有最终输出，发送结束消息
+                    # 如果有最终输出，发送结束消息（流式输出）
                     if state_update.get("output") and state_update.get("should_finish"):
+                        final_content = state_update["output"]
+
+                        # 发送流式内容块（模拟流式效果）
+                        chunk_size = 20  # 每块字符数
+                        for i in range(0, len(final_content), chunk_size):
+                            chunk = final_content[i:i + chunk_size]
+                            await self.send_callback({
+                                "type": "chat_stream_chunk",
+                                "id": f"{msg_id}_chunk_{i}",
+                                "timestamp": int(time.time() * 1000),
+                                "conversationId": conversation_id,
+                                "content": chunk,
+                                "chunkIndex": i // chunk_size,
+                            })
+                            # 小延迟模拟流式效果
+                            await asyncio.sleep(0.01)
+
+                        # 发送结束消息
                         await self.send_callback({
                             "type": "chat_stream_end",
                             "id": f"{msg_id}_end",
                             "timestamp": int(time.time() * 1000),
                             "conversationId": conversation_id,
-                            "fullContent": state_update["output"],
+                            "fullContent": final_content,
                         })
 
             return None  # 通过流式消息发送，不返回响应

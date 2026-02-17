@@ -23,6 +23,8 @@ interface SendChatOptions {
   modelId?: number;
   history?: HistoryMessageItem[];
   stream?: boolean;
+  knowledgeId?: string; // 知识库 ID（可选，用于知识检索）
+  knowledgeMetadata?: Record<string, { name: string; description: string }>; // 知识库元数据
 }
 
 interface UseWebSocketReturn {
@@ -185,12 +187,15 @@ export function useWebSocket(
   // 发送 Agent 聊天消息（触发 ReAct 智能体）
   const sendAgentChat = useCallback(
     (options: SendChatOptions): boolean => {
-      const { content, conversationId, modelId, history } = options;
+      const { content, conversationId, modelId, history, knowledgeId, knowledgeMetadata } =
+        options;
       const message = createMessage<AgentChatMessage>(MessageType.AGENT_CHAT, {
         content,
         conversationId,
         modelId,
         history,
+        knowledgeId,
+        knowledgeMetadata,
       });
       return send(message);
     },

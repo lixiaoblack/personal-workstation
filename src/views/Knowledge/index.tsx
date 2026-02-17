@@ -462,9 +462,9 @@ const KnowledgePage: React.FC = () => {
                   全部知识库
                 </p>
                 {knowledgeList.map((item) => (
-                  <button
+                  <div
                     key={item.id}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${
                       selectedKnowledge?.id === item.id
                         ? "bg-primary/10 text-primary"
                         : "text-text-secondary hover:bg-bg-tertiary"
@@ -498,7 +498,7 @@ const KnowledgePage: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                       />
                     </Popconfirm>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}

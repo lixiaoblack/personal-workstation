@@ -119,6 +119,8 @@ export interface AgentChatMessage extends BaseMessage {
   modelId?: number; // 模型配置 ID
   history?: HistoryMessageItem[]; // 历史消息（滑动窗口）
   maxIterations?: number; // 最大迭代次数，默认 5
+  knowledgeId?: string; // 知识库 ID（可选，用于知识检索）
+  knowledgeMetadata?: Record<string, { name: string; description: string }>; // 知识库元数据（用于智能匹配）
 }
 
 // 聊天响应

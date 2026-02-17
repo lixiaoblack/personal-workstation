@@ -4,82 +4,37 @@
  * 支持流式传输、对话历史、模型选择、Markdown 渲染
  * 使用 MobX 管理模型状态
  */
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
-import { useNavigate } from "react-router-dom";
-import { Modal, Input, message, Dropdown, Tag, Tooltip, Switch } from "antd";
-import { Bubble } from "@ant-design/x";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Modal, Input, message } from "antd";
 import { observer } from "mobx-react-lite";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { modelStore } from "@/stores";
-import { MarkdownRenderer } from "@/components/MarkdownRenderer";
-import { ConnectionState, MessageType } from "@/types/electron";
+import { MessageType, ConnectionState } from "@/types/electron";
 import type {
   ChatStreamStartMessage,
   ChatStreamChunkMessage,
   ChatStreamEndMessage,
   ChatResponseMessage,
   ChatErrorMessage,
-  ModelConfig,
-  OllamaModelConfig,
-  ConversationGroup,
+  AgentStepMessage,
   Conversation,
   Message,
-  StreamStatus,
-  HistoryMessageItem,
-  AgentStepMessage,
-  AgentStepType,
-  AgentToolCallInfo,
+  KnowledgeInfo,
 } from "@/types/electron";
 
-// 提供商显示名称映射
-const PROVIDER_LABELS: Record<string, { name: string; color: string }> = {
-  openai: { name: "OpenAI", color: "processing" },
-  bailian: { name: "百炼", color: "cyan" },
-  zhipu: { name: "智谱", color: "purple" },
-  ollama: { name: "Ollama", color: "success" },
-  custom: { name: "自定义", color: "default" },
-};
+// 配置和类型
+import { DEFAULT_CONTEXT_LIMIT } from "./config";
+import type { StreamState, AgentStepItem } from "./config";
 
-// 上下文配置：默认保留最近 N 条消息
-const DEFAULT_CONTEXT_LIMIT = 20;
-
-// Agent 步骤显示配置
-const AGENT_STEP_ICONS: Record<AgentStepType, string> = {
-  thought: "💭", // 思考
-  tool_call: "🔧", // 调用工具
-  tool_result: "📊", // 工具结果
-  answer: "💬", // 最终答案
-};
-
-const AGENT_STEP_LABELS: Record<AgentStepType, string> = {
-  thought: "思考中",
-  tool_call: "调用工具",
-  tool_result: "工具结果",
-  answer: "回答",
-};
-
-// 格式化时间
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-// 检查是否为 Ollama 模型配置
-const isOllamaModel = (model: ModelConfig): model is OllamaModelConfig => {
-  return model.provider === "ollama";
-};
+// 子组件
+import AIChatSidebar from "./components/AIChatSidebar";
+import AIChatHeader from "./components/AIChatHeader";
+import AIChatMessage from "./components/AIChatMessage";
+import AIChatStreamingMessage from "./components/AIChatStreamingMessage";
+import AIChatEmptyState from "./components/AIChatEmptyState";
+import AIChatInput from "./components/AIChatInput";
 
 const AIChatComponent: React.FC = () => {
-  const navigate = useNavigate();
   const { connectionState, sendChat, sendAgentChat, lastMessage } =
     useWebSocket({
       autoConnect: true,
@@ -90,38 +45,35 @@ const AIChatComponent: React.FC = () => {
   // 只筛选 LLM 模型（过滤掉嵌入模型）
   const llmModels = models.filter((m) => m.usageType === "llm" || !m.usageType);
 
-  // Agent 模式开关（测试用）
+  // Agent 模式开关
   const [agentMode, setAgentMode] = useState(false);
+
+  // 知识库列表和选中状态
+  const [knowledgeList, setKnowledgeList] = useState<KnowledgeInfo[]>([]);
+  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string | null>(
+    null
+  );
 
   // 对话分组列表
   const [conversationGroups, setConversationGroups] = useState<
-    ConversationGroup[]
+    import("@/types/electron").ConversationGroup[]
   >([]);
+
   // 当前选中的对话
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
+
   // 当前对话的消息列表
   const [messages, setMessages] = useState<Message[]>([]);
 
   // 流式消息状态
-  const [streamState, setStreamState] = useState<{
-    status: StreamStatus;
-    content: string;
-    conversationId: number | null;
-  }>({
+  const [streamState, setStreamState] = useState<StreamState>({
     status: "idle",
     content: "",
     conversationId: null,
   });
 
-  // Agent 步骤状态（用于显示思考过程）
-  interface AgentStepItem {
-    type: AgentStepType;
-    content: string;
-    toolCall?: AgentToolCallInfo;
-    iteration?: number;
-    timestamp: number;
-  }
+  // Agent 步骤状态
   const [agentSteps, setAgentSteps] = useState<AgentStepItem[]>([]);
 
   // 展开的思考过程消息 ID 集合
@@ -131,6 +83,7 @@ const AIChatComponent: React.FC = () => {
 
   // 输入内容
   const [inputValue, setInputValue] = useState("");
+
   // 编辑对话标题弹窗
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState("");
@@ -139,11 +92,11 @@ const AIChatComponent: React.FC = () => {
   >(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const loadingRef = useRef(false);
   const agentStepsRef = useRef<AgentStepItem[]>([]);
 
   // ===== 数据加载 =====
+
   // 加载对话分组列表
   const loadConversations = useCallback(async () => {
     try {
@@ -171,8 +124,8 @@ const AIChatComponent: React.FC = () => {
           }
 
           // 从最后一条 AI 消息的 metadata 中恢复 Agent 步骤
-          const messages = conversation.messages || [];
-          const lastAiMessage = [...messages]
+          const msgs = conversation.messages || [];
+          const lastAiMessage = [...msgs]
             .reverse()
             .find((m) => m.role === "assistant");
           if (lastAiMessage?.metadata?.agentSteps) {
@@ -188,13 +141,24 @@ const AIChatComponent: React.FC = () => {
         console.error("加载消息列表失败:", error);
       }
     },
-    [models]
+    [models, setCurrentModel]
   );
 
   // 初始化加载
   useEffect(() => {
     modelStore.loadModels();
     loadConversations();
+    // 加载知识库列表
+    (async () => {
+      try {
+        const result = await window.electronAPI.listKnowledge();
+        if (result.success && result.knowledge) {
+          setKnowledgeList(result.knowledge);
+        }
+      } catch (error) {
+        console.error("加载知识库列表失败:", error);
+      }
+    })();
   }, [loadConversations]);
 
   // 自动滚动到底部
@@ -203,7 +167,7 @@ const AIChatComponent: React.FC = () => {
   }, [messages, streamState.content]);
 
   // ===== WebSocket 消息处理 =====
-  // 处理流式消息
+
   useEffect(() => {
     if (!lastMessage) return;
 
@@ -238,7 +202,6 @@ const AIChatComponent: React.FC = () => {
       if (cid && fullContent) {
         (async () => {
           try {
-            // 收集当前的 Agent 步骤（如果有）
             const currentAgentSteps = agentStepsRef.current;
             const metadata =
               currentAgentSteps.length > 0
@@ -253,9 +216,7 @@ const AIChatComponent: React.FC = () => {
               timestamp: Date.now(),
               metadata,
             });
-            // 刷新消息列表
             await loadMessages(cid);
-            // 刷新对话列表
             await loadConversations();
           } catch (error) {
             console.error("保存 AI 消息失败:", error);
@@ -268,18 +229,15 @@ const AIChatComponent: React.FC = () => {
         content: "",
         conversationId: null,
       });
-      // 不清空 Agent 步骤，让用户可以看到思考过程
-      // setAgentSteps([]);
       loadingRef.current = false;
       return;
     }
 
-    // 非流式响应（备用处理）
+    // 非流式响应
     if (lastMessage.type === MessageType.CHAT_RESPONSE) {
       const response = lastMessage as ChatResponseMessage;
       if (response.success && response.content) {
         const activeConvId = activeConversation?.id;
-        // 保存 AI 消息到数据库
         if (activeConvId) {
           (async () => {
             try {
@@ -289,9 +247,7 @@ const AIChatComponent: React.FC = () => {
                 content: response.content,
                 timestamp: Date.now(),
               });
-              // 刷新消息列表
               await loadMessages(activeConvId);
-              // 刷新对话列表
               await loadConversations();
             } catch (error) {
               console.error("保存 AI 消息失败:", error);
@@ -312,16 +268,15 @@ const AIChatComponent: React.FC = () => {
         content: "",
         conversationId: null,
       });
-      setAgentSteps([]); // 清空 Agent 步骤
+      setAgentSteps([]);
       agentStepsRef.current = [];
       loadingRef.current = false;
       return;
     }
 
-    // Agent 步骤消息（思考过程）
+    // Agent 步骤消息
     if (lastMessage.type === MessageType.AGENT_STEP) {
       const agentStep = lastMessage as AgentStepMessage;
-      // 添加新的 Agent 步骤
       setAgentSteps((prev) => {
         const newSteps = [
           ...prev,
@@ -336,7 +291,6 @@ const AIChatComponent: React.FC = () => {
         agentStepsRef.current = newSteps;
         return newSteps;
       });
-      return;
     }
   }, [
     lastMessage,
@@ -347,6 +301,7 @@ const AIChatComponent: React.FC = () => {
   ]);
 
   // ===== 对话管理 =====
+
   // 创建新对话
   const handleNewConversation = useCallback(async () => {
     if (!currentModel) {
@@ -360,7 +315,7 @@ const AIChatComponent: React.FC = () => {
       });
       setActiveConversation(conversation);
       setMessages([]);
-      setAgentSteps([]); // 清空 Agent 步骤
+      setAgentSteps([]);
       agentStepsRef.current = [];
       await loadConversations();
     } catch (error) {
@@ -372,28 +327,18 @@ const AIChatComponent: React.FC = () => {
   // 删除对话
   const handleDeleteConversation = useCallback(
     async (conversationId: number) => {
-      Modal.confirm({
-        title: "删除对话",
-        content: "确定要删除这个对话吗？",
-        okText: "删除",
-        cancelText: "取消",
-        okButtonProps: { danger: true },
-        onOk: async () => {
-          try {
-            await window.electronAPI.deleteConversation(conversationId);
-            // 如果删除的是当前对话，清空消息
-            if (activeConversation?.id === conversationId) {
-              setActiveConversation(null);
-              setMessages([]);
-            }
-            await loadConversations();
-            message.success("对话已删除");
-          } catch (error) {
-            console.error("删除对话失败:", error);
-            message.error("删除对话失败");
-          }
-        },
-      });
+      try {
+        await window.electronAPI.deleteConversation(conversationId);
+        if (activeConversation?.id === conversationId) {
+          setActiveConversation(null);
+          setMessages([]);
+        }
+        await loadConversations();
+        message.success("对话已删除");
+      } catch (error) {
+        console.error("删除对话失败:", error);
+        message.error("删除对话失败");
+      }
     },
     [activeConversation, loadConversations]
   );
@@ -413,7 +358,6 @@ const AIChatComponent: React.FC = () => {
         title: editingTitle.trim(),
       });
       await loadConversations();
-      // 如果是当前对话，更新状态
       if (activeConversation?.id === editingConversationId) {
         setActiveConversation({
           ...activeConversation,
@@ -440,13 +384,13 @@ const AIChatComponent: React.FC = () => {
         message.warning("正在生成回复，请稍后再切换对话");
         return;
       }
-      // loadMessages 会从数据库恢复 agentSteps
       await loadMessages(conversationId);
     },
     [loadMessages, streamState.status]
   );
 
   // ===== 发送消息 =====
+
   const handleSend = useCallback(async () => {
     const content = inputValue.trim();
     if (!content || connectionState !== ConnectionState.CONNECTED) return;
@@ -485,7 +429,7 @@ const AIChatComponent: React.FC = () => {
 
     // 添加用户消息
     const userMessage: Message = {
-      id: Date.now(), // 临时 ID
+      id: Date.now(),
       conversationId: conversationId!,
       role: "user",
       content,
@@ -503,22 +447,20 @@ const AIChatComponent: React.FC = () => {
         content,
         timestamp: Date.now(),
       });
-      // 自动设置标题（如果是第一条消息）
       await window.electronAPI.autoSetConversationTitle(conversationId!);
-      // 刷新对话列表
       await loadConversations();
     } catch (error) {
       console.error("保存用户消息失败:", error);
     }
 
-    // 获取历史消息（滑动窗口策略）
-    let history: HistoryMessageItem[] = [];
+    // 获取历史消息
+    let history: { role: "user" | "assistant" | "system"; content: string }[] =
+      [];
     try {
       const recentMessages = await window.electronAPI.getRecentMessages(
         conversationId!,
         DEFAULT_CONTEXT_LIMIT
       );
-      // 转换为 WebSocket 消息格式（排除当前用户消息，因为已经单独发送）
       history = recentMessages
         .filter((msg) => msg.id !== userMessage.id)
         .map((msg) => ({
@@ -529,14 +471,27 @@ const AIChatComponent: React.FC = () => {
       console.error("获取历史消息失败:", error);
     }
 
-    // 发送到 WebSocket（携带历史消息）
     // 根据 agentMode 选择发送方式
     if (agentMode) {
+      // 构建知识库元数据（用于智能匹配）
+      const knowledgeMetadata: Record<
+        string,
+        { name: string; description: string }
+      > = {};
+      knowledgeList.forEach((kb) => {
+        knowledgeMetadata[kb.id] = {
+          name: kb.name,
+          description: kb.description || "",
+        };
+      });
+
       sendAgentChat({
         content,
         conversationId: String(conversationId),
         modelId: currentModel.id,
         history,
+        knowledgeId: selectedKnowledgeId || undefined,
+        knowledgeMetadata,
       });
     } else {
       sendChat({
@@ -556,787 +511,92 @@ const AIChatComponent: React.FC = () => {
     sendChat,
     sendAgentChat,
     agentMode,
+    selectedKnowledgeId,
+    knowledgeList,
     loadConversations,
   ]);
 
-  // 处理键盘事件
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // 模型选择下拉菜单
-  const modelMenuItems = useMemo(() => {
-    return llmModels.map((model) => {
-      const providerInfo = PROVIDER_LABELS[model.provider] || {
-        name: model.provider,
-        color: "default",
-      };
-      const isOllama = isOllamaModel(model);
-
-      return {
-        key: String(model.id),
-        label: (
-          <div className="flex items-center justify-between w-full gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{model.name}</span>
-              <Tag
-                color={providerInfo.color}
-                className="text-[10px] leading-tight px-1.5 py-0 m-0"
-              >
-                {providerInfo.name}
-              </Tag>
-              {isOllama && (
-                <Tooltip title={`本地运行: ${model.host}`}>
-                  <span className="material-symbols-outlined text-xs text-success">
-                    offline_bolt
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-            {model.isDefault && (
-              <span className="text-xs text-primary">默认</span>
-            )}
-          </div>
-        ),
-        onClick: () => setCurrentModel(model),
-      };
+  // 切换消息展开状态
+  const toggleMessageExpand = useCallback((messageId: number) => {
+    setExpandedThoughts((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
     });
-  }, [llmModels]);
-
-  // 连接状态渲染
-  const renderConnectionStatus = () => {
-    const statusConfig: Record<
-      ConnectionState,
-      { color: string; text: string; animate: boolean }
-    > = {
-      [ConnectionState.CONNECTED]: {
-        color: "bg-success",
-        text: "已连接",
-        animate: false,
-      },
-      [ConnectionState.CONNECTING]: {
-        color: "bg-warning",
-        text: "连接中",
-        animate: true,
-      },
-      [ConnectionState.DISCONNECTED]: {
-        color: "bg-error",
-        text: "已断开",
-        animate: false,
-      },
-      [ConnectionState.RECONNECTING]: {
-        color: "bg-warning",
-        text: "重连中",
-        animate: true,
-      },
-      [ConnectionState.ERROR]: {
-        color: "bg-error",
-        text: "连接错误",
-        animate: false,
-      },
-    };
-    const config = statusConfig[connectionState];
-
-    return (
-      <div className="flex items-center gap-2 px-3 py-1 bg-success/10 rounded-full border border-success/20">
-        <span
-          className={`flex h-2 w-2 rounded-full ${config.color} ${
-            config.animate ? "animate-pulse" : ""
-          }`}
-        ></span>
-        <span className="text-xs text-success font-medium tracking-wide">
-          {config.text}
-        </span>
-      </div>
-    );
-  };
-
-  // 渲染对话历史侧边栏
-  const renderSidebar = () => (
-    <aside className="w-72 flex flex-col border-r border-border bg-bg-secondary/50 shrink-0">
-      {/* 头部 */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h3 className="text-text-primary font-bold text-sm tracking-wide">
-          最近对话
-        </h3>
-        <button className="text-text-tertiary hover:text-primary transition-colors">
-          <span className="material-symbols-outlined text-xl">search</span>
-        </button>
-      </div>
-
-      {/* 对话列表 */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-        {/* 新建对话按钮 */}
-        <button
-          className="w-full flex items-center gap-2 px-3 py-2.5 mb-3 rounded-lg border border-dashed border-border hover:border-primary hover:text-primary transition-all text-text-tertiary text-sm"
-          onClick={handleNewConversation}
-        >
-          <span className="material-symbols-outlined text-lg">add</span>
-          <span>新建对话</span>
-        </button>
-
-        {/* 对话分组 */}
-        {conversationGroups.map((group) => (
-          <div key={group.label} className="mb-4">
-            <p className="px-3 text-[10px] uppercase font-bold text-text-tertiary mb-2 tracking-widest">
-              {group.label}
-            </p>
-            {group.conversations.map((conv) => (
-              <Dropdown
-                key={conv.id}
-                trigger={["contextMenu"]}
-                menu={{
-                  items: [
-                    {
-                      key: "edit",
-                      label: "编辑标题",
-                      icon: (
-                        <span className="material-symbols-outlined text-sm">
-                          edit
-                        </span>
-                      ),
-                      onClick: () =>
-                        handleEditTitle({
-                          id: conv.id,
-                          title: conv.title,
-                          modelId: null,
-                          modelName: conv.modelName,
-                          messageCount: conv.messageCount,
-                          createdAt: conv.createdAt,
-                          updatedAt: conv.updatedAt,
-                        } as Conversation),
-                    },
-                    {
-                      key: "delete",
-                      label: "删除对话",
-                      icon: (
-                        <span className="material-symbols-outlined text-sm">
-                          delete
-                        </span>
-                      ),
-                      danger: true,
-                      onClick: () => handleDeleteConversation(conv.id),
-                    },
-                  ],
-                }}
-              >
-                <div
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
-                    activeConversation?.id === conv.id
-                      ? "bg-bg-tertiary border border-border"
-                      : "hover:bg-bg-hover"
-                  }`}
-                  onClick={() => handleSelectConversation(conv.id)}
-                >
-                  <span
-                    className={`material-symbols-outlined text-lg ${
-                      activeConversation?.id === conv.id
-                        ? "text-primary"
-                        : "text-text-tertiary"
-                    }`}
-                  >
-                    chat_bubble
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm font-medium truncate ${
-                        activeConversation?.id === conv.id
-                          ? "text-text-primary"
-                          : "text-text-secondary"
-                      }`}
-                    >
-                      {conv.title || "新对话"}
-                    </p>
-                    <p className="text-text-tertiary text-[11px]">
-                      {conv.messageCount}条消息
-                    </p>
-                  </div>
-                  <span
-                    className="material-symbols-outlined text-text-tertiary text-lg opacity-0 group-hover:opacity-100 hover:text-error transition-all"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteConversation(conv.id);
-                    }}
-                  >
-                    delete
-                  </span>
-                </div>
-              </Dropdown>
-            ))}
-          </div>
-        ))}
-
-        {/* 空状态 */}
-        {conversationGroups.length === 0 && (
-          <div className="text-center py-8 text-text-tertiary text-sm">
-            暂无对话记录
-          </div>
-        )}
-      </div>
-    </aside>
-  );
-
-  // 渲染消息
-  const renderMessage = (msg: Message) => {
-    const isUser = msg.role === "user";
-
-    // 检查消息是否包含 Agent 思考步骤
-    const agentStepsInMessage =
-      (msg.metadata?.agentSteps as AgentStepItem[]) || [];
-    const hasAgentSteps = agentStepsInMessage.length > 0;
-
-    // 过滤掉 answer 类型（答案已显示在消息内容中）
-    const thinkingSteps = agentStepsInMessage.filter(
-      (step) => step.type !== "answer"
-    );
-
-    // 是否展开思考过程
-    const isExpanded = expandedThoughts.has(msg.id);
-
-    // 切换展开/收起
-    const toggleExpand = () => {
-      setExpandedThoughts((prev) => {
-        const next = new Set(prev);
-        if (next.has(msg.id)) {
-          next.delete(msg.id);
-        } else {
-          next.add(msg.id);
-        }
-        return next;
-      });
-    };
-
-    return (
-      <div
-        key={msg.id}
-        className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}
-      >
-        <div
-          className={`flex gap-3 max-w-[85%] ${
-            isUser ? "flex-row-reverse" : ""
-          }`}
-        >
-          {/* 头像 */}
-          <div
-            className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-              isUser
-                ? "bg-primary/10 border border-primary/20"
-                : "bg-bg-tertiary border border-border"
-            }`}
-          >
-            <span
-              className={`material-symbols-outlined text-lg ${
-                isUser ? "text-primary" : "text-text-secondary"
-              }`}
-            >
-              {isUser ? "person" : "smart_toy"}
-            </span>
-          </div>
-
-          {/* 消息内容 */}
-          <div className="flex flex-col gap-1">
-            {/* 时间戳 */}
-            <div
-              className={`flex items-center gap-2 text-[11px] font-medium text-text-tertiary ${
-                isUser ? "justify-end" : ""
-              }`}
-            >
-              {isUser ? (
-                <>
-                  <span>{formatTime(msg.timestamp)}</span>
-                  <span>我</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-primary">
-                    AI 助手 ({currentModel?.name || "未知模型"})
-                  </span>
-                  <span>{formatTime(msg.timestamp)}</span>
-                  {hasAgentSteps && (
-                    <span className="text-success">思考完成</span>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Agent 思考过程（可展开/收起） */}
-            {!isUser && thinkingSteps.length > 0 && (
-              <div className="mb-2">
-                {/* 收起状态：只显示展开按钮 */}
-                {!isExpanded ? (
-                  <button
-                    onClick={toggleExpand}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-tertiary/50 hover:bg-bg-tertiary rounded-lg text-xs text-text-tertiary hover:text-text-secondary transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      expand_more
-                    </span>
-                    <span>查看思考过程 ({thinkingSteps.length} 步)</span>
-                  </button>
-                ) : (
-                  /* 展开状态：显示完整思考过程 */
-                  <div className="bg-bg-secondary border border-border rounded-lg overflow-hidden">
-                    {/* 标题栏 */}
-                    <button
-                      onClick={toggleExpand}
-                      className="flex items-center justify-between w-full px-3 py-2 hover:bg-bg-hover transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-sm text-success">
-                          check_circle
-                        </span>
-                        <span className="text-xs font-medium text-text-secondary">
-                          思考过程 ({thinkingSteps.length} 步)
-                        </span>
-                      </div>
-                      <span className="material-symbols-outlined text-sm text-text-tertiary">
-                        expand_less
-                      </span>
-                    </button>
-
-                    {/* 步骤列表 */}
-                    <div className="px-3 pb-3 space-y-2">
-                      {thinkingSteps.map((step, index) => (
-                        <div
-                          key={`${step.timestamp}-${index}`}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          {/* 步骤图标 */}
-                          <span className="shrink-0 text-base">
-                            {AGENT_STEP_ICONS[step.type]}
-                          </span>
-
-                          {/* 步骤内容 */}
-                          <div className="flex flex-col gap-1 flex-1 min-w-0">
-                            {/* 步骤标签 */}
-                            <span className="text-xs font-medium text-text-secondary">
-                              {AGENT_STEP_LABELS[step.type]}
-                            </span>
-
-                            {/* 思考内容 */}
-                            <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
-                              {step.type === "tool_call" && step.toolCall ? (
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-primary font-medium">
-                                    {step.toolCall.name}
-                                  </span>
-                                  <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
-                                    {JSON.stringify(step.toolCall.arguments)}
-                                  </code>
-                                </div>
-                              ) : step.type === "tool_result" ? (
-                                <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-20 overflow-auto">
-                                  {step.content}
-                                </code>
-                              ) : (
-                                step.content
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 消息气泡 */}
-            <Bubble
-              placement={isUser ? "end" : "start"}
-              variant="filled"
-              shape="default"
-              content={msg.content}
-              contentRender={(content) => {
-                if (isUser) {
-                  return <span className="whitespace-pre-wrap">{content}</span>;
-                }
-                return <MarkdownRenderer content={content as string} />;
-              }}
-              styles={{
-                content: isUser
-                  ? { backgroundColor: "var(--color-primary)", color: "#fff" }
-                  : {
-                      backgroundColor: "var(--color-bg-secondary)",
-                      border: "1px solid var(--color-border)",
-                    },
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 渲染流式消息（正在生成中）
-  const renderStreamingMessage = () => {
-    if (streamState.status !== "streaming") return null;
-
-    // 获取当前思考步骤（过滤掉 answer）
-    const thinkingSteps = agentSteps.filter((step) => step.type !== "answer");
-
-    return (
-      <div className="flex justify-start mb-6">
-        <div className="flex gap-3 max-w-[85%]">
-          {/* AI 头像 */}
-          <div className="size-8 rounded-lg bg-bg-tertiary border border-border flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-lg text-text-secondary">
-              smart_toy
-            </span>
-          </div>
-
-          {/* 消息内容 */}
-          <div className="flex flex-col gap-1">
-            {/* 时间戳 */}
-            <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
-              <span className="text-primary">
-                AI 助手 ({currentModel?.name || "未知模型"})
-              </span>
-              <span className="animate-pulse text-warning">思考中...</span>
-            </div>
-
-            {/* 思考过程（流式阶段始终展开显示） */}
-            {thinkingSteps.length > 0 && (
-              <div className="bg-bg-secondary border border-border rounded-lg overflow-hidden mb-2">
-                {/* 标题栏 */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-bg-tertiary/50">
-                  <span className="material-symbols-outlined text-sm text-warning animate-pulse">
-                    psychology
-                  </span>
-                  <span className="text-xs font-medium text-text-secondary">
-                    思考中 ({thinkingSteps.length} 步)
-                  </span>
-                </div>
-
-                {/* 步骤列表 */}
-                <div className="px-3 pb-3 space-y-2">
-                  {thinkingSteps.map((step, index) => (
-                    <div
-                      key={`${step.timestamp}-${index}`}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      {/* 步骤图标 */}
-                      <span className="shrink-0 text-base">
-                        {AGENT_STEP_ICONS[step.type]}
-                      </span>
-
-                      {/* 步骤内容 */}
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <span className="text-xs font-medium text-text-secondary">
-                          {AGENT_STEP_LABELS[step.type]}
-                        </span>
-                        <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
-                          {step.type === "tool_call" && step.toolCall ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-primary font-medium">
-                                {step.toolCall.name}
-                              </span>
-                              <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
-                                {JSON.stringify(step.toolCall.arguments)}
-                              </code>
-                            </div>
-                          ) : step.type === "tool_result" ? (
-                            <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-20 overflow-auto">
-                              {step.content}
-                            </code>
-                          ) : (
-                            step.content
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 流式消息气泡（有内容时才显示） */}
-            {streamState.content && (
-              <Bubble
-                placement="start"
-                variant="filled"
-                shape="default"
-                streaming
-                content={streamState.content}
-                contentRender={(content) => (
-                  <MarkdownRenderer content={content as string} />
-                )}
-                styles={{
-                  content: {
-                    backgroundColor: "var(--color-bg-secondary)",
-                    border: "1px solid var(--color-border)",
-                  },
-                }}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 渲染空状态
-  const renderEmptyState = () => (
-    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-      <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-        <span className="material-symbols-outlined text-4xl text-primary">
-          smart_toy
-        </span>
-      </div>
-      <h3 className="text-lg font-semibold text-text-primary mb-2">
-        开始与 AI 对话
-      </h3>
-      <p className="text-sm text-text-tertiary max-w-md mb-6">
-        {llmModels.length > 0
-          ? "我是一个智能助手，可以帮助您解答问题、编写代码、分析数据等。"
-          : "请先在设置中配置模型，才能开始对话。"}
-      </p>
-      {llmModels.length > 0 && (
-        <div className="flex flex-wrap gap-2 justify-center">
-          {[
-            "帮我写一段 Python 代码",
-            "解释什么是闭包",
-            "如何优化 SQL 查询",
-          ].map((suggestion) => (
-            <button
-              key={suggestion}
-              className="px-4 py-2 rounded-full border border-border hover:border-primary hover:text-primary text-text-tertiary text-sm transition-all"
-              onClick={() => setInputValue(suggestion)}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-      {llmModels.length === 0 && (
-        <button
-          className="px-6 py-2 rounded-lg bg-primary text-white text-sm hover:bg-primary-hover transition-colors"
-          onClick={() => navigate("/settings/ai")}
-        >
-          前往配置模型
-        </button>
-      )}
-    </div>
-  );
+  }, []);
 
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* 对话历史侧边栏 */}
-      {renderSidebar()}
+      <AIChatSidebar
+        conversationGroups={conversationGroups}
+        activeConversation={activeConversation}
+        onNewConversation={handleNewConversation}
+        onSelectConversation={handleSelectConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onEditTitle={handleEditTitle}
+      />
 
       {/* 主聊天区域 */}
       <main className="flex-1 flex flex-col relative bg-bg-primary">
         {/* 头部栏 */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-bg-secondary/80 backdrop-blur-md z-10">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">
-                smart_toy
-              </span>
-              <h2 className="text-text-primary font-bold tracking-tight">
-                AI 助手
-              </h2>
-            </div>
-            <div className="h-6 w-[1px] bg-border"></div>
-            <div className="flex items-center gap-4">
-              {/* 模型选择 */}
-              {currentModel && (
-                <Dropdown menu={{ items: modelMenuItems }} trigger={["click"]}>
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-bg-tertiary rounded-full border border-border cursor-pointer hover:border-primary/50 transition-colors">
-                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-tighter">
-                      {currentModel.name}
-                    </span>
-                    <Tag
-                      color={
-                        PROVIDER_LABELS[currentModel.provider]?.color ||
-                        "default"
-                      }
-                      className="text-[9px] leading-tight px-1 py-0 m-0"
-                    >
-                      {PROVIDER_LABELS[currentModel.provider]?.name ||
-                        currentModel.provider}
-                    </Tag>
-                    <span className="material-symbols-outlined text-base text-text-tertiary">
-                      expand_more
-                    </span>
-                  </div>
-                </Dropdown>
-              )}
-              {/* 其他模型快捷入口 */}
-              <div className="flex items-center gap-3 text-xs font-medium text-text-tertiary">
-                {llmModels
-                  .filter((m) => m.id !== currentModel?.id)
-                  .slice(0, 3)
-                  .map((model) => {
-                    const isOllama = isOllamaModel(model);
-                    return (
-                      <button
-                        key={model.id}
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        onClick={() => setCurrentModel(model)}
-                      >
-                        <span>{model.name}</span>
-                        {isOllama && (
-                          <Tooltip title="本地模型">
-                            <span className="material-symbols-outlined text-[10px] text-success">
-                              offline_bolt
-                            </span>
-                          </Tooltip>
-                        )}
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {renderConnectionStatus()}
-            <div className="flex items-center gap-1">
-              <button
-                className="p-2 text-text-tertiary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-all"
-                onClick={() => navigate("/settings/ai")}
-              >
-                <span className="material-symbols-outlined text-xl">
-                  settings
-                </span>
-              </button>
-            </div>
-          </div>
-        </header>
+        <AIChatHeader
+          currentModel={currentModel}
+          llmModels={llmModels}
+          connectionState={connectionState}
+          onSelectModel={setCurrentModel}
+        />
 
         {/* 消息列表 */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 max-w-4xl mx-auto w-full">
           {messages.length === 0 &&
           streamState.status !== "streaming" &&
           agentSteps.length === 0 ? (
-            renderEmptyState()
+            <AIChatEmptyState
+              llmModels={llmModels}
+              onSelectSuggestion={setInputValue}
+            />
           ) : (
             <div className="space-y-8">
-              {messages.map(renderMessage)}
-              {renderStreamingMessage()}
+              {messages.map((msg) => (
+                <AIChatMessage
+                  key={msg.id}
+                  message={msg}
+                  currentModel={currentModel}
+                  isExpanded={expandedThoughts.has(msg.id)}
+                  onToggleExpand={() => toggleMessageExpand(msg.id)}
+                />
+              ))}
+              {streamState.status === "streaming" && (
+                <AIChatStreamingMessage
+                  content={streamState.content}
+                  currentModel={currentModel}
+                  agentSteps={agentSteps}
+                />
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
         </div>
 
         {/* 输入区域 */}
-        <div className="p-6 bg-transparent">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-bg-secondary border border-border rounded-2xl shadow-xl focus-within:border-primary/50 transition-all p-2">
-              {/* 工具栏 */}
-              <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-border/50">
-                <div className="flex items-center gap-1">
-                  <button
-                    className="p-2 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                    title="添加附件"
-                  >
-                    <span className="material-symbols-outlined text-lg">
-                      attach_file
-                    </span>
-                  </button>
-                  <button
-                    className="p-2 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                    title="上传图片"
-                  >
-                    <span className="material-symbols-outlined text-lg">
-                      image
-                    </span>
-                  </button>
-                  <div className="h-4 w-[1px] bg-border mx-1"></div>
-                  <button
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-all text-xs font-medium"
-                    title="快捷模板"
-                  >
-                    <span className="material-symbols-outlined text-base">
-                      temp_preferences_custom
-                    </span>
-                    <span>快捷模板</span>
-                  </button>
-                  <div className="h-4 w-[1px] bg-border mx-1"></div>
-                  {/* Agent 模式开关 */}
-                  <Tooltip
-                    title={
-                      agentMode
-                        ? "Agent 模式：智能体将使用工具完成任务"
-                        : "普通模式：直接对话"
-                    }
-                  >
-                    <div className="flex items-center gap-2 px-2">
-                      <Switch
-                        size="small"
-                        checked={agentMode}
-                        onChange={setAgentMode}
-                        checkedChildren="🤖"
-                        unCheckedChildren="💬"
-                      />
-                      <span
-                        className={`text-xs font-medium ${
-                          agentMode ? "text-primary" : "text-text-tertiary"
-                        }`}
-                      >
-                        {agentMode ? "Agent" : "对话"}
-                      </span>
-                    </div>
-                  </Tooltip>
-                </div>
-                <div className="text-[10px] text-text-tertiary font-medium">
-                  按 Enter 发送，Shift + Enter 换行
-                </div>
-              </div>
-
-              {/* 输入框和发送按钮 */}
-              <div className="flex items-end gap-3 px-2 py-2">
-                <textarea
-                  ref={textareaRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="在这里输入您的问题，例如：'如何使用 Python 处理地理栅格数据？'"
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-text-primary text-sm placeholder:text-text-tertiary resize-none custom-scrollbar py-1 outline-none"
-                  rows={3}
-                  disabled={
-                    connectionState !== ConnectionState.CONNECTED ||
-                    streamState.status === "streaming"
-                  }
-                />
-                <button
-                  className={`p-3 rounded-xl flex items-center justify-center transition-all shadow-lg shrink-0 ${
-                    inputValue.trim() &&
-                    connectionState === ConnectionState.CONNECTED &&
-                    streamState.status !== "streaming" &&
-                    currentModel
-                      ? "bg-primary hover:bg-primary-hover text-white shadow-primary/20"
-                      : "bg-bg-tertiary text-text-tertiary cursor-not-allowed"
-                  }`}
-                  onClick={handleSend}
-                  disabled={
-                    !inputValue.trim() ||
-                    connectionState !== ConnectionState.CONNECTED ||
-                    streamState.status === "streaming" ||
-                    !currentModel
-                  }
-                >
-                  <span className="material-symbols-outlined text-2xl">
-                    send
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* 底部提示 */}
-            <div className="mt-4 flex justify-center">
-              <div className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
-                <span className="material-symbols-outlined text-base">
-                  info
-                </span>
-                <span>AI 可能会产生错误，请核实重要信息</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AIChatInput
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+          currentModel={currentModel}
+          connectionState={connectionState}
+          streamState={streamState}
+          agentMode={agentMode}
+          onAgentModeChange={setAgentMode}
+          onSend={handleSend}
+          knowledgeList={knowledgeList}
+          selectedKnowledgeId={selectedKnowledgeId}
+          onKnowledgeChange={setSelectedKnowledgeId}
+        />
       </main>
 
       {/* 编辑标题弹窗 */}

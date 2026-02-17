@@ -79,6 +79,7 @@ def init_skills_system():
     2. 注册内置技能
     3. 加载外部技能目录（用户自定义技能）
     4. 将技能注册为 Agent 工具
+    5. 注册知识库检索工具
 
     外部技能目录优先级：
     1. SKILLS_DIR 环境变量（支持多个路径，冒号分隔）
@@ -87,6 +88,7 @@ def init_skills_system():
     """
     from agent.skills import global_skill_registry, init_builtin_skills, SkillLoader
     from agent.tools import global_tool_registry, register_skills_as_tools
+    from agent.knowledge_tool import register_knowledge_tools
 
     # 1. 注册内置技能
     init_builtin_skills(global_skill_registry)
@@ -124,6 +126,10 @@ def init_skills_system():
     tool_count = register_skills_as_tools(
         global_skill_registry, global_tool_registry)
     logger.info(f"已将 {tool_count} 个技能注册为 Agent 工具")
+
+    # 5. 注册知识库检索工具
+    register_knowledge_tools()
+    logger.info("已注册知识库检索工具")
 
 
 class AgentService:

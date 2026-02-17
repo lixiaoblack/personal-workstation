@@ -1,0 +1,10 @@
+/**
+ * AIChat 组件导出索引
+ */
+export { default as AIChatSidebar } from "./AIChatSidebar";
+export { default as AIChatHeader } from "./AIChatHeader";
+export { default as AIChatMessage } from "./AIChatMessage";
+export { default as AIChatStreamingMessage } from "./AIChatStreamingMessage";
+export { default as AIChatAgentSteps } from "./AIChatAgentSteps";
+export { default as AIChatEmptyState } from "./AIChatEmptyState";
+export { default as AIChatInput } from "./AIChatInput";

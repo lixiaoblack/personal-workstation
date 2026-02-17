@@ -61,7 +61,8 @@ def init_skills_system():
     logger.info(f"Skills 系统初始化完成，共 {len(global_skill_registry)} 个技能")
 
     # 4. 将技能注册为 Agent 工具（让 Agent 可以调用技能）
-    tool_count = register_skills_as_tools(global_skill_registry, global_tool_registry)
+    tool_count = register_skills_as_tools(
+        global_skill_registry, global_tool_registry)
     logger.info(f"已将 {tool_count} 个技能注册为 Agent 工具")
 
 

@@ -122,6 +122,9 @@ const AIChatComponent: React.FC = () => {
   }
   const [agentSteps, setAgentSteps] = useState<AgentStepItem[]>([]);
 
+  // 展开的思考过程消息 ID 集合
+  const [expandedThoughts, setExpandedThoughts] = useState<Set<number>>(new Set());
+
   // 输入内容
   const [inputValue, setInputValue] = useState("");
   // 编辑对话标题弹窗
@@ -776,6 +779,29 @@ const AIChatComponent: React.FC = () => {
   const renderMessage = (msg: Message) => {
     const isUser = msg.role === "user";
 
+    // 检查消息是否包含 Agent 思考步骤
+    const agentStepsInMessage = (msg.metadata?.agentSteps as AgentStepItem[]) || [];
+    const hasAgentSteps = agentStepsInMessage.length > 0;
+
+    // 过滤掉 answer 类型（答案已显示在消息内容中）
+    const thinkingSteps = agentStepsInMessage.filter((step) => step.type !== "answer");
+
+    // 是否展开思考过程
+    const isExpanded = expandedThoughts.has(msg.id);
+
+    // 切换展开/收起
+    const toggleExpand = () => {
+      setExpandedThoughts((prev) => {
+        const next = new Set(prev);
+        if (next.has(msg.id)) {
+          next.delete(msg.id);
+        } else {
+          next.add(msg.id);
+        }
+        return next;
+      });
+    };
+
     return (
       <div
         key={msg.id}
@@ -822,9 +848,94 @@ const AIChatComponent: React.FC = () => {
                     AI 助手 ({currentModel?.name || "未知模型"})
                   </span>
                   <span>{formatTime(msg.timestamp)}</span>
+                  {hasAgentSteps && (
+                    <span className="text-success">思考完成</span>
+                  )}
                 </>
               )}
             </div>
+
+            {/* Agent 思考过程（可展开/收起） */}
+            {!isUser && thinkingSteps.length > 0 && (
+              <div className="mb-2">
+                {/* 收起状态：只显示展开按钮 */}
+                {!isExpanded ? (
+                  <button
+                    onClick={toggleExpand}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-tertiary/50 hover:bg-bg-tertiary rounded-lg text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      expand_more
+                    </span>
+                    <span>查看思考过程 ({thinkingSteps.length} 步)</span>
+                  </button>
+                ) : (
+                  /* 展开状态：显示完整思考过程 */
+                  <div className="bg-bg-secondary border border-border rounded-lg overflow-hidden">
+                    {/* 标题栏 */}
+                    <button
+                      onClick={toggleExpand}
+                      className="flex items-center justify-between w-full px-3 py-2 hover:bg-bg-hover transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-success">
+                          check_circle
+                        </span>
+                        <span className="text-xs font-medium text-text-secondary">
+                          思考过程 ({thinkingSteps.length} 步)
+                        </span>
+                      </div>
+                      <span className="material-symbols-outlined text-sm text-text-tertiary">
+                        expand_less
+                      </span>
+                    </button>
+
+                    {/* 步骤列表 */}
+                    <div className="px-3 pb-3 space-y-2">
+                      {thinkingSteps.map((step, index) => (
+                        <div
+                          key={`${step.timestamp}-${index}`}
+                          className="flex items-start gap-2 text-sm"
+                        >
+                          {/* 步骤图标 */}
+                          <span className="shrink-0 text-base">
+                            {AGENT_STEP_ICONS[step.type]}
+                          </span>
+
+                          {/* 步骤内容 */}
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            {/* 步骤标签 */}
+                            <span className="text-xs font-medium text-text-secondary">
+                              {AGENT_STEP_LABELS[step.type]}
+                            </span>
+
+                            {/* 思考内容 */}
+                            <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
+                              {step.type === "tool_call" && step.toolCall ? (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-primary font-medium">
+                                    {step.toolCall.name}
+                                  </span>
+                                  <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
+                                    {JSON.stringify(step.toolCall.arguments)}
+                                  </code>
+                                </div>
+                              ) : step.type === "tool_result" ? (
+                                <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-20 overflow-auto">
+                                  {step.content}
+                                </code>
+                              ) : (
+                                step.content
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 消息气泡 */}
             <Bubble
@@ -855,7 +966,10 @@ const AIChatComponent: React.FC = () => {
 
   // 渲染流式消息（正在生成中）
   const renderStreamingMessage = () => {
-    if (streamState.status !== "streaming" || !streamState.content) return null;
+    if (streamState.status !== "streaming") return null;
+
+    // 获取当前思考步骤（过滤掉 answer）
+    const thinkingSteps = agentSteps.filter((step) => step.type !== "answer");
 
     return (
       <div className="flex justify-start mb-6">
@@ -874,115 +988,83 @@ const AIChatComponent: React.FC = () => {
               <span className="text-primary">
                 AI 助手 ({currentModel?.name || "未知模型"})
               </span>
-              <span className="animate-pulse">正在生成...</span>
+              <span className="animate-pulse text-warning">思考中...</span>
             </div>
 
-            {/* 流式消息气泡 */}
-            <Bubble
-              placement="start"
-              variant="filled"
-              shape="default"
-              streaming
-              content={streamState.content}
-              contentRender={(content) => (
-                <MarkdownRenderer content={content as string} />
-              )}
-              styles={{
-                content: {
-                  backgroundColor: "var(--color-bg-secondary)",
-                  border: "1px solid var(--color-border)",
-                },
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 渲染 Agent 思考步骤
-  const renderAgentSteps = () => {
-    // 过滤掉 answer 类型（答案在消息列表中显示）
-    const thinkingSteps = agentSteps.filter((step) => step.type !== "answer");
-    if (thinkingSteps.length === 0) return null;
-
-    // 判断是否还在执行中
-    const isStreaming =
-      streamState.status === "streaming" || loadingRef.current;
-
-    return (
-      <div className="flex justify-start mb-4">
-        <div className="flex gap-3 max-w-[85%]">
-          {/* AI 头像 */}
-          <div className="size-8 rounded-lg bg-bg-tertiary border border-border flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-lg text-text-secondary">
-              smart_toy
-            </span>
-          </div>
-
-          {/* 思考过程容器 */}
-          <div className="flex flex-col gap-2 flex-1">
-            {/* 标题 */}
-            <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
-              <span className="text-primary">AI 助手</span>
-              <span
-                className={
-                  isStreaming ? "animate-pulse text-warning" : "text-success"
-                }
-              >
-                {isStreaming ? "思考中..." : "思考完成"}
-              </span>
-            </div>
-
-            {/* 步骤列表 */}
-            <div className="bg-bg-secondary border border-border rounded-lg p-3 space-y-2">
-              {thinkingSteps.map((step, index) => (
-                <div
-                  key={`${step.timestamp}-${index}`}
-                  className="flex items-start gap-2 text-sm"
-                >
-                  {/* 步骤图标 */}
-                  <span className="shrink-0 text-base">
-                    {AGENT_STEP_ICONS[step.type]}
+            {/* 思考过程（流式阶段始终展开显示） */}
+            {thinkingSteps.length > 0 && (
+              <div className="bg-bg-secondary border border-border rounded-lg overflow-hidden mb-2">
+                {/* 标题栏 */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-bg-tertiary/50">
+                  <span className="material-symbols-outlined text-sm text-warning animate-pulse">
+                    psychology
                   </span>
-
-                  {/* 步骤内容 */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    {/* 步骤标签和迭代次数 */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-text-secondary">
-                        {AGENT_STEP_LABELS[step.type]}
-                      </span>
-                      {step.iteration !== undefined && step.iteration > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-tertiary">
-                          迭代 #{step.iteration}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 思考内容 */}
-                    <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
-                      {step.type === "tool_call" && step.toolCall ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-primary font-medium">
-                            {step.toolCall.name}
-                          </span>
-                          <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
-                            {JSON.stringify(step.toolCall.arguments, null, 2)}
-                          </code>
-                        </div>
-                      ) : step.type === "tool_result" ? (
-                        <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-32 overflow-auto">
-                          {step.content}
-                        </code>
-                      ) : (
-                        step.content
-                      )}
-                    </div>
-                  </div>
+                  <span className="text-xs font-medium text-text-secondary">
+                    思考中 ({thinkingSteps.length} 步)
+                  </span>
                 </div>
-              ))}
-            </div>
+
+                {/* 步骤列表 */}
+                <div className="px-3 pb-3 space-y-2">
+                  {thinkingSteps.map((step, index) => (
+                    <div
+                      key={`${step.timestamp}-${index}`}
+                      className="flex items-start gap-2 text-sm"
+                    >
+                      {/* 步骤图标 */}
+                      <span className="shrink-0 text-base">
+                        {AGENT_STEP_ICONS[step.type]}
+                      </span>
+
+                      {/* 步骤内容 */}
+                      <div className="flex flex-col gap-1 flex-1 min-w-0">
+                        <span className="text-xs font-medium text-text-secondary">
+                          {AGENT_STEP_LABELS[step.type]}
+                        </span>
+                        <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
+                          {step.type === "tool_call" && step.toolCall ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-primary font-medium">
+                                {step.toolCall.name}
+                              </span>
+                              <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
+                                {JSON.stringify(step.toolCall.arguments)}
+                              </code>
+                            </div>
+                          ) : step.type === "tool_result" ? (
+                            <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-20 overflow-auto">
+                              {step.content}
+                            </code>
+                          ) : (
+                            step.content
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 流式消息气泡（有内容时才显示） */}
+            {streamState.content && (
+              <Bubble
+                placement="start"
+                variant="filled"
+                shape="default"
+                streaming
+                content={streamState.content}
+                contentRender={(content) => (
+                  <MarkdownRenderer content={content as string} />
+                )}
+                styles={{
+                  content: {
+                    backgroundColor: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border)",
+                  },
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -1127,7 +1209,6 @@ const AIChatComponent: React.FC = () => {
           ) : (
             <div className="space-y-8">
               {messages.map(renderMessage)}
-              {renderAgentSteps()}
               {renderStreamingMessage()}
               <div ref={messagesEndRef} />
             </div>

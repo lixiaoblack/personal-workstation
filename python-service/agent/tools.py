@@ -454,10 +454,12 @@ class SkillToolAdapter(BaseTool):
 
             if param_required:
                 # 必填字段：使用 Field(...) 作为默认值
-                fields[param_name] = (param_type, Field(description=param_desc))
+                fields[param_name] = (
+                    param_type, Field(description=param_desc))
             else:
                 # 可选字段：使用 Field(default="") 作为默认值
-                fields[param_name] = (param_type, Field(default="", description=param_desc))
+                fields[param_name] = (param_type, Field(
+                    default="", description=param_desc))
 
         # 动态创建 Pydantic 模型
         return create_model(

@@ -279,6 +279,7 @@ class MessageHandler:
         msg_id = message.get("id")
 
         logger.info(f"[Agent] 收到消息: {content[:50]}...")
+        logger.info(f"[Agent] 知识库元数据: {knowledge_metadata}")
 
         try:
             # 导入 Agent 模块

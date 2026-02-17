@@ -301,6 +301,7 @@ class KnowledgeListTool(BaseTool):
     知识库列表工具
 
     列出所有可用的知识库，帮助用户了解有哪些知识库可以查询。
+    使用前端传来的元数据获取知识库名称和描述。
     """
 
     name = "knowledge_list"
@@ -319,8 +320,15 @@ class KnowledgeListTool(BaseTool):
 
             lines = ["可用的知识库：\n"]
             for kb in knowledge_list:
-                lines.append(f"- {kb.get('name', '未命名')} (ID: {kb.get('id')})")
-                lines.append(f"  文档数: {kb.get('documentCount', 0)}")
+                name = kb.get('name', '未命名')
+                kb_id = kb.get('id', '未知')
+                doc_count = kb.get('documentCount', 0)
+                description = kb.get('description', '')
+                
+                lines.append(f"- {name} (ID: {kb_id})")
+                lines.append(f"  文档数: {doc_count}")
+                if description:
+                    lines.append(f"  描述: {description}")
 
             return "\n".join(lines)
 
@@ -329,13 +337,37 @@ class KnowledgeListTool(BaseTool):
             return f"获取失败: {str(e)}"
 
     async def _list_async(self) -> List[Dict[str, Any]]:
-        """异步获取知识库列表"""
+        """异步获取知识库列表，结合 LanceDB 数据和元数据"""
         from rag.vectorstore import get_vectorstore
 
         vectorstore = get_vectorstore()
         stats = vectorstore.get_stats()
 
-        return stats.get("collections", [])
+        # 获取 LanceDB 中的集合信息
+        collections = stats.get("collections", [])
+        
+        # 结合元数据
+        result = []
+        for col in collections:
+            kb_id = col.get("id", "")
+            # 从元数据获取名称和描述
+            metadata = KnowledgeRetrieverTool._knowledge_metadata.get(kb_id, {})
+            
+            # 如果元数据中没有名称，尝试从 ID 解析或使用默认值
+            name = metadata.get("name")
+            if not name:
+                # 尝试生成一个更友好的名称
+                name = f"知识库 {kb_id[-6:]}" if kb_id else "未命名"
+            
+            result.append({
+                "id": kb_id,
+                "name": name,
+                "description": metadata.get("description", ""),
+                "documentCount": col.get("document_count", 0),
+            })
+
+        logger.info(f"[KnowledgeListTool] 知识库列表: {result}")
+        return result
 
 
 def register_knowledge_tools():

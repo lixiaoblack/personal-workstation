@@ -71,6 +71,13 @@ export type {
   KnowledgeInfo,
   KnowledgeDocumentInfo,
   KnowledgeSearchResult,
+  // Memory 记忆相关类型
+  MemoryGetContextResponseMessage,
+  MemorySaveResponseMessage,
+  MemoryCreateSummaryResponseMessage,
+  MemoryListResponseMessage,
+  MemoryDeleteResponseMessage,
+  MemoryGenerateSummaryResponseMessage,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -116,6 +123,12 @@ import type {
   KnowledgeInfo,
   KnowledgeDocumentInfo,
   KnowledgeSearchResult,
+  MemoryGetContextResponseMessage,
+  MemorySaveResponseMessage,
+  MemoryCreateSummaryResponseMessage,
+  MemoryListResponseMessage,
+  MemoryDeleteResponseMessage,
+  MemoryGenerateSummaryResponseMessage,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -298,40 +311,16 @@ export interface ElectronAPI {
   }>;
 
   // Memory 记忆管理
-  getMemoryContext: () => Promise<{
-    success: boolean;
-    memories: Array<{
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-      confidence: number;
-    }>;
-    summaries: Array<{
-      id: number;
-      conversationId: number;
-      summary: string;
-      keyTopics: string[];
-    }>;
-    contextPrompt: string;
-    error?: string;
-  }>;
+  getMemoryContext: () => Promise<
+    Omit<MemoryGetContextResponseMessage, "type" | "id" | "timestamp">
+  >;
   saveMemory: (
     memoryType: string,
     memoryKey: string,
     memoryValue: string,
     sourceConversationId?: number,
     confidence?: number
-  ) => Promise<{
-    success: boolean;
-    memory?: {
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-    };
-    error?: string;
-  }>;
+  ) => Promise<Omit<MemorySaveResponseMessage, "type" | "id" | "timestamp">>;
   saveMemories: (
     memories: Array<{
       type: string;
@@ -347,27 +336,13 @@ export interface ElectronAPI {
     summary: string,
     keyTopics: string[],
     messageCount: number
-  ) => Promise<{
-    success: boolean;
-    summary?: { id: number; conversationId: number; summary: string };
-    error?: string;
-  }>;
+  ) => Promise<Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">>;
   listMemories: (
     memoryType?: string
-  ) => Promise<{
-    success: boolean;
-    memories: Array<{
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-      confidence: number;
-      createdAt: number;
-      updatedAt: number;
-    }>;
-    error?: string;
-  }>;
-  deleteMemory: (memoryId: number) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">>;
+  deleteMemory: (
+    memoryId: number
+  ) => Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">>;
   getConversationSummaries: (
     conversationId: number
   ) => Promise<{
@@ -384,13 +359,7 @@ export interface ElectronAPI {
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
     modelId?: number
-  ) => Promise<{
-    success: boolean;
-    summary?: string;
-    keyTopics?: string[];
-    pendingTasks?: string[];
-    error?: string;
-  }>;
+  ) => Promise<Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">>;
 }
 
 declare global {

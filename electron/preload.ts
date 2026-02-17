@@ -38,6 +38,12 @@ import type {
   KnowledgeInfo,
   KnowledgeDocumentInfo,
   KnowledgeSearchResult,
+  MemoryGetContextResponseMessage,
+  MemorySaveResponseMessage,
+  MemoryCreateSummaryResponseMessage,
+  MemoryListResponseMessage,
+  MemoryDeleteResponseMessage,
+  MemoryGenerateSummaryResponseMessage,
 } from "./types/websocket";
 
 // WebSocket 服务器信息
@@ -311,40 +317,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   }> => ipcRenderer.invoke("knowledge:selectFiles"),
 
   // Memory 记忆管理
-  getMemoryContext: (): Promise<{
-    success: boolean;
-    memories: Array<{
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-      confidence: number;
-    }>;
-    summaries: Array<{
-      id: number;
-      conversationId: number;
-      summary: string;
-      keyTopics: string[];
-    }>;
-    contextPrompt: string;
-    error?: string;
-  }> => ipcRenderer.invoke("memory:getContext"),
+  getMemoryContext: (): Promise<
+    Omit<MemoryGetContextResponseMessage, "type" | "id" | "timestamp">
+  > => ipcRenderer.invoke("memory:getContext"),
   saveMemory: (
     memoryType: string,
     memoryKey: string,
     memoryValue: string,
     sourceConversationId?: number,
     confidence?: number
-  ): Promise<{
-    success: boolean;
-    memory?: {
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-    };
-    error?: string;
-  }> =>
+  ): Promise<Omit<MemorySaveResponseMessage, "type" | "id" | "timestamp">> =>
     ipcRenderer.invoke(
       "memory:save",
       memoryType,
@@ -369,11 +351,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     summary: string,
     keyTopics: string[],
     messageCount: number
-  ): Promise<{
-    success: boolean;
-    summary?: { id: number; conversationId: number; summary: string };
-    error?: string;
-  }> =>
+  ): Promise<Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">> =>
     ipcRenderer.invoke(
       "memory:createSummary",
       conversationId,
@@ -385,22 +363,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ),
   listMemories: (
     memoryType?: string
-  ): Promise<{
-    success: boolean;
-    memories: Array<{
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-      confidence: number;
-      createdAt: number;
-      updatedAt: number;
-    }>;
-    error?: string;
-  }> => ipcRenderer.invoke("memory:list", memoryType),
+  ): Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">> =>
+    ipcRenderer.invoke("memory:list", memoryType),
   deleteMemory: (
     memoryId: number
-  ): Promise<{ success: boolean; error?: string }> =>
+  ): Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">> =>
     ipcRenderer.invoke("memory:delete", memoryId),
   getConversationSummaries: (
     conversationId: number
@@ -420,13 +387,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
     modelId?: number
-  ): Promise<{
-    success: boolean;
-    summary?: string;
-    keyTopics?: string[];
-    pendingTasks?: string[];
-    error?: string;
-  }> => ipcRenderer.invoke("memory:generateSummary", conversationId, messages, modelId),
+  ): Promise<Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">> =>
+    ipcRenderer.invoke("memory:generateSummary", conversationId, messages, modelId),
 });
 
 // 类型声明
@@ -560,40 +522,16 @@ export interface ElectronAPI {
   }>;
 
   // Memory 记忆管理
-  getMemoryContext: () => Promise<{
-    success: boolean;
-    memories: Array<{
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-      confidence: number;
-    }>;
-    summaries: Array<{
-      id: number;
-      conversationId: number;
-      summary: string;
-      keyTopics: string[];
-    }>;
-    contextPrompt: string;
-    error?: string;
-  }>;
+  getMemoryContext: () => Promise<
+    Omit<MemoryGetContextResponseMessage, "type" | "id" | "timestamp">
+  >;
   saveMemory: (
     memoryType: string,
     memoryKey: string,
     memoryValue: string,
     sourceConversationId?: number,
     confidence?: number
-  ) => Promise<{
-    success: boolean;
-    memory?: {
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-    };
-    error?: string;
-  }>;
+  ) => Promise<Omit<MemorySaveResponseMessage, "type" | "id" | "timestamp">>;
   saveMemories: (
     memories: Array<{
       type: string;
@@ -609,27 +547,13 @@ export interface ElectronAPI {
     summary: string,
     keyTopics: string[],
     messageCount: number
-  ) => Promise<{
-    success: boolean;
-    summary?: { id: number; conversationId: number; summary: string };
-    error?: string;
-  }>;
+  ) => Promise<Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">>;
   listMemories: (
     memoryType?: string
-  ) => Promise<{
-    success: boolean;
-    memories: Array<{
-      id: number;
-      memoryType: string;
-      memoryKey: string;
-      memoryValue: string;
-      confidence: number;
-      createdAt: number;
-      updatedAt: number;
-    }>;
-    error?: string;
-  }>;
-  deleteMemory: (memoryId: number) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">>;
+  deleteMemory: (
+    memoryId: number
+  ) => Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">>;
   getConversationSummaries: (
     conversationId: number
   ) => Promise<{
@@ -646,13 +570,7 @@ export interface ElectronAPI {
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
     modelId?: number
-  ) => Promise<{
-    success: boolean;
-    summary?: string;
-    keyTopics?: string[];
-    pendingTasks?: string[];
-    error?: string;
-  }>;
+  ) => Promise<Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">>;
 }
 
 declare global {

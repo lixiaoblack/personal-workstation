@@ -172,24 +172,26 @@ class KnowledgeRetrieverTool(BaseTool):
         from rag.vectorstore import get_vectorstore
 
         vectorstore = get_vectorstore()
-        
+
         # 获取所有知识库
         all_collections = vectorstore.list_collections()
-        
+
         if not all_collections:
             return []
 
         # 尝试根据查询关键词匹配知识库名称/描述
-        matched_collections = self._match_knowledge_by_query(query, all_collections)
-        
+        matched_collections = self._match_knowledge_by_query(
+            query, all_collections)
+
         # 如果有匹配的知识库，优先搜索这些
         search_collections = matched_collections if matched_collections else all_collections
-        
+
         logger.info(f"搜索知识库: {search_collections} (匹配: {matched_collections})")
 
         # 搜索所有（或匹配的）知识库
         all_results = []
-        per_knowledge_k = max(3, top_k // len(search_collections)) if len(search_collections) > 1 else top_k
+        per_knowledge_k = max(
+            3, top_k // len(search_collections)) if len(search_collections) > 1 else top_k
 
         for knowledge_id in search_collections:
             try:
@@ -255,7 +257,7 @@ class KnowledgeRetrieverTool(BaseTool):
             metadata = self._knowledge_metadata.get(knowledge_id, {})
             name = metadata.get("name", knowledge_id).lower()
             description = metadata.get("description", "").lower()
-            
+
             # 检查知识库名称或描述是否包含相关关键词
             combined = f"{name} {description}"
             for keyword in relevant_keywords:
@@ -324,7 +326,7 @@ class KnowledgeListTool(BaseTool):
                 kb_id = kb.get('id', '未知')
                 doc_count = kb.get('documentCount', 0)
                 description = kb.get('description', '')
-                
+
                 lines.append(f"- {name} (ID: {kb_id})")
                 lines.append(f"  文档数: {doc_count}")
                 if description:
@@ -345,20 +347,21 @@ class KnowledgeListTool(BaseTool):
 
         # 获取 LanceDB 中的集合信息
         collections = stats.get("collections", [])
-        
+
         # 结合元数据
         result = []
         for col in collections:
             kb_id = col.get("id", "")
             # 从元数据获取名称和描述
-            metadata = KnowledgeRetrieverTool._knowledge_metadata.get(kb_id, {})
-            
+            metadata = KnowledgeRetrieverTool._knowledge_metadata.get(
+                kb_id, {})
+
             # 如果元数据中没有名称，尝试从 ID 解析或使用默认值
             name = metadata.get("name")
             if not name:
                 # 尝试生成一个更友好的名称
                 name = f"知识库 {kb_id[-6:]}" if kb_id else "未命名"
-            
+
             result.append({
                 "id": kb_id,
                 "name": name,

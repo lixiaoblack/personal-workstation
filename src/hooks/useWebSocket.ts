@@ -187,8 +187,14 @@ export function useWebSocket(
   // 发送 Agent 聊天消息（触发 ReAct 智能体）
   const sendAgentChat = useCallback(
     (options: SendChatOptions): boolean => {
-      const { content, conversationId, modelId, history, knowledgeId, knowledgeMetadata } =
-        options;
+      const {
+        content,
+        conversationId,
+        modelId,
+        history,
+        knowledgeId,
+        knowledgeMetadata,
+      } = options;
       const message = createMessage<AgentChatMessage>(MessageType.AGENT_CHAT, {
         content,
         conversationId,

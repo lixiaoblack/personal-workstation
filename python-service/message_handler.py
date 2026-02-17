@@ -289,8 +289,10 @@ class MessageHandler:
 
             # 设置知识库元数据（用于智能匹配）
             if knowledge_metadata:
-                KnowledgeRetrieverTool.set_knowledge_metadata(knowledge_metadata)
-                logger.info(f"[Agent] 已设置知识库元数据: {list(knowledge_metadata.keys())}")
+                KnowledgeRetrieverTool.set_knowledge_metadata(
+                    knowledge_metadata)
+                logger.info(
+                    f"[Agent] 已设置知识库元数据: {list(knowledge_metadata.keys())}")
 
             # 如果指定了知识库，设置默认知识库
             if knowledge_id:

@@ -29,8 +29,18 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
+
+# watchdog 是可选依赖，用于文件监听和热重载
+# 如果不存在，热重载功能将被禁用
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler, FileSystemEvent
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    Observer = None  # type: ignore
+    FileSystemEventHandler = object  # type: ignore
+    FileSystemEvent = None  # type: ignore
+    WATCHDOG_AVAILABLE = False
 
 from .base import (
     BaseSkill,
@@ -105,13 +115,16 @@ class SkillLoader:
         self._tool_registry = tool_registry
         self._skill_registry = skill_registry
 
-        # 文件监听器
-        self._observer: Optional[Observer] = None
+        # 文件监听器（需要 watchdog 库）
+        self._observer: Optional[Any] = None
 
         # 已加载的技能文件映射：{技能名称: 文件路径}
         self._skill_files: Dict[str, str] = {}
 
-        logger.info("技能加载器已初始化")
+        if WATCHDOG_AVAILABLE:
+            logger.info("技能加载器已初始化（支持热重载）")
+        else:
+            logger.info("技能加载器已初始化（热重载功能已禁用）")
 
     def set_tool_registry(self, tool_registry: Any):
         """设置工具注册中心"""
@@ -308,17 +321,28 @@ class SkillLoader:
             on_created: 新建文件回调
             on_modified: 修改文件回调
             on_deleted: 删除文件回调
+
+        Note:
+            此功能需要安装 watchdog 库。如果未安装，将输出警告日志。
         """
+        # 检查 watchdog 是否可用
+        if not WATCHDOG_AVAILABLE:
+            logger.warning(
+                "watchdog 库未安装，热重载功能已禁用。"
+                "如需启用，请运行: pip install watchdog"
+            )
+            return
+
         if self._observer:
             self.stop_watching()
 
         # 创建事件处理器
-        class SkillFileHandler(FileSystemEventHandler):
+        class SkillFileHandler(FileSystemEventHandler):  # type: ignore
             def __init__(self, loader: SkillLoader):
                 self.loader = loader
                 self.extensions = [".yaml", ".yml", ".json"]
 
-            def on_created(self, event: FileSystemEvent):
+            def on_created(self, event):  # type: ignore
                 if event.is_directory:
                     return
 
@@ -334,7 +358,7 @@ class SkillLoader:
                     except Exception as e:
                         logger.error(f"加载新技能失败: {e}")
 
-            def on_modified(self, event: FileSystemEvent):
+            def on_modified(self, event):  # type: ignore
                 if event.is_directory:
                     return
 
@@ -359,7 +383,7 @@ class SkillLoader:
                     except Exception as e:
                         logger.error(f"重载技能失败: {e}")
 
-            def on_deleted(self, event: FileSystemEvent):
+            def on_deleted(self, event):  # type: ignore
                 if event.is_directory:
                     return
 
@@ -380,7 +404,7 @@ class SkillLoader:
                             on_deleted(skill_name)
 
         # 创建监听器
-        self._observer = Observer()
+        self._observer = Observer()  # type: ignore
         self._observer.schedule(
             SkillFileHandler(self),
             directory,

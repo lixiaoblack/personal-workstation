@@ -143,6 +143,10 @@ def agent_node(state: AgentState, tool_registry: ToolRegistry) -> Dict[str, Any]
     tools_prompt = tool_registry.get_tools_prompt()
     system_prompt = REACT_SYSTEM_PROMPT.format(tools_prompt=tools_prompt)
 
+    # 调试：打印可用工具
+    logger.info(f"[Agent] 可用工具: {tool_registry.list_tools()}")
+    logger.debug(f"[Agent] 工具描述:\n{tools_prompt}")
+
     # 2. 构建消息列表
     messages = [SystemMessage(content=system_prompt)]
 

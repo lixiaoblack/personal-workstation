@@ -18,9 +18,15 @@ const CodeBlock: React.FC<{
   language?: string;
   children: string;
 }> = ({ language, children }) => {
+  // 如果内容为空，不渲染代码块
+  const trimmedContent = children.trim();
+  if (!trimmedContent) {
+    return null;
+  }
+
   return (
     <CodeHighlighter lang={language || "text"}>
-      {children.trim()}
+      {trimmedContent}
     </CodeHighlighter>
   );
 };

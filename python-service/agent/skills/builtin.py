@@ -53,7 +53,7 @@ class CalculatorSkill(BuiltinSkill):
             metadata=SkillMetadata(
                 name="calculator_skill",
                 display_name="数学计算",
-                description="执行数学表达式计算，支持加减乘除、幂运算、三角函数等",
+                description="执行数学表达式计算。当用户需要计算数学表达式时调用此工具。支持加减乘除、幂运算、三角函数等。",
                 author="system",
                 version="1.0.0",
                 tags=["数学", "计算", "calculator"],
@@ -138,14 +138,14 @@ class DateTimeSkill(BuiltinSkill):
             metadata=SkillMetadata(
                 name="datetime_skill",
                 display_name="日期时间",
-                description="获取当前日期时间、进行日期计算等",
+                description="获取当前日期和时间。当用户询问时间、日期、几点、几号、今天、明天、昨天时调用此工具。",
                 author="system",
                 version="1.0.0",
                 tags=["日期", "时间", "datetime"],
                 icon="🕐",
             ),
             type=SkillType.BUILTIN,
-            trigger=SkillTrigger.KEYWORD,
+            trigger=SkillTrigger.INTENT,  # 改为 INTENT，让 Agent 可以自动调用
             trigger_keywords=["时间", "日期", "几点", "几号", "今天", "明天", "昨天"],
             parameters={
                 "query": {

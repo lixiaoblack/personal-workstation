@@ -517,12 +517,18 @@ def register_skills_as_tools(skill_registry, tool_registry):
             if tool.name not in tool_registry.list_tools():
                 tool_registry.register(tool)
                 count += 1
+                # 打印工具描述，便于调试
+                tool_prompt = tool.get_tool_prompt()
                 logger.info(f"已将技能 {skill.name} 注册为工具")
+                logger.debug(f"工具描述:\n{tool_prompt}")
             else:
                 logger.debug(f"工具 {tool.name} 已存在，跳过注册")
 
         except Exception as e:
             logger.error(f"注册技能 {skill.name} 为工具失败: {e}")
+
+    # 打印所有已注册的工具
+    logger.info(f"当前已注册的工具: {tool_registry.list_tools()}")
 
     return count
 

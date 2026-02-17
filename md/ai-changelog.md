@@ -17,6 +17,8 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.20 | 2026-02-17 | RAG 知识库功能完整实现 |
+| 0.5.19 | 2026-02-17 | Skills 前端 UI 集成与 Agent 消息优化 |
 | 0.5.18 | 2026-02-17 | Skills 技能系统框架 |
 | 0.5.17 | 2026-02-16 | Agent 思考过程持久化与修复 |
 | 0.5.16 | 2026-02-16 | Agent 思考过程前端展示 |
@@ -38,6 +40,78 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.20
+
+- **RAG 知识库功能**
+  - 创建 python-service/rag/ 模块
+  - **嵌入模型服务**（embeddings.py）
+    - EmbeddingModelType 枚举：OLLAMA / OPENAI
+    - EmbeddingService 类：自动选择嵌入模型
+    - 默认模型：nomic-embed-text（Ollama）/ text-embedding-3-small（OpenAI）
+  - **向量存储**（vectorstore.py）
+    - LanceDBVectorStore 类
+    - 支持文档添加、相似度搜索、删除操作
+    - 数据存储位置：~/.personal-workstation/knowledge/
+  - **文档处理**（document_processor.py）
+    - DocumentProcessor 类
+    - 支持 Markdown、PDF、TXT、JSON、HTML 格式
+    - 提取元数据（文件名、路径、创建时间、修改时间）
+  - **文本分块**（text_splitter.py）
+    - SmartTextSplitter 类
+    - 按 token 数量分块
+    - 支持重叠窗口
+    - 保留代码块完整性
+  - **知识检索器**（retriever.py）
+    - KnowledgeRetriever 类
+    - 向量检索 + 重排序
+
+- **知识库管理服务**
+  - 创建 knowledgeService.ts
+  - 知识库 CRUD 操作
+  - 文档添加/删除/搜索
+  - SQLite 数据库迁移（knowledge、documents 表）
+
+- **WebSocket 消息处理**
+  - 添加知识库相关消息类型
+  - knowledge_create/delete/add_document/search/list
+
+- **前端知识库 UI**
+  - 创建 Knowledge 页面
+  - 知识库列表展示和选择
+  - 创建知识库弹窗（名称、描述、嵌入模型选择）
+  - 添加文档弹窗（支持多文件选择）
+  - 文档列表展示
+  - 搜索测试功能
+  - 侧边栏菜单入口
+
+### 新增 (Added) - v0.5.19
+
+- **Skills 前端 UI 集成**
+  - 创建 SkillsCard 组件（技能管理卡片）
+  - 技能列表展示：名称、描述、类型、触发方式、状态
+  - 技能启用/禁用切换
+  - 技能热重载功能
+  - 集成到 AISettings 页面
+
+- **Skills 集成到 Agent 工具调用**
+  - 创建 SkillToolAdapter 类，将 Skill 包装为 Tool
+  - 实现 register_skills_as_tools() 函数
+  - Agent 自动调用已启用的技能
+  - DateTimeSkill 触发方式改为 intent（意图触发）
+
+- **Agent 模式消息展示优化**
+  - 思考过程和最终答案合并为一条消息
+  - 流式阶段：展开显示思考过程（带动画）
+  - 完成后：默认收起，显示「查看思考过程」按钮
+  - 支持点击展开/收起查看详细推理过程
+
+### 修复 (Fixed) - v0.5.19
+
+- watchdog 依赖缺失导致 Python 服务启动失败（改为可选依赖）
+- Pydantic v2 动态模型创建报错（使用 create_model 替代 type()）
+- Markdown 渲染空代码块显示问题（sanitizeMarkdown 清理不完整标记）
+- LLM 返回内容末尾不完整的 ``` 标记导致空 pre 标签显示
 
 ### 新增 (Added) - v0.5.18
 
@@ -249,6 +323,6 @@
 
 ---
 
-*文档版本: v1.5*
+*文档版本: v1.7*
 *创建时间: 2026-02-13*
-*最后更新: 2026-02-16*
+*最后更新: 2026-02-17*

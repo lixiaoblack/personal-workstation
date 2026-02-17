@@ -51,6 +51,24 @@ export enum MessageType {
   SKILL_EXECUTE_RESPONSE = "skill_execute_response", // 技能执行响应
   SKILL_RELOAD = "skill_reload", // 技能重载请求
   SKILL_RELOAD_RESPONSE = "skill_reload_response", // 技能重载响应
+
+  // Knowledge 知识库相关
+  KNOWLEDGE_CREATE = "knowledge_create", // 创建知识库
+  KNOWLEDGE_CREATE_RESPONSE = "knowledge_create_response", // 创建知识库响应
+  KNOWLEDGE_DELETE = "knowledge_delete", // 删除知识库
+  KNOWLEDGE_DELETE_RESPONSE = "knowledge_delete_response", // 删除知识库响应
+  KNOWLEDGE_LIST = "knowledge_list", // 知识库列表
+  KNOWLEDGE_LIST_RESPONSE = "knowledge_list_response", // 知识库列表响应
+  KNOWLEDGE_GET = "knowledge_get", // 获取知识库详情
+  KNOWLEDGE_GET_RESPONSE = "knowledge_get_response", // 获取知识库详情响应
+  KNOWLEDGE_ADD_DOCUMENT = "knowledge_add_document", // 添加文档
+  KNOWLEDGE_ADD_DOCUMENT_RESPONSE = "knowledge_add_document_response", // 添加文档响应
+  KNOWLEDGE_REMOVE_DOCUMENT = "knowledge_remove_document", // 删除文档
+  KNOWLEDGE_REMOVE_DOCUMENT_RESPONSE = "knowledge_remove_document_response", // 删除文档响应
+  KNOWLEDGE_SEARCH = "knowledge_search", // 搜索知识库
+  KNOWLEDGE_SEARCH_RESPONSE = "knowledge_search_response", // 搜索知识库响应
+  KNOWLEDGE_LIST_DOCUMENTS = "knowledge_list_documents", // 列出知识库文档
+  KNOWLEDGE_LIST_DOCUMENTS_RESPONSE = "knowledge_list_documents_response", // 列出知识库文档响应
 }
 
 // 基础消息结构
@@ -314,6 +332,201 @@ export interface SkillReloadResponseMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== Knowledge 知识库相关消息类型 ====================
+
+/**
+ * 知识库信息
+ */
+export interface KnowledgeInfo {
+  id: string;
+  name: string;
+  description?: string;
+  embeddingModel: string;
+  embeddingModelName: string;
+  documentCount: number;
+  totalChunks: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * 知识库文档信息
+ */
+export interface KnowledgeDocumentInfo {
+  id: string;
+  knowledgeId: string;
+  fileName: string;
+  filePath: string;
+  fileType: string;
+  fileSize: number;
+  chunkCount: number;
+  createdAt: number;
+}
+
+/**
+ * 搜索结果
+ */
+export interface KnowledgeSearchResult {
+  content: string;
+  score: number;
+  metadata: Record<string, unknown>;
+  retrievalMethod: string;
+}
+
+/**
+ * 创建知识库请求消息
+ */
+export interface KnowledgeCreateMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_CREATE;
+  name: string;
+  description?: string;
+  embeddingModel?: "ollama" | "openai";
+  embeddingModelName?: string;
+}
+
+/**
+ * 创建知识库响应消息
+ */
+export interface KnowledgeCreateResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_CREATE_RESPONSE;
+  success: boolean;
+  knowledge?: KnowledgeInfo;
+  error?: string;
+}
+
+/**
+ * 删除知识库请求消息
+ */
+export interface KnowledgeDeleteMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_DELETE;
+  knowledgeId: string;
+}
+
+/**
+ * 删除知识库响应消息
+ */
+export interface KnowledgeDeleteResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_DELETE_RESPONSE;
+  success: boolean;
+  knowledgeId: string;
+  error?: string;
+}
+
+/**
+ * 知识库列表请求消息
+ */
+export interface KnowledgeListMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_LIST;
+}
+
+/**
+ * 知识库列表响应消息
+ */
+export interface KnowledgeListResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_LIST_RESPONSE;
+  success: boolean;
+  knowledge: KnowledgeInfo[];
+  count: number;
+  error?: string;
+}
+
+/**
+ * 获取知识库详情请求消息
+ */
+export interface KnowledgeGetMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_GET;
+  knowledgeId: string;
+}
+
+/**
+ * 获取知识库详情响应消息
+ */
+export interface KnowledgeGetResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_GET_RESPONSE;
+  success: boolean;
+  knowledge?: KnowledgeInfo;
+  error?: string;
+}
+
+/**
+ * 添加文档请求消息
+ */
+export interface KnowledgeAddDocumentMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_ADD_DOCUMENT;
+  knowledgeId: string;
+  filePath: string;
+}
+
+/**
+ * 添加文档响应消息
+ */
+export interface KnowledgeAddDocumentResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_ADD_DOCUMENT_RESPONSE;
+  success: boolean;
+  document?: KnowledgeDocumentInfo;
+  error?: string;
+}
+
+/**
+ * 删除文档请求消息
+ */
+export interface KnowledgeRemoveDocumentMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_REMOVE_DOCUMENT;
+  knowledgeId: string;
+  documentId: string;
+}
+
+/**
+ * 删除文档响应消息
+ */
+export interface KnowledgeRemoveDocumentResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_REMOVE_DOCUMENT_RESPONSE;
+  success: boolean;
+  documentId: string;
+  error?: string;
+}
+
+/**
+ * 搜索知识库请求消息
+ */
+export interface KnowledgeSearchMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SEARCH;
+  knowledgeId: string;
+  query: string;
+  topK?: number;
+  method?: "vector" | "keyword" | "hybrid";
+}
+
+/**
+ * 搜索知识库响应消息
+ */
+export interface KnowledgeSearchResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SEARCH_RESPONSE;
+  success: boolean;
+  results: KnowledgeSearchResult[];
+  count: number;
+  error?: string;
+}
+
+/**
+ * 列出知识库文档请求消息
+ */
+export interface KnowledgeListDocumentsMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_LIST_DOCUMENTS;
+  knowledgeId: string;
+}
+
+/**
+ * 列出知识库文档响应消息
+ */
+export interface KnowledgeListDocumentsResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_LIST_DOCUMENTS_RESPONSE;
+  success: boolean;
+  documents: KnowledgeDocumentInfo[];
+  count: number;
+  error?: string;
+}
+
 // ==================== Agent 相关消息类型 ====================
 
 // 从 conversation.ts 重新导出，避免重复定义
@@ -414,7 +627,23 @@ export type WebSocketMessage =
   | SkillExecuteMessage
   | SkillExecuteResponseMessage
   | SkillReloadMessage
-  | SkillReloadResponseMessage;
+  | SkillReloadResponseMessage
+  | KnowledgeCreateMessage
+  | KnowledgeCreateResponseMessage
+  | KnowledgeDeleteMessage
+  | KnowledgeDeleteResponseMessage
+  | KnowledgeListMessage
+  | KnowledgeListResponseMessage
+  | KnowledgeGetMessage
+  | KnowledgeGetResponseMessage
+  | KnowledgeAddDocumentMessage
+  | KnowledgeAddDocumentResponseMessage
+  | KnowledgeRemoveDocumentMessage
+  | KnowledgeRemoveDocumentResponseMessage
+  | KnowledgeSearchMessage
+  | KnowledgeSearchResponseMessage
+  | KnowledgeListDocumentsMessage
+  | KnowledgeListDocumentsResponseMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

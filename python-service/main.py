@@ -29,6 +29,47 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def get_external_skills_dirs() -> list:
+    """
+    获取外部技能目录列表
+
+    按优先级返回多个可能的技能目录：
+    1. 环境变量 SKILLS_DIR 指定的目录（支持冒号分隔多个路径）
+    2. 用户配置目录 ~/.personal-workstation/skills
+    3. 项目内置目录 python-service/skills
+
+    Returns:
+        目录路径列表
+    """
+    dirs = []
+
+    # 1. 环境变量指定的目录（最高优先级）
+    env_dirs = os.environ.get("SKILLS_DIR", "")
+    if env_dirs:
+        # 支持冒号分隔多个路径 (Unix) 或分号 (Windows)
+        separator = ";" if sys.platform == "win32" else ":"
+        for d in env_dirs.split(separator):
+            d = d.strip()
+            if d and os.path.isabs(d):
+                dirs.append(d)
+            elif d:
+                # 相对路径转为绝对路径
+                dirs.append(os.path.abspath(d))
+
+    # 2. 用户配置目录
+    home_dir = os.path.expanduser("~")
+    user_skills_dir = os.path.join(home_dir, ".personal-workstation", "skills")
+    if user_skills_dir not in dirs:
+        dirs.append(user_skills_dir)
+
+    # 3. 项目内置目录（最低优先级）
+    builtin_dir = os.path.join(os.path.dirname(__file__), "skills")
+    if builtin_dir not in dirs:
+        dirs.append(builtin_dir)
+
+    return dirs
+
+
 def init_skills_system():
     """
     初始化 Skills 系统
@@ -36,8 +77,13 @@ def init_skills_system():
     在服务启动时调用，完成：
     1. 初始化技能注册中心
     2. 注册内置技能
-    3. 加载用户自定义技能
+    3. 加载外部技能目录（用户自定义技能）
     4. 将技能注册为 Agent 工具
+
+    外部技能目录优先级：
+    1. SKILLS_DIR 环境变量（支持多个路径，冒号分隔）
+    2. ~/.personal-workstation/skills（用户配置目录）
+    3. python-service/skills（项目内置目录）
     """
     from agent.skills import global_skill_registry, init_builtin_skills, SkillLoader
     from agent.tools import global_tool_registry, register_skills_as_tools
@@ -48,15 +94,29 @@ def init_skills_system():
     # 2. 设置工具注册中心（用于 YamlSkill 执行工具）
     global_skill_registry._tool_registry = global_tool_registry
 
-    # 3. 加载用户自定义技能
-    skills_dir = os.path.join(os.path.dirname(__file__), "skills")
-    if os.path.exists(skills_dir):
-        loader = SkillLoader(
-            tool_registry=global_tool_registry,
-            skill_registry=global_skill_registry
-        )
-        skills = loader.load_from_directory(skills_dir)
-        logger.info(f"从 {skills_dir} 加载了 {len(skills)} 个自定义技能")
+    # 3. 从多个目录加载技能
+    loader = SkillLoader(
+        tool_registry=global_tool_registry,
+        skill_registry=global_skill_registry
+    )
+
+    external_dirs = get_external_skills_dirs()
+    total_loaded = 0
+
+    for skills_dir in external_dirs:
+        if os.path.exists(skills_dir):
+            skills = loader.load_from_directory(skills_dir)
+            if skills:
+                logger.info(f"从 {skills_dir} 加载了 {len(skills)} 个技能")
+                total_loaded += len(skills)
+        else:
+            # 自动创建用户配置目录
+            if ".personal-workstation" in skills_dir:
+                try:
+                    os.makedirs(skills_dir, exist_ok=True)
+                    logger.info(f"已创建用户技能目录: {skills_dir}")
+                except Exception as e:
+                    logger.warning(f"无法创建用户技能目录: {e}")
 
     logger.info(f"Skills 系统初始化完成，共 {len(global_skill_registry)} 个技能")
 

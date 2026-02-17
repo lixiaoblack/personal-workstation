@@ -1,0 +1,56 @@
+# 示例技能：天气查询
+# 这是一个示例技能配置文件，展示如何创建自定义技能
+# 技能文件放在 ~/.personal-workstation/skills/ 目录下会自动加载
+
+# 技能元数据
+metadata:
+  name: weather_query
+  display_name: 天气查询
+  description: 查询指定城市的天气信息
+  tags:
+    - weather
+    - query
+
+# 技能类型
+# builtin: 内置技能（需 Python 实现）
+# custom: 自定义技能（通过配置文件）
+# composite: 组合技能（组合多个技能）
+type: custom
+
+# 触发方式
+# manual: 仅手动触发
+# keyword: 关键词触发（需配置 trigger_keywords）
+# intent: 意图触发（Agent 根据描述自动判断）
+trigger: intent
+
+# 触发关键词（当 trigger=keyword 时生效）
+trigger_keywords:
+  - 天气
+  - 气温
+  - 下雨
+
+# 技能参数定义
+# 定义技能执行需要的参数
+parameters:
+  city:
+    type: string
+    description: 要查询天气的城市名称
+    required: true
+  unit:
+    type: string
+    description: 温度单位（celsius 或 fahrenheit）
+    required: false
+    default: celsius
+
+# 使用示例
+examples:
+  - "北京今天天气怎么样"
+  - "上海现在多少度"
+  - "广州会下雨吗"
+
+# 执行超时时间（秒）
+timeout: 30
+# 注意：
+# 1. 技能名称 (metadata.name) 必须唯一
+# 2. 目前仅支持配置型技能，复杂逻辑需开发内置技能
+# 3. 配置修改后需重载技能（在设置页面点击重载按钮）

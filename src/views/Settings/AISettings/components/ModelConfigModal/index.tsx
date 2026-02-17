@@ -8,6 +8,7 @@ import type {
   ModelProvider,
   CreateModelConfigInput,
   OllamaModel,
+  ModelUsageType,
 } from "@/types/electron";
 
 interface ModelConfigModalProps {
@@ -39,6 +40,15 @@ const formatModelSize = (bytes: number): string => {
   return `${(bytes / 1024).toFixed(0)} KB`;
 };
 
+const usageTypeOptions: {
+  value: ModelUsageType;
+  label: string;
+  desc: string;
+}[] = [
+  { value: "llm", label: "大语言模型", desc: "用于 AI 对话、问答等" },
+  { value: "embedding", label: "嵌入模型", desc: "用于知识库文档向量化" },
+];
+
 const providerOptions: { value: ModelProvider; label: string }[] = [
   { value: "openai", label: "OpenAI" },
   { value: "bailian", label: "百炼（阿里云）" },
@@ -65,6 +75,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   // 表单状态
+  const [usageType, setUsageType] = useState<ModelUsageType>("llm");
   const [provider, setProvider] = useState<ModelProvider>("openai");
   const [name, setName] = useState("");
   const [modelId, setModelId] = useState("");
@@ -105,6 +116,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
   // 初始化表单
   useEffect(() => {
     if (config) {
+      setUsageType(config.usageType || "llm");
       setProvider(config.provider);
       setName(config.name);
       setModelId(config.modelId);
@@ -129,6 +141,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       }
     } else {
       // 重置为默认值
+      setUsageType("llm");
       setProvider("openai");
       setName("");
       setModelId("");
@@ -198,6 +211,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
     setLoading(true);
     try {
       const input: CreateModelConfigInput = {
+        usageType,
         provider,
         name: name.trim(),
         modelId: modelId.trim(),
@@ -252,6 +266,30 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       destroyOnClose
     >
       <div className="space-y-4 py-4">
+        {/* 模型类型 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-text-tertiary">
+            模型类型
+          </label>
+          <Select
+            className="w-full"
+            value={usageType}
+            onChange={setUsageType}
+            options={usageTypeOptions.map((opt) => ({
+              value: opt.value,
+              label: (
+                <div>
+                  <span className="font-medium">{opt.label}</span>
+                  <span className="text-xs text-text-tertiary ml-2">
+                    {opt.desc}
+                  </span>
+                </div>
+              ),
+            }))}
+            disabled={!!config}
+          />
+        </div>
+
         {/* 提供商 */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-text-tertiary">

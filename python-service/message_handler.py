@@ -43,6 +43,15 @@ class MessageHandler:
             "skill_list": self._handle_skill_list,
             "skill_execute": self._handle_skill_execute,
             "skill_reload": self._handle_skill_reload,
+            # Knowledge 知识库相关
+            "knowledge_create": self._handle_knowledge_create,
+            "knowledge_delete": self._handle_knowledge_delete,
+            "knowledge_list": self._handle_knowledge_list,
+            "knowledge_get": self._handle_knowledge_list,  # 复用 list 处理
+            "knowledge_add_document": self._handle_knowledge_add_document,
+            "knowledge_remove_document": self._handle_knowledge_list_documents,  # 复用
+            "knowledge_search": self._handle_knowledge_search,
+            "knowledge_list_documents": self._handle_knowledge_list_documents,
         }
         # 会话存储（后续可替换为持久化存储）
         self.conversations: Dict[str, list] = {}
@@ -799,3 +808,340 @@ class MessageHandler:
                 "success": False,
                 "error": str(e),
             }
+
+    # ==================== Knowledge 知识库相关消息处理 ====================
+
+    async def _handle_knowledge_create(self, message: dict) -> dict:
+        """处理创建知识库请求"""
+        name = message.get("name", "")
+        description = message.get("description")
+        embedding_model = message.get("embeddingModel", "ollama")
+        embedding_model_name = message.get(
+            "embeddingModelName", "nomic-embed-text")
+        # 优先使用传入的 knowledgeId，否则生成新的
+        knowledge_id = message.get("knowledgeId")
+
+        if not name:
+            return {
+                "type": "knowledge_create_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": "知识库名称不能为空",
+            }
+
+        try:
+            from rag.vectorstore import LanceDBVectorStore, get_vectorstore
+            from rag.embeddings import EmbeddingService, EmbeddingModelType
+
+            # 创建向量存储
+            vectorstore = get_vectorstore()
+
+            # 确定嵌入模型类型和维度
+            model_type = EmbeddingModelType.OLLAMA if embedding_model == "ollama" else EmbeddingModelType.OPENAI
+            embedding_service = EmbeddingService(
+                model_type=model_type,
+                model_name=embedding_model_name,
+            )
+
+            # 如果没有传入 ID，生成一个
+            if not knowledge_id:
+                knowledge_id = f"kb_{int(time.time() * 1000)}"
+
+            # 创建集合
+            success = vectorstore.create_collection(
+                knowledge_id, embedding_service.dimension)
+
+            if success:
+                return {
+                    "type": "knowledge_create_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "success": True,
+                    "knowledge": {
+                        "id": knowledge_id,
+                        "name": name,
+                        "description": description,
+                        "embeddingModel": embedding_model,
+                        "embeddingModelName": embedding_model_name,
+                        "documentCount": 0,
+                        "totalChunks": 0,
+                        "createdAt": int(time.time() * 1000),
+                        "updatedAt": int(time.time() * 1000),
+                    },
+                }
+            else:
+                return {
+                    "type": "knowledge_create_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "success": False,
+                    "error": "创建知识库失败",
+                }
+
+        except Exception as e:
+            logger.error(f"创建知识库错误: {e}")
+            return {
+                "type": "knowledge_create_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": str(e),
+            }
+
+    async def _handle_knowledge_delete(self, message: dict) -> dict:
+        """处理删除知识库请求"""
+        knowledge_id = message.get("knowledgeId")
+
+        if not knowledge_id:
+            return {
+                "type": "knowledge_delete_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": "知识库 ID 不能为空",
+            }
+
+        try:
+            from rag.vectorstore import get_vectorstore
+
+            vectorstore = get_vectorstore()
+            success = vectorstore.delete_collection(knowledge_id)
+
+            return {
+                "type": "knowledge_delete_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": success,
+                "knowledgeId": knowledge_id,
+            }
+
+        except Exception as e:
+            logger.error(f"删除知识库错误: {e}")
+            return {
+                "type": "knowledge_delete_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "knowledgeId": knowledge_id,
+                "error": str(e),
+            }
+
+    async def _handle_knowledge_list(self, message: dict) -> dict:
+        """处理知识库列表请求"""
+        try:
+            from rag.vectorstore import get_vectorstore
+
+            vectorstore = get_vectorstore()
+            stats = vectorstore.get_stats()
+
+            # 将集合信息转换为知识库格式
+            knowledge_list = []
+            for collection in stats.get("collections", []):
+                knowledge_list.append({
+                    "id": collection["id"],
+                    "name": collection["id"],  # 使用集合 ID 作为名称
+                    "documentCount": collection["document_count"],
+                    "totalChunks": 0,  # TODO: 从数据库获取
+                    "embeddingModel": "ollama",
+                    "embeddingModelName": "nomic-embed-text",
+                    "createdAt": int(time.time() * 1000),
+                    "updatedAt": int(time.time() * 1000),
+                })
+
+            return {
+                "type": "knowledge_list_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "knowledge": knowledge_list,
+                "count": len(knowledge_list),
+            }
+
+        except Exception as e:
+            logger.error(f"获取知识库列表错误: {e}")
+            return {
+                "type": "knowledge_list_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "knowledge": [],
+                "count": 0,
+                "error": str(e),
+            }
+
+    async def _handle_knowledge_add_document(self, message: dict) -> dict:
+        """处理添加文档请求"""
+        knowledge_id = message.get("knowledgeId")
+        file_path = message.get("filePath")
+
+        if not knowledge_id or not file_path:
+            return {
+                "type": "knowledge_add_document_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": "知识库 ID 和文件路径不能为空",
+            }
+
+        try:
+            from rag.vectorstore import get_vectorstore, Document
+            from rag.document_processor import DocumentProcessor
+            from rag.text_splitter import SmartTextSplitter
+            from rag.embeddings import get_embedding_service
+            import uuid
+            import os
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                return {
+                    "type": "knowledge_add_document_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "success": False,
+                    "error": f"文件不存在: {file_path}",
+                }
+
+            # 处理文档
+            processor = DocumentProcessor()
+            documents = processor.process_file(file_path)
+
+            if not documents:
+                return {
+                    "type": "knowledge_add_document_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "success": False,
+                    "error": "文档解析失败或文件格式不支持",
+                }
+
+            # 分块
+            splitter = SmartTextSplitter(chunk_size=1000, chunk_overlap=200)
+            chunks = splitter.split_documents(documents)
+
+            # 转换为向量存储文档
+            vectorstore = get_vectorstore()
+            embedding_service = get_embedding_service()
+
+            docs_to_add = []
+            for chunk in chunks:
+                doc = Document(
+                    id=str(uuid.uuid4()),
+                    content=chunk.content,
+                    metadata=chunk.metadata,
+                )
+                docs_to_add.append(doc)
+
+            # 添加到向量存储
+            count = await vectorstore.add_documents(
+                knowledge_id=knowledge_id,
+                documents=docs_to_add,
+                embedding_service=embedding_service,
+            )
+
+            return {
+                "type": "knowledge_add_document_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "document": {
+                    "id": str(uuid.uuid4()),
+                    "knowledgeId": knowledge_id,
+                    "fileName": os.path.basename(file_path),
+                    "filePath": file_path,
+                    "fileType": os.path.splitext(file_path)[1],
+                    "fileSize": os.path.getsize(file_path),
+                    "chunkCount": count,
+                    "createdAt": int(time.time() * 1000),
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"添加文档错误: {e}")
+            return {
+                "type": "knowledge_add_document_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": str(e),
+            }
+
+    async def _handle_knowledge_search(self, message: dict) -> dict:
+        """处理知识库搜索请求"""
+        knowledge_id = message.get("knowledgeId")
+        query = message.get("query", "")
+        top_k = message.get("topK", 5)
+        method = message.get("method", "hybrid")
+
+        if not knowledge_id or not query:
+            return {
+                "type": "knowledge_search_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "results": [],
+                "count": 0,
+                "error": "知识库 ID 和查询内容不能为空",
+            }
+
+        try:
+            from rag.retriever import KnowledgeRetriever
+            from rag.vectorstore import get_vectorstore
+            from rag.embeddings import get_embedding_service
+
+            vectorstore = get_vectorstore()
+            embedding_service = get_embedding_service()
+
+            retriever = KnowledgeRetriever(vectorstore, embedding_service)
+
+            results = await retriever.retrieve(
+                knowledge_id=knowledge_id,
+                query=query,
+                top_k=top_k,
+                method=method,
+            )
+
+            # 转换结果格式
+            search_results = []
+            for result in results:
+                search_results.append({
+                    "content": result.content,
+                    "score": result.score,
+                    "metadata": result.metadata,
+                    "retrievalMethod": result.retrieval_method,
+                })
+
+            return {
+                "type": "knowledge_search_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "results": search_results,
+                "count": len(search_results),
+            }
+
+        except Exception as e:
+            logger.error(f"搜索知识库错误: {e}")
+            return {
+                "type": "knowledge_search_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "results": [],
+                "count": 0,
+                "error": str(e),
+            }
+
+    async def _handle_knowledge_list_documents(self, message: dict) -> dict:
+        """处理列出知识库文档请求"""
+        # 这个方法主要依赖 Electron 端的数据库，这里返回空列表
+        knowledge_id = message.get("knowledgeId")
+
+        return {
+            "type": "knowledge_list_documents_response",
+            "id": message.get("id"),
+            "timestamp": int(time.time() * 1000),
+            "success": True,
+            "documents": [],
+            "count": 0,
+        }

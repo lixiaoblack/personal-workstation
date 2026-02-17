@@ -5,6 +5,7 @@
 import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { app } from "electron";
 import type {
   PythonServiceConfig,
@@ -85,7 +86,25 @@ async function getPythonInterpreter(
     }
   }
 
-  // 3. 检测系统 Python
+  // 3. 优先检测 Anaconda/Miniconda Python（通常有更完整的科学计算包）
+  const condaPaths = [
+    "/opt/anaconda3/bin/python",
+    "/opt/anaconda3/bin/python3",
+    "/opt/miniconda3/bin/python",
+    "/opt/miniconda3/bin/python3",
+    path.join(os.homedir(), "anaconda3", "bin", "python"),
+    path.join(os.homedir(), "anaconda3", "bin", "python3"),
+    path.join(os.homedir(), "miniconda3", "bin", "python"),
+    path.join(os.homedir(), "miniconda3", "bin", "python3"),
+  ];
+
+  for (const condaPath of condaPaths) {
+    if (fs.existsSync(condaPath)) {
+      return condaPath;
+    }
+  }
+
+  // 4. 检测系统 Python
   const env = await detectPythonEnvironment({ timeout: 5000 });
   if (env.python3Path) {
     return env.python3Path;
@@ -94,7 +113,7 @@ async function getPythonInterpreter(
     return env.pythonPath;
   }
 
-  // 4. 默认使用 python3 或 python
+  // 5. 默认使用 python3 或 python
   return process.platform === "win32" ? "python" : "python3";
 }
 

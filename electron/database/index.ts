@@ -113,6 +113,7 @@ function runMigrations(database: Database.Database): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS model_configs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usage_type TEXT DEFAULT 'llm',
       provider TEXT NOT NULL,
       name TEXT NOT NULL,
       model_id TEXT NOT NULL,
@@ -134,11 +135,29 @@ function runMigrations(database: Database.Database): void {
     );
   `);
 
-  // 模型配置索引
+  // 数据迁移：为 model_configs 表添加 usage_type 列（如果不存在）
+  // 注意：必须在创建索引之前执行，否则索引会引用不存在的列
+  try {
+    const modelColumns = database
+      .prepare("PRAGMA table_info(model_configs)")
+      .all() as Array<{ name: string }>;
+    const hasUsageType = modelColumns.some((col) => col.name === "usage_type");
+    if (!hasUsageType) {
+      database.exec(
+        `ALTER TABLE model_configs ADD COLUMN usage_type TEXT DEFAULT 'llm'`
+      );
+      console.log("[Database] 已添加 model_configs.usage_type 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 usage_type 列失败:", error);
+  }
+
+  // 模型配置索引（在列迁移之后创建）
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_model_configs_provider ON model_configs(provider);
     CREATE INDEX IF NOT EXISTS idx_model_configs_enabled ON model_configs(enabled);
     CREATE INDEX IF NOT EXISTS idx_model_configs_is_default ON model_configs(is_default);
+    CREATE INDEX IF NOT EXISTS idx_model_configs_usage_type ON model_configs(usage_type);
   `);
 
   // 数据迁移：将有 API Key 或 host 的模型状态更新为 active
@@ -198,6 +217,42 @@ function runMigrations(database: Database.Database): void {
   } catch (error) {
     console.error("[Database] 添加 metadata 列失败:", error);
   }
+
+  // 知识库表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS knowledge (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      embedding_model TEXT DEFAULT 'ollama',
+      embedding_model_name TEXT DEFAULT 'nomic-embed-text',
+      document_count INTEGER DEFAULT 0,
+      total_chunks INTEGER DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+  `);
+
+  // 知识库文档表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS knowledge_documents (
+      id TEXT PRIMARY KEY,
+      knowledge_id TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_type TEXT,
+      file_size INTEGER DEFAULT 0,
+      chunk_count INTEGER DEFAULT 0,
+      created_at INTEGER,
+      FOREIGN KEY (knowledge_id) REFERENCES knowledge(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 知识库索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_knowledge_name ON knowledge(name);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_documents_knowledge_id ON knowledge_documents(knowledge_id);
+  `);
 }
 
 export default {

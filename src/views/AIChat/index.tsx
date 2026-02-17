@@ -87,6 +87,8 @@ const AIChatComponent: React.FC = () => {
 
   // 从 MobX Store 获取模型状态
   const { models, currentModel, setCurrentModel } = modelStore;
+  // 只筛选 LLM 模型（过滤掉嵌入模型）
+  const llmModels = models.filter((m) => m.usageType === "llm" || !m.usageType);
 
   // Agent 模式开关（测试用）
   const [agentMode, setAgentMode] = useState(false);
@@ -123,7 +125,9 @@ const AIChatComponent: React.FC = () => {
   const [agentSteps, setAgentSteps] = useState<AgentStepItem[]>([]);
 
   // 展开的思考过程消息 ID 集合
-  const [expandedThoughts, setExpandedThoughts] = useState<Set<number>>(new Set());
+  const [expandedThoughts, setExpandedThoughts] = useState<Set<number>>(
+    new Set()
+  );
 
   // 输入内容
   const [inputValue, setInputValue] = useState("");
@@ -565,7 +569,7 @@ const AIChatComponent: React.FC = () => {
 
   // 模型选择下拉菜单
   const modelMenuItems = useMemo(() => {
-    return models.map((model) => {
+    return llmModels.map((model) => {
       const providerInfo = PROVIDER_LABELS[model.provider] || {
         name: model.provider,
         color: "default",
@@ -600,7 +604,7 @@ const AIChatComponent: React.FC = () => {
         onClick: () => setCurrentModel(model),
       };
     });
-  }, [models]);
+  }, [llmModels]);
 
   // 连接状态渲染
   const renderConnectionStatus = () => {
@@ -780,11 +784,14 @@ const AIChatComponent: React.FC = () => {
     const isUser = msg.role === "user";
 
     // 检查消息是否包含 Agent 思考步骤
-    const agentStepsInMessage = (msg.metadata?.agentSteps as AgentStepItem[]) || [];
+    const agentStepsInMessage =
+      (msg.metadata?.agentSteps as AgentStepItem[]) || [];
     const hasAgentSteps = agentStepsInMessage.length > 0;
 
     // 过滤掉 answer 类型（答案已显示在消息内容中）
-    const thinkingSteps = agentStepsInMessage.filter((step) => step.type !== "answer");
+    const thinkingSteps = agentStepsInMessage.filter(
+      (step) => step.type !== "answer"
+    );
 
     // 是否展开思考过程
     const isExpanded = expandedThoughts.has(msg.id);
@@ -1083,11 +1090,11 @@ const AIChatComponent: React.FC = () => {
         开始与 AI 对话
       </h3>
       <p className="text-sm text-text-tertiary max-w-md mb-6">
-        {models.length > 0
+        {llmModels.length > 0
           ? "我是一个智能助手，可以帮助您解答问题、编写代码、分析数据等。"
           : "请先在设置中配置模型，才能开始对话。"}
       </p>
-      {models.length > 0 && (
+      {llmModels.length > 0 && (
         <div className="flex flex-wrap gap-2 justify-center">
           {[
             "帮我写一段 Python 代码",
@@ -1104,7 +1111,7 @@ const AIChatComponent: React.FC = () => {
           ))}
         </div>
       )}
-      {models.length === 0 && (
+      {llmModels.length === 0 && (
         <button
           className="px-6 py-2 rounded-lg bg-primary text-white text-sm hover:bg-primary-hover transition-colors"
           onClick={() => navigate("/settings/ai")}
@@ -1160,7 +1167,7 @@ const AIChatComponent: React.FC = () => {
               )}
               {/* 其他模型快捷入口 */}
               <div className="flex items-center gap-3 text-xs font-medium text-text-tertiary">
-                {models
+                {llmModels
                   .filter((m) => m.id !== currentModel?.id)
                   .slice(0, 3)
                   .map((model) => {

@@ -11,6 +11,9 @@ import * as pythonEnvService from "./services/pythonEnvService";
 import * as pythonProcessService from "./services/pythonProcessService";
 import * as modelConfigService from "./services/modelConfigService";
 import * as conversationService from "./services/conversationService";
+import * as knowledgeService from "./services/knowledgeService";
+import { dialog } from "electron";
+import { MessageType } from "./types/websocket";
 import type {
   PythonDetectOptions,
   PythonServiceConfig,
@@ -405,6 +408,264 @@ function registerIpcHandlers() {
 
     return websocketService.reloadSkills(skillName);
   });
+
+  // ==================== Knowledge 知识库相关 ====================
+
+  // 创建知识库
+  ipcMain.handle("knowledge:create", async (_event, input) => {
+    try {
+      // 先在本地数据库创建，生成 ID
+      const knowledge = knowledgeService.createKnowledge(
+        input.name,
+        input.description,
+        input.embeddingModel,
+        input.embeddingModelName
+      );
+
+      // 检查 Python 服务是否连接
+      const wsInfo = websocketService.getServerInfo();
+      if (wsInfo.pythonConnected) {
+        // 通过 WebSocket 创建向量存储，使用本地数据库生成的 ID
+        try {
+          await websocketService.sendKnowledgeRequest(
+            MessageType.KNOWLEDGE_CREATE,
+            {
+              knowledgeId: knowledge.id,
+              name: input.name,
+              description: input.description,
+              embeddingModel: input.embeddingModel,
+              embeddingModelName: input.embeddingModelName,
+            }
+          );
+        } catch (pyError) {
+          console.error("[Main] Python 端创建向量存储失败:", pyError);
+          // Python 失败不回滚本地记录，用户可以稍后重试
+        }
+      }
+
+      return {
+        success: true,
+        knowledge: [knowledge],
+        count: 1,
+      };
+    } catch (error) {
+      console.error("[Main] 创建知识库失败:", error);
+      return {
+        success: false,
+        knowledge: [],
+        count: 0,
+        error: String(error),
+      };
+    }
+  });
+
+  // 删除知识库
+  ipcMain.handle("knowledge:delete", async (_event, knowledgeId: string) => {
+    try {
+      const wsInfo = websocketService.getServerInfo();
+      if (wsInfo.pythonConnected) {
+        await websocketService.sendKnowledgeRequest(
+          MessageType.KNOWLEDGE_DELETE,
+          { knowledgeId }
+        );
+      }
+
+      const success = knowledgeService.deleteKnowledge(knowledgeId);
+      return { success };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // 列出知识库
+  ipcMain.handle("knowledge:list", async () => {
+    try {
+      const knowledge = knowledgeService.listKnowledge();
+      return {
+        success: true,
+        knowledge,
+        count: knowledge.length,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        knowledge: [],
+        count: 0,
+        error: String(error),
+      };
+    }
+  });
+
+  // 获取知识库详情
+  ipcMain.handle("knowledge:get", async (_event, knowledgeId: string) => {
+    try {
+      const knowledge = knowledgeService.getKnowledge(knowledgeId);
+      return {
+        success: !!knowledge,
+        knowledge: knowledge ? [knowledge] : [],
+        count: knowledge ? 1 : 0,
+        error: knowledge ? undefined : "知识库不存在",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        knowledge: [],
+        count: 0,
+        error: String(error),
+      };
+    }
+  });
+
+  // 选择知识库文件
+  ipcMain.handle("knowledge:selectFiles", async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: "选择要添加的文档",
+      properties: ["openFile", "multiSelections"],
+      filters: [
+        {
+          name: "支持的文档",
+          extensions: ["md", "txt", "pdf", "json", "html"],
+        },
+        { name: "Markdown", extensions: ["md"] },
+        { name: "文本文件", extensions: ["txt"] },
+        { name: "PDF", extensions: ["pdf"] },
+        { name: "JSON", extensions: ["json"] },
+        { name: "HTML", extensions: ["html", "htm"] },
+      ],
+    });
+    return result;
+  });
+
+  // 添加文档到知识库
+  ipcMain.handle(
+    "knowledge:addDocument",
+    async (_event, knowledgeId: string, filePath: string) => {
+      try {
+        const wsInfo = websocketService.getServerInfo();
+        if (!wsInfo.pythonConnected) {
+          return {
+            success: false,
+            error: "Python 服务未连接，无法处理文档",
+          };
+        }
+
+        const result = (await websocketService.sendKnowledgeRequest(
+          MessageType.KNOWLEDGE_ADD_DOCUMENT,
+          { knowledgeId, filePath }
+        )) as {
+          success: boolean;
+          document?: unknown;
+          error?: string;
+        };
+
+        // 如果 Python 端添加成功，同步保存到本地数据库
+        if (result.success && result.document) {
+          const doc = result.document as Record<string, unknown>;
+          try {
+            const fileName =
+              (doc.fileName as string) ||
+              filePath.split("/").pop() ||
+              "unknown";
+            const fileType =
+              (doc.fileType as string) ||
+              fileName.split(".").pop() ||
+              "unknown";
+            const fileSize = (doc.fileSize as number) || 0;
+            const chunkCount = (doc.chunkCount as number) || 0;
+
+            const document = knowledgeService.addDocument(
+              knowledgeId,
+              fileName,
+              filePath,
+              fileType,
+              fileSize,
+              chunkCount
+            );
+
+            return {
+              success: true,
+              document,
+            };
+          } catch (dbError) {
+            console.error("[Main] 保存文档到本地数据库失败:", dbError);
+            // 仍然返回 Python 端的结果
+          }
+        }
+
+        return result;
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
+  // 删除文档
+  ipcMain.handle(
+    "knowledge:removeDocument",
+    async (_event, knowledgeId: string, documentId: string) => {
+      try {
+        const success = knowledgeService.removeDocument(
+          knowledgeId,
+          documentId
+        );
+        return { success };
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
+  // 搜索知识库
+  ipcMain.handle(
+    "knowledge:search",
+    async (_event, knowledgeId: string, query: string, topK?: number) => {
+      try {
+        const wsInfo = websocketService.getServerInfo();
+        if (!wsInfo.pythonConnected) {
+          return {
+            success: false,
+            results: [],
+            count: 0,
+            error: "Python 服务未连接",
+          };
+        }
+
+        return await websocketService.sendKnowledgeRequest(
+          MessageType.KNOWLEDGE_SEARCH,
+          { knowledgeId, query, topK: topK || 5 }
+        );
+      } catch (error) {
+        return {
+          success: false,
+          results: [],
+          count: 0,
+          error: String(error),
+        };
+      }
+    }
+  );
+
+  // 列出知识库文档
+  ipcMain.handle(
+    "knowledge:listDocuments",
+    async (_event, knowledgeId: string) => {
+      try {
+        const documents = knowledgeService.listDocuments(knowledgeId);
+        return {
+          success: true,
+          documents,
+          count: documents.length,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          documents: [],
+          count: 0,
+          error: String(error),
+        };
+      }
+    }
+  );
 }
 
 // Electron 应用生命周期

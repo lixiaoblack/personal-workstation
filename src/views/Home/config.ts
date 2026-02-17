@@ -21,6 +21,12 @@ export const NAV_MENU_CONFIG: INavMenuItem[] = [
     path: "/ai-chat",
   },
   {
+    key: "knowledge",
+    icon: "database",
+    label: "知识库",
+    path: "/knowledge",
+  },
+  {
     key: "developer",
     icon: "code",
     label: "开发者工具",

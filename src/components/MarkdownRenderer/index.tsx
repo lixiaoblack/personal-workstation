@@ -31,10 +31,30 @@ const CodeBlock: React.FC<{
   );
 };
 
-// 安全的内容过滤：移除空的代码块
+// 安全的内容过滤：清理不完整的代码块
 const sanitizeMarkdown = (content: string): string => {
-  // 移除空的代码块 ```\n``` 或 ```\n\n```
-  return content.replace(/```\s*```/g, "").replace(/```\n*```/g, "");
+  let sanitized = content;
+
+  // 1. 移除空的代码块 ```\n``` 或 ```\n\n```
+  sanitized = sanitized.replace(/```\s*```/g, "");
+  sanitized = sanitized.replace(/```\n*```/g, "");
+
+  // 2. 移除末尾不完整的代码块开始标记（没有闭合的 ```）
+  // 统计 ``` 的数量，如果是奇数则移除最后一个
+  const codeBlockMarkers = sanitized.match(/```/g);
+  if (codeBlockMarkers && codeBlockMarkers.length % 2 !== 0) {
+    // 移除最后一个未闭合的 ```
+    const lastIndex = sanitized.lastIndexOf("```");
+    if (lastIndex !== -1) {
+      // 检查这个 ``` 后面是否只有空白
+      const afterMarker = sanitized.slice(lastIndex + 3).trim();
+      if (!afterMarker) {
+        sanitized = sanitized.slice(0, lastIndex).trimEnd();
+      }
+    }
+  }
+
+  return sanitized;
 };
 
 // Markdown 组件配置
@@ -153,7 +173,7 @@ const components: Components = {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(
   ({ content, className = "" }) => {
-    // 清理内容：移除空的代码块
+    // 清理内容：移除不完整的代码块
     const sanitizedContent = sanitizeMarkdown(content);
 
     return (

@@ -1,11 +1,11 @@
 /**
  * AISettings AI 模型设置页面
- * 包含 Python 环境检测、服务管理、模型配置管理、技能管理
+ * 包含 Python 环境检测、服务管理、模型配置管理、嵌入模型配置、技能管理
  * 配置变更后自动同步 MobX Store
  */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Spin, Button, Empty } from "antd";
+import { App, Spin, Button, Empty, Tabs } from "antd";
 import type {
   PythonEnvironment,
   PythonInstallGuide,
@@ -564,66 +564,117 @@ const AISettings: React.FC = () => {
   };
 
   // 渲染模型配置列表
-  const renderModelConfigSection = () => (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary">tune</span>
-          <h2 className="text-xl font-bold text-text-primary">模型配置</h2>
-        </div>
-        <Button
-          type="primary"
-          icon={
-            <span className="material-symbols-outlined text-base">add</span>
-          }
-          onClick={() => {
-            setEditingConfig(null);
-            setConfigModalOpen(true);
-          }}
-        >
-          添加配置
-        </Button>
-      </div>
+  const renderModelConfigSection = () => {
+    // 分离 LLM 和嵌入模型
+    const llmConfigs = modelConfigs.filter(
+      (c) => c.usageType === "llm" || !c.usageType
+    );
+    const embeddingConfigs = modelConfigs.filter(
+      (c) => c.usageType === "embedding"
+    );
 
-      {modelLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Spin />
-        </div>
-      ) : modelConfigs.length === 0 ? (
-        <div className="p-8 bg-bg-secondary border border-border rounded-xl">
-          <Empty
-            description="暂无模型配置"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">tune</span>
+            <h2 className="text-xl font-bold text-text-primary">模型配置</h2>
+          </div>
+          <Button
+            type="primary"
+            icon={
+              <span className="material-symbols-outlined text-base">add</span>
+            }
+            onClick={() => {
+              setEditingConfig(null);
+              setConfigModalOpen(true);
+            }}
           >
-            <Button
-              type="primary"
-              onClick={() => {
-                setEditingConfig(null);
-                setConfigModalOpen(true);
-              }}
+            添加配置
+          </Button>
+        </div>
+
+        {modelLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Spin />
+          </div>
+        ) : modelConfigs.length === 0 ? (
+          <div className="p-8 bg-bg-secondary border border-border rounded-xl">
+            <Empty
+              description="暂无模型配置"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
             >
-              添加第一个配置
-            </Button>
-          </Empty>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {modelConfigs.map((config) => (
-            <ModelConfigCard
-              key={config.id}
-              config={config}
-              onEdit={handleEditConfig}
-              onDelete={handleDeleteConfig}
-              onToggleEnabled={handleToggleEnabled}
-              onSetDefault={handleSetDefault}
-              onTest={handleTestConfig}
-              testing={testingId === config.id}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEditingConfig(null);
+                  setConfigModalOpen(true);
+                }}
+              >
+                添加第一个配置
+              </Button>
+            </Empty>
+          </div>
+        ) : (
+          <Tabs
+            defaultActiveKey="llm"
+            items={[
+              {
+                key: "llm",
+                label: `大语言模型 (${llmConfigs.length})`,
+                children:
+                  llmConfigs.length === 0 ? (
+                    <div className="p-6 bg-bg-secondary border border-border rounded-xl text-center text-text-tertiary">
+                      暂无大语言模型配置
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {llmConfigs.map((config) => (
+                        <ModelConfigCard
+                          key={config.id}
+                          config={config}
+                          onEdit={handleEditConfig}
+                          onDelete={handleDeleteConfig}
+                          onToggleEnabled={handleToggleEnabled}
+                          onSetDefault={handleSetDefault}
+                          onTest={handleTestConfig}
+                          testing={testingId === config.id}
+                        />
+                      ))}
+                    </div>
+                  ),
+              },
+              {
+                key: "embedding",
+                label: `嵌入模型 (${embeddingConfigs.length})`,
+                children:
+                  embeddingConfigs.length === 0 ? (
+                    <div className="p-6 bg-bg-secondary border border-border rounded-xl text-center text-text-tertiary">
+                      暂无嵌入模型配置，用于知识库文档向量化
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {embeddingConfigs.map((config) => (
+                        <ModelConfigCard
+                          key={config.id}
+                          config={config}
+                          onEdit={handleEditConfig}
+                          onDelete={handleDeleteConfig}
+                          onToggleEnabled={handleToggleEnabled}
+                          onSetDefault={handleSetDefault}
+                          onTest={handleTestConfig}
+                          testing={testingId === config.id}
+                        />
+                      ))}
+                    </div>
+                  ),
+              },
+            ]}
+          />
+        )}
+      </div>
+    );
+  };
 
   // 渲染技能管理区域
   const renderSkillsSection = () => (

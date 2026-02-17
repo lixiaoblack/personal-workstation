@@ -2,6 +2,9 @@
  * AI 模型配置相关类型定义
  */
 
+// 模型用途类型
+export type ModelUsageType = "llm" | "embedding"; // 大语言模型 | 嵌入模型
+
 // 模型提供商类型
 export type ModelProvider =
   | "openai" // OpenAI API
@@ -16,6 +19,7 @@ export type ModelConfigStatus = "active" | "inactive" | "error";
 // 基础模型配置
 export interface BaseModelConfig {
   id: number;
+  usageType: ModelUsageType; // 模型用途
   provider: ModelProvider;
   name: string; // 配置名称，如 "GPT-4", "Qwen-Max"
   modelId: string; // 模型 ID，如 "gpt-4-turbo", "qwen-max"
@@ -54,6 +58,7 @@ export type ModelConfig = OnlineModelConfig | OllamaModelConfig;
 
 // 模型配置创建/更新参数
 export interface CreateModelConfigInput {
+  usageType?: ModelUsageType; // 默认 "llm"
   provider: ModelProvider;
   name: string;
   modelId: string;
@@ -71,6 +76,7 @@ export interface CreateModelConfigInput {
 }
 
 export interface UpdateModelConfigInput {
+  usageType?: ModelUsageType;
   name?: string;
   modelId?: string;
   apiKey?: string;
@@ -91,6 +97,7 @@ export interface UpdateModelConfigInput {
 // 模型配置列表项（不包含敏感信息）
 export interface ModelConfigListItem {
   id: number;
+  usageType: ModelUsageType;
   provider: ModelProvider;
   name: string;
   modelId: string;
@@ -113,6 +120,53 @@ export interface ModelTestResult {
     contextLength?: number;
   };
 }
+
+// 默认嵌入模型配置
+export const DEFAULT_EMBEDDING_MODEL_CONFIGS: Omit<
+  CreateModelConfigInput,
+  "apiKey"
+>[] = [
+  {
+    usageType: "embedding",
+    provider: "ollama",
+    name: "Nomic Embed Text",
+    modelId: "nomic-embed-text",
+    host: "http://127.0.0.1:11434",
+    enabled: false,
+    isDefault: false,
+    priority: 1,
+  },
+  {
+    usageType: "embedding",
+    provider: "ollama",
+    name: "Mxbai Embed Large",
+    modelId: "mxbai-embed-large",
+    host: "http://127.0.0.1:11434",
+    enabled: false,
+    isDefault: false,
+    priority: 2,
+  },
+  {
+    usageType: "embedding",
+    provider: "openai",
+    name: "OpenAI text-embedding-3-small",
+    modelId: "text-embedding-3-small",
+    enabled: false,
+    isDefault: false,
+    priority: 3,
+    maxTokens: 8191,
+  },
+  {
+    usageType: "embedding",
+    provider: "openai",
+    name: "OpenAI text-embedding-3-large",
+    modelId: "text-embedding-3-large",
+    enabled: false,
+    isDefault: false,
+    priority: 4,
+    maxTokens: 8191,
+  },
+];
 
 // 默认模型配置
 export const DEFAULT_MODEL_CONFIGS: Omit<CreateModelConfigInput, "apiKey">[] = [

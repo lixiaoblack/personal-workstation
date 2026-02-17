@@ -10,12 +10,17 @@ import type {
   UpdateModelConfigInput,
   ModelProvider,
   ModelConfigStatus,
+  ModelUsageType,
 } from "../types/model";
-import { DEFAULT_MODEL_CONFIGS } from "../types/model";
+import {
+  DEFAULT_MODEL_CONFIGS,
+  DEFAULT_EMBEDDING_MODEL_CONFIGS,
+} from "../types/model";
 
 // 数据库行类型
 interface ModelConfigRow {
   id: number;
+  usage_type: string;
   provider: string;
   name: string;
   model_id: string;
@@ -42,6 +47,7 @@ interface ModelConfigRow {
 function rowToModelConfig(row: ModelConfigRow): ModelConfig {
   const baseConfig = {
     id: row.id,
+    usageType: (row.usage_type || "llm") as ModelUsageType,
     provider: row.provider as ModelProvider,
     name: row.name,
     modelId: row.model_id,
@@ -91,6 +97,7 @@ function modelConfigToRow(
 ): Partial<ModelConfigRow> {
   const row: Partial<ModelConfigRow> = {};
 
+  if ("usageType" in input) row.usage_type = input.usageType;
   if ("provider" in input) row.provider = input.provider;
   if ("name" in input) row.name = input.name;
   if ("modelId" in input) row.model_id = input.modelId;
@@ -115,19 +122,27 @@ function modelConfigToRow(
 /**
  * 获取所有模型配置列表
  */
-export function getModelConfigs(): ModelConfigListItem[] {
+export function getModelConfigs(
+  usageType?: ModelUsageType
+): ModelConfigListItem[] {
   const db = getDatabase();
-  const rows = db
-    .prepare(
-      `SELECT id, provider, name, model_id, enabled, is_default, priority, 
+  let query = `SELECT id, usage_type, provider, name, model_id, enabled, is_default, priority, 
               status, last_error, created_at, updated_at
-       FROM model_configs 
-       ORDER BY priority ASC, id ASC`
-    )
-    .all() as ModelConfigRow[];
+       FROM model_configs`;
+  const params: string[] = [];
+
+  if (usageType) {
+    query += ` WHERE usage_type = ?`;
+    params.push(usageType);
+  }
+
+  query += ` ORDER BY priority ASC, id ASC`;
+
+  const rows = db.prepare(query).all(...params) as ModelConfigRow[];
 
   return rows.map((row) => ({
     id: row.id,
+    usageType: (row.usage_type || "llm") as ModelUsageType,
     provider: row.provider as ModelProvider,
     name: row.name,
     modelId: row.model_id,
@@ -156,16 +171,18 @@ export function getModelConfigById(id: number): ModelConfig | null {
 /**
  * 获取默认模型配置
  */
-export function getDefaultModelConfig(): ModelConfig | null {
+export function getDefaultModelConfig(
+  usageType: ModelUsageType = "llm"
+): ModelConfig | null {
   const db = getDatabase();
   const row = db
     .prepare(
       `SELECT * FROM model_configs 
-       WHERE is_default = 1 AND enabled = 1 
+       WHERE is_default = 1 AND enabled = 1 AND usage_type = ?
        ORDER BY priority ASC 
        LIMIT 1`
     )
-    .get() as ModelConfigRow | undefined;
+    .get(usageType) as ModelConfigRow | undefined;
 
   return row ? rowToModelConfig(row) : null;
 }
@@ -173,17 +190,37 @@ export function getDefaultModelConfig(): ModelConfig | null {
 /**
  * 获取启用的模型配置列表（按优先级排序）
  */
-export function getEnabledModelConfigs(): ModelConfig[] {
+export function getEnabledModelConfigs(
+  usageType?: ModelUsageType
+): ModelConfig[] {
   const db = getDatabase();
-  const rows = db
-    .prepare(
-      `SELECT * FROM model_configs 
-       WHERE enabled = 1 
-       ORDER BY priority ASC, id ASC`
-    )
-    .all() as ModelConfigRow[];
+  let query = `SELECT * FROM model_configs WHERE enabled = 1`;
+  const params: string[] = [];
+
+  if (usageType) {
+    query += ` AND usage_type = ?`;
+    params.push(usageType);
+  }
+
+  query += ` ORDER BY priority ASC, id ASC`;
+
+  const rows = db.prepare(query).all(...params) as ModelConfigRow[];
 
   return rows.map(rowToModelConfig);
+}
+
+/**
+ * 获取启用的嵌入模型配置列表
+ */
+export function getEnabledEmbeddingModelConfigs(): ModelConfig[] {
+  return getEnabledModelConfigs("embedding");
+}
+
+/**
+ * 获取默认嵌入模型配置
+ */
+export function getDefaultEmbeddingModelConfig(): ModelConfig | null {
+  return getDefaultModelConfig("embedding");
 }
 
 /**
@@ -193,24 +230,28 @@ export function createModelConfig(input: CreateModelConfigInput): ModelConfig {
   const db = getDatabase();
   const row = modelConfigToRow(input);
 
-  // 如果设置为默认，先取消其他默认
+  // 如果设置为默认，先取消同类型的其他默认
+  const usageType = input.usageType || "llm";
   if (input.isDefault) {
-    db.prepare("UPDATE model_configs SET is_default = 0").run();
+    db.prepare(
+      "UPDATE model_configs SET is_default = 0 WHERE usage_type = ?"
+    ).run(usageType);
   }
 
   const stmt = db.prepare(`
     INSERT INTO model_configs (
-      provider, name, model_id, api_key, api_base_url, organization,
+      usage_type, provider, name, model_id, api_key, api_base_url, organization,
       host, enabled, is_default, priority, status, max_tokens, 
       temperature, keep_alive, extra_params
     ) VALUES (
-      @provider, @name, @model_id, @api_key, @api_base_url, @organization,
+      @usage_type, @provider, @name, @model_id, @api_key, @api_base_url, @organization,
       @host, @enabled, @is_default, @priority, @status, @max_tokens,
       @temperature, @keep_alive, @extra_params
     )
   `);
 
   const result = stmt.run({
+    usage_type: row.usage_type || "llm",
     provider: row.provider || "openai",
     name: row.name || "",
     model_id: row.model_id || "",
@@ -246,9 +287,12 @@ export function updateModelConfig(
     return null;
   }
 
-  // 如果设置为默认，先取消其他默认
+  // 如果设置为默认，先取消同类型的其他默认
   if (input.isDefault) {
-    db.prepare("UPDATE model_configs SET is_default = 0").run();
+    const usageType = existing.usageType;
+    db.prepare(
+      "UPDATE model_configs SET is_default = 0 WHERE usage_type = ?"
+    ).run(usageType);
   }
 
   const row = modelConfigToRow(input);
@@ -291,10 +335,14 @@ export function setDefaultModelConfig(id: number): boolean {
     return false;
   }
 
+  const usageType = config.usageType;
+
   // 使用事务确保原子性
   const transaction = db.transaction(() => {
-    // 取消所有默认
-    db.prepare("UPDATE model_configs SET is_default = 0").run();
+    // 取消同类型的所有默认
+    db.prepare(
+      "UPDATE model_configs SET is_default = 0 WHERE usage_type = ?"
+    ).run(usageType);
     // 设置指定模型为默认
     db.prepare(
       "UPDATE model_configs SET is_default = 1, enabled = 1 WHERE id = ?"
@@ -336,8 +384,13 @@ export function initializeDefaultConfigs(): void {
     return;
   }
 
-  // 导入默认配置
+  // 导入默认 LLM 配置
   for (const config of DEFAULT_MODEL_CONFIGS) {
+    createModelConfig(config as CreateModelConfigInput);
+  }
+
+  // 导入默认嵌入模型配置
+  for (const config of DEFAULT_EMBEDDING_MODEL_CONFIGS) {
     createModelConfig(config as CreateModelConfigInput);
   }
 }
@@ -347,6 +400,8 @@ export default {
   getModelConfigById,
   getDefaultModelConfig,
   getEnabledModelConfigs,
+  getEnabledEmbeddingModelConfigs,
+  getDefaultEmbeddingModelConfig,
   createModelConfig,
   updateModelConfig,
   deleteModelConfig,

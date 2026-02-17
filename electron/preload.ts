@@ -34,6 +34,11 @@ import type {
   OllamaTestResult,
 } from "./types";
 import type { SkillInfo } from "./types/websocket";
+import type {
+  KnowledgeInfo,
+  KnowledgeDocumentInfo,
+  KnowledgeSearchResult,
+} from "./types/websocket";
 
 // WebSocket 服务器信息
 export interface WsServerInfo {
@@ -63,6 +68,34 @@ export interface SkillReloadResult {
   skillName?: string;
   message?: string;
   count?: number;
+  error?: string;
+}
+
+// Knowledge 知识库相关类型
+export interface KnowledgeCreateInput {
+  name: string;
+  description?: string;
+  embeddingModel?: "ollama" | "openai";
+  embeddingModelName?: string;
+}
+
+export interface KnowledgeListResult {
+  success: boolean;
+  knowledge: KnowledgeInfo[];
+  count: number;
+  error?: string;
+}
+
+export interface KnowledgeAddDocumentResult {
+  success: boolean;
+  document?: KnowledgeDocumentInfo;
+  error?: string;
+}
+
+export interface KnowledgeSearchResultData {
+  success: boolean;
+  results: KnowledgeSearchResult[];
+  count: number;
   error?: string;
 }
 
@@ -234,6 +267,48 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("skill:execute", skillName, parameters),
   reloadSkills: (skillName?: string): Promise<SkillReloadResult> =>
     ipcRenderer.invoke("skill:reload", skillName),
+
+  // Knowledge 知识库相关
+  createKnowledge: (
+    input: KnowledgeCreateInput
+  ): Promise<KnowledgeListResult> =>
+    ipcRenderer.invoke("knowledge:create", input),
+  deleteKnowledge: (
+    knowledgeId: string
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("knowledge:delete", knowledgeId),
+  listKnowledge: (): Promise<KnowledgeListResult> =>
+    ipcRenderer.invoke("knowledge:list"),
+  getKnowledge: (knowledgeId: string): Promise<KnowledgeListResult> =>
+    ipcRenderer.invoke("knowledge:get", knowledgeId),
+  addKnowledgeDocument: (
+    knowledgeId: string,
+    filePath: string
+  ): Promise<KnowledgeAddDocumentResult> =>
+    ipcRenderer.invoke("knowledge:addDocument", knowledgeId, filePath),
+  removeKnowledgeDocument: (
+    knowledgeId: string,
+    documentId: string
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("knowledge:removeDocument", knowledgeId, documentId),
+  searchKnowledge: (
+    knowledgeId: string,
+    query: string,
+    topK?: number
+  ): Promise<KnowledgeSearchResultData> =>
+    ipcRenderer.invoke("knowledge:search", knowledgeId, query, topK),
+  listKnowledgeDocuments: (
+    knowledgeId: string
+  ): Promise<{
+    success: boolean;
+    documents: KnowledgeDocumentInfo[];
+    count: number;
+    error?: string;
+  }> => ipcRenderer.invoke("knowledge:listDocuments", knowledgeId),
+  selectKnowledgeFiles: (): Promise<{
+    canceled: boolean;
+    filePaths: string[];
+  }> => ipcRenderer.invoke("knowledge:selectFiles"),
 });
 
 // 类型声明
@@ -330,6 +405,41 @@ export interface ElectronAPI {
     parameters?: Record<string, unknown>
   ) => Promise<SkillExecuteResult>;
   reloadSkills: (skillName?: string) => Promise<SkillReloadResult>;
+
+  // Knowledge 知识库相关
+  createKnowledge: (
+    input: KnowledgeCreateInput
+  ) => Promise<KnowledgeListResult>;
+  deleteKnowledge: (
+    knowledgeId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  listKnowledge: () => Promise<KnowledgeListResult>;
+  getKnowledge: (knowledgeId: string) => Promise<KnowledgeListResult>;
+  addKnowledgeDocument: (
+    knowledgeId: string,
+    filePath: string
+  ) => Promise<KnowledgeAddDocumentResult>;
+  removeKnowledgeDocument: (
+    knowledgeId: string,
+    documentId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  searchKnowledge: (
+    knowledgeId: string,
+    query: string,
+    topK?: number
+  ) => Promise<KnowledgeSearchResultData>;
+  listKnowledgeDocuments: (
+    knowledgeId: string
+  ) => Promise<{
+    success: boolean;
+    documents: KnowledgeDocumentInfo[];
+    count: number;
+    error?: string;
+  }>;
+  selectKnowledgeFiles: () => Promise<{
+    canceled: boolean;
+    filePaths: string[];
+  }>;
 }
 
 declare global {

@@ -63,11 +63,23 @@ interface PendingSkillRequest {
 }
 const pendingSkillRequests: Map<string, PendingSkillRequest> = new Map();
 
+// Knowledge 请求响应 Promise 缓存
+interface PendingKnowledgeRequest {
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+  timeout: NodeJS.Timeout;
+}
+const pendingKnowledgeRequests: Map<string, PendingKnowledgeRequest> =
+  new Map();
+
 // Ollama 请求超时时间（毫秒）
 const OLLAMA_REQUEST_TIMEOUT = 30000;
 
 // Skills 请求超时时间（毫秒）
 const SKILL_REQUEST_TIMEOUT = 30000;
+
+// Knowledge 请求超时时间（毫秒）
+const KNOWLEDGE_REQUEST_TIMEOUT = 60000; // 文档处理可能需要更长时间
 
 // 默认配置
 const DEFAULT_CONFIG: Required<WebSocketServerConfig> = {
@@ -484,6 +496,36 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
       }
       return;
     }
+
+    // 处理来自 Python 的 Knowledge 响应
+    if (
+      message.type === MessageType.KNOWLEDGE_CREATE_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_DELETE_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_LIST_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_GET_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_ADD_DOCUMENT_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_REMOVE_DOCUMENT_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_SEARCH_RESPONSE ||
+      message.type === MessageType.KNOWLEDGE_LIST_DOCUMENTS_RESPONSE
+    ) {
+      const clientInfo = clients.get(ws);
+      // 确保消息来自 Python 客户端
+      if (clientInfo?.clientType === "python_agent") {
+        const msgId = message.id;
+        if (msgId) {
+          const pending = pendingKnowledgeRequests.get(msgId);
+          if (pending) {
+            clearTimeout(pending.timeout);
+            pendingKnowledgeRequests.delete(msgId);
+            pending.resolve(message);
+            console.log(`[WebSocket] Knowledge 响应已处理: ${msgId}`);
+          } else {
+            console.warn(`[WebSocket] 未找到对应的 Knowledge 请求: ${msgId}`);
+          }
+        }
+      }
+      return;
+    }
   } catch (error) {
     console.error("[WebSocket] 消息解析错误:", error);
   }
@@ -796,4 +838,46 @@ export async function reloadSkills(skillName?: string): Promise<{
       error: error instanceof Error ? error.message : "未知错误",
     };
   }
+}
+
+// ==================== Knowledge 知识库相关 ====================
+
+/**
+ * 发送 Knowledge 请求并等待响应
+ */
+export async function sendKnowledgeRequest<T>(
+  messageType: MessageType,
+  data?: Record<string, unknown>
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (!pythonClient || pythonClient.readyState !== WebSocket.OPEN) {
+      reject(new Error("Python 服务未连接"));
+      return;
+    }
+
+    const messageId = `kb_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    const message = createMessage(messageType as never, data || {});
+
+    // 设置超时
+    const timeout = setTimeout(() => {
+      pendingKnowledgeRequests.delete(messageId);
+      reject(new Error("请求超时"));
+    }, KNOWLEDGE_REQUEST_TIMEOUT);
+
+    // 存储等待响应的 Promise
+    pendingKnowledgeRequests.set(messageId, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      timeout,
+    });
+
+    // 发送消息（使用生成的 messageId）
+    const messageWithId = {
+      ...message,
+      id: messageId,
+    };
+    pythonClient.send(JSON.stringify(messageWithId));
+  });
 }

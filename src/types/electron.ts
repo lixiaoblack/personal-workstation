@@ -47,6 +47,7 @@ export type {
   OllamaModelConfig,
   ModelProvider,
   ModelConfigStatus,
+  ModelUsageType,
   CreateModelConfigInput,
   UpdateModelConfigInput,
   Conversation,
@@ -66,6 +67,10 @@ export type {
   SkillInfo,
   SkillType,
   SkillTrigger,
+  // Knowledge 知识库相关类型
+  KnowledgeInfo,
+  KnowledgeDocumentInfo,
+  KnowledgeSearchResult,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -108,6 +113,9 @@ import type {
   OllamaModel,
   OllamaTestResult,
   SkillInfo,
+  KnowledgeInfo,
+  KnowledgeDocumentInfo,
+  KnowledgeSearchResult,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -227,6 +235,66 @@ export interface ElectronAPI {
     message?: string;
     count?: number;
     error?: string;
+  }>;
+
+  // Knowledge 知识库相关 API
+  createKnowledge: (input: {
+    name: string;
+    description?: string;
+    embeddingModel?: "ollama" | "openai";
+    embeddingModelName?: string;
+  }) => Promise<{
+    success: boolean;
+    knowledge: KnowledgeInfo[];
+    count: number;
+    error?: string;
+  }>;
+  deleteKnowledge: (
+    knowledgeId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  listKnowledge: () => Promise<{
+    success: boolean;
+    knowledge: KnowledgeInfo[];
+    count: number;
+    error?: string;
+  }>;
+  getKnowledge: (knowledgeId: string) => Promise<{
+    success: boolean;
+    knowledge: KnowledgeInfo[];
+    count: number;
+    error?: string;
+  }>;
+  addKnowledgeDocument: (
+    knowledgeId: string,
+    filePath: string
+  ) => Promise<{
+    success: boolean;
+    document?: KnowledgeDocumentInfo;
+    error?: string;
+  }>;
+  removeKnowledgeDocument: (
+    knowledgeId: string,
+    documentId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  searchKnowledge: (
+    knowledgeId: string,
+    query: string,
+    topK?: number
+  ) => Promise<{
+    success: boolean;
+    results: KnowledgeSearchResult[];
+    count: number;
+    error?: string;
+  }>;
+  listKnowledgeDocuments: (knowledgeId: string) => Promise<{
+    success: boolean;
+    documents: KnowledgeDocumentInfo[];
+    count: number;
+    error?: string;
+  }>;
+  selectKnowledgeFiles: () => Promise<{
+    canceled: boolean;
+    filePaths: string[];
   }>;
 }
 

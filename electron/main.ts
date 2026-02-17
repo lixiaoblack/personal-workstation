@@ -355,6 +355,53 @@ function registerIpcHandlers() {
 
     return websocketService.testOllamaConnection(host);
   });
+
+  // ==================== Skills 技能相关 ====================
+
+  // 获取技能列表
+  ipcMain.handle("skill:getList", async () => {
+    const wsInfo = websocketService.getServerInfo();
+
+    if (!wsInfo.running || !wsInfo.pythonConnected) {
+      return {
+        success: false,
+        skills: [],
+        count: 0,
+        error: "Python 服务未连接",
+      };
+    }
+
+    return websocketService.getSkillList();
+  });
+
+  // 执行技能
+  ipcMain.handle("skill:execute", async (_, skillName: string, parameters?: Record<string, unknown>) => {
+    const wsInfo = websocketService.getServerInfo();
+
+    if (!wsInfo.running || !wsInfo.pythonConnected) {
+      return {
+        success: false,
+        skillName,
+        error: "Python 服务未连接",
+      };
+    }
+
+    return websocketService.executeSkill(skillName, parameters);
+  });
+
+  // 重载技能
+  ipcMain.handle("skill:reload", async (_, skillName?: string) => {
+    const wsInfo = websocketService.getServerInfo();
+
+    if (!wsInfo.running || !wsInfo.pythonConnected) {
+      return {
+        success: false,
+        error: "Python 服务未连接",
+      };
+    }
+
+    return websocketService.reloadSkills(skillName);
+  });
 }
 
 // Electron 应用生命周期

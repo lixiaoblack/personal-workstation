@@ -14,6 +14,9 @@ import {
   type OllamaStatusResponseMessage,
   type OllamaModelsResponseMessage,
   type OllamaTestResponseMessage,
+  type SkillListResponseMessage,
+  type SkillExecuteResponseMessage,
+  type SkillReloadResponseMessage,
   createMessage,
 } from "../types/websocket";
 import { getEnabledModelConfigs } from "./modelConfigService";
@@ -52,8 +55,19 @@ interface PendingOllamaRequest {
 }
 const pendingOllamaRequests: Map<string, PendingOllamaRequest> = new Map();
 
+// Skills 请求响应 Promise 缓存
+interface PendingSkillRequest {
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+  timeout: NodeJS.Timeout;
+}
+const pendingSkillRequests: Map<string, PendingSkillRequest> = new Map();
+
 // Ollama 请求超时时间（毫秒）
 const OLLAMA_REQUEST_TIMEOUT = 30000;
+
+// Skills 请求超时时间（毫秒）
+const SKILL_REQUEST_TIMEOUT = 30000;
 
 // 默认配置
 const DEFAULT_CONFIG: Required<WebSocketServerConfig> = {
@@ -445,6 +459,31 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
       }
       return;
     }
+
+    // 处理来自 Python 的 Skills 响应
+    if (
+      message.type === MessageType.SKILL_LIST_RESPONSE ||
+      message.type === MessageType.SKILL_EXECUTE_RESPONSE ||
+      message.type === MessageType.SKILL_RELOAD_RESPONSE
+    ) {
+      const clientInfo = clients.get(ws);
+      // 确保消息来自 Python 客户端
+      if (clientInfo?.clientType === "python_agent") {
+        const msgId = message.id;
+        if (msgId) {
+          const pending = pendingSkillRequests.get(msgId);
+          if (pending) {
+            clearTimeout(pending.timeout);
+            pendingSkillRequests.delete(msgId);
+            pending.resolve(message);
+            console.log(`[WebSocket] Skill 响应已处理: ${msgId}`);
+          } else {
+            console.warn(`[WebSocket] 未找到对应的 Skill 请求: ${msgId}`);
+          }
+        }
+      }
+      return;
+    }
   } catch (error) {
     console.error("[WebSocket] 消息解析错误:", error);
   }
@@ -610,6 +649,148 @@ export async function testOllamaConnection(
     return {
       success: false,
       host: host || "http://127.0.0.1:11434",
+      error: error instanceof Error ? error.message : "未知错误",
+    };
+  }
+}
+
+// ==================== Skills 技能相关 ====================
+
+/**
+ * 发送 Skills 请求并等待响应
+ */
+async function sendSkillRequest<T>(
+  messageType: MessageType,
+  data?: Record<string, unknown>
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (!pythonClient || pythonClient.readyState !== WebSocket.OPEN) {
+      reject(new Error("Python 服务未连接"));
+      return;
+    }
+
+    const messageId = `skill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const message = createMessage(messageType as never, data || {});
+
+    // 设置超时
+    const timeout = setTimeout(() => {
+      pendingSkillRequests.delete(messageId);
+      reject(new Error("请求超时"));
+    }, SKILL_REQUEST_TIMEOUT);
+
+    // 存储等待响应的 Promise
+    pendingSkillRequests.set(messageId, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      timeout,
+    });
+
+    // 发送消息（使用生成的 messageId）
+    const messageWithId = {
+      ...message,
+      id: messageId,
+    };
+    pythonClient.send(JSON.stringify(messageWithId));
+  });
+}
+
+/**
+ * 获取技能列表
+ */
+export async function getSkillList(): Promise<{
+  success: boolean;
+  skills: Array<{
+    name: string;
+    displayName: string;
+    description: string;
+    type: string;
+    trigger: string;
+    enabled: boolean;
+    tags: string[];
+    icon?: string;
+    version: string;
+    author: string;
+  }>;
+  count: number;
+  error?: string;
+}> {
+  try {
+    const response = await sendSkillRequest<SkillListResponseMessage>(
+      MessageType.SKILL_LIST
+    );
+    return {
+      success: response.success,
+      skills: response.skills,
+      count: response.count,
+      error: response.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      skills: [],
+      count: 0,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
+  }
+}
+
+/**
+ * 执行技能
+ */
+export async function executeSkill(
+  skillName: string,
+  parameters?: Record<string, unknown>
+): Promise<{
+  success: boolean;
+  skillName: string;
+  result?: string;
+  error?: string;
+}> {
+  try {
+    const response = await sendSkillRequest<SkillExecuteResponseMessage>(
+      MessageType.SKILL_EXECUTE,
+      { skillName, parameters: parameters || {} }
+    );
+    return {
+      success: response.success,
+      skillName: response.skillName,
+      result: response.result,
+      error: response.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      skillName,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
+  }
+}
+
+/**
+ * 重载技能
+ */
+export async function reloadSkills(skillName?: string): Promise<{
+  success: boolean;
+  skillName?: string;
+  message?: string;
+  count?: number;
+  error?: string;
+}> {
+  try {
+    const response = await sendSkillRequest<SkillReloadResponseMessage>(
+      MessageType.SKILL_RELOAD,
+      skillName ? { skillName } : {}
+    );
+    return {
+      success: response.success,
+      skillName: response.skillName,
+      message: response.message,
+      count: response.count,
+      error: response.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
       error: error instanceof Error ? error.message : "未知错误",
     };
   }

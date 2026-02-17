@@ -33,6 +33,7 @@ import type {
   OllamaStatus,
   OllamaTestResult,
 } from "./types";
+import type { SkillInfo } from "./types/websocket";
 
 // WebSocket 服务器信息
 export interface WsServerInfo {
@@ -40,6 +41,29 @@ export interface WsServerInfo {
   port: number;
   clientCount: number;
   pythonConnected: boolean;
+}
+
+// Skills 技能相关类型
+export interface SkillListResult {
+  success: boolean;
+  skills: SkillInfo[];
+  count: number;
+  error?: string;
+}
+
+export interface SkillExecuteResult {
+  success: boolean;
+  skillName: string;
+  result?: string;
+  error?: string;
+}
+
+export interface SkillReloadResult {
+  success: boolean;
+  skillName?: string;
+  message?: string;
+  count?: number;
+  error?: string;
 }
 
 // 重新导出类型供外部使用
@@ -199,6 +223,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("ollama:getModels", host),
   testOllamaConnection: (host?: string): Promise<OllamaTestResult> =>
     ipcRenderer.invoke("ollama:testConnection", host),
+
+  // Skills 技能相关
+  getSkillList: (): Promise<SkillListResult> =>
+    ipcRenderer.invoke("skill:getList"),
+  executeSkill: (skillName: string, parameters?: Record<string, unknown>): Promise<SkillExecuteResult> =>
+    ipcRenderer.invoke("skill:execute", skillName, parameters),
+  reloadSkills: (skillName?: string): Promise<SkillReloadResult> =>
+    ipcRenderer.invoke("skill:reload", skillName),
 });
 
 // 类型声明
@@ -287,6 +319,11 @@ export interface ElectronAPI {
   getOllamaStatus: (host?: string) => Promise<OllamaStatus>;
   getOllamaModels: (host?: string) => Promise<OllamaModel[]>;
   testOllamaConnection: (host?: string) => Promise<OllamaTestResult>;
+
+  // Skills 技能相关
+  getSkillList: () => Promise<SkillListResult>;
+  executeSkill: (skillName: string, parameters?: Record<string, unknown>) => Promise<SkillExecuteResult>;
+  reloadSkills: (skillName?: string) => Promise<SkillReloadResult>;
 }
 
 declare global {

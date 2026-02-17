@@ -53,6 +53,9 @@ class MessageHandler:
             "knowledge_remove_document": self._handle_knowledge_list_documents,  # 复用
             "knowledge_search": self._handle_knowledge_search,
             "knowledge_list_documents": self._handle_knowledge_list_documents,
+            # Memory 记忆相关
+            "memory_generate_summary": self._handle_memory_generate_summary,
+            "memory_extract": self._handle_memory_extract,
         }
         # 会话存储（后续可替换为持久化存储）
         self.conversations: Dict[str, list] = {}
@@ -1182,3 +1185,117 @@ class MessageHandler:
             "documents": [],
             "count": 0,
         }
+
+    # ==================== Memory 记忆相关消息处理 ====================
+
+    async def _handle_memory_generate_summary(self, message: dict) -> dict:
+        """
+        处理摘要生成请求
+
+        从对话消息中生成摘要，用于多轮对话状态管理。
+        """
+        conversation_id = message.get("conversationId")
+        messages = message.get("messages", [])
+        model_id = message.get("modelId")
+
+        if not conversation_id or not messages:
+            return {
+                "type": "memory_generate_summary_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": "缺少 conversationId 或 messages",
+            }
+
+        try:
+            from memory_service import memory_service
+
+            # 生成摘要
+            result = await memory_service.generate_summary(messages, model_id)
+
+            if not result:
+                return {
+                    "type": "memory_generate_summary_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "success": False,
+                    "error": "摘要生成失败",
+                }
+
+            logger.info(f"[Memory] 生成摘要成功: conversation_id={conversation_id}")
+
+            return {
+                "type": "memory_generate_summary_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "conversationId": conversation_id,
+                "summary": result.get("summary", ""),
+                "keyTopics": result.get("key_topics", []),
+                "pendingTasks": result.get("pending_tasks", []),
+            }
+
+        except Exception as e:
+            logger.error(f"生成摘要错误: {e}")
+            return {
+                "type": "memory_generate_summary_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": str(e),
+            }
+
+    async def _handle_memory_extract(self, message: dict) -> dict:
+        """
+        处理记忆提取请求
+
+        从对话中提取用户偏好、项目上下文、任务进度等信息。
+        """
+        conversation_id = message.get("conversationId")
+        messages = message.get("messages", [])
+        model_id = message.get("modelId")
+
+        if not messages:
+            return {
+                "type": "memory_extract_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": "缺少 messages",
+            }
+
+        try:
+            from memory_service import memory_service
+
+            # 提取记忆
+            result = await memory_service.extract_memory(messages, model_id)
+
+            if not result:
+                return {
+                    "type": "memory_extract_response",
+                    "id": message.get("id"),
+                    "timestamp": int(time.time() * 1000),
+                    "success": True,
+                    "memories": {},
+                }
+
+            logger.info(f"[Memory] 提取记忆成功: {list(result.keys())}")
+
+            return {
+                "type": "memory_extract_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": True,
+                "conversationId": conversation_id,
+                "memories": result,
+            }
+
+        except Exception as e:
+            logger.error(f"提取记忆错误: {e}")
+            return {
+                "type": "memory_extract_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": str(e),
+            }

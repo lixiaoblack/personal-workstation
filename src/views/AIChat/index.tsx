@@ -166,6 +166,76 @@ const AIChatComponent: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamState.content]);
 
+  // ===== 摘要生成机制 =====
+
+  const SUMMARY_THRESHOLD = 10; // 每10条消息生成一次摘要
+
+  const checkAndGenerateSummary = useCallback(async (conversationId: number) => {
+    try {
+      // 获取当前对话的消息数量
+      const recentMessages = await window.electronAPI.getRecentMessages(
+        conversationId,
+        100 // 获取足够多的消息来计算
+      );
+      const messageCount = recentMessages.length;
+
+      // 获取已有的摘要
+      const summariesResult = await window.electronAPI.getConversationSummaries(conversationId);
+      const existingSummaries = summariesResult.success ? summariesResult.summaries : [];
+
+      // 计算已摘要的消息数量（通过 endMessageId 判断）
+      let summarizedMessageCount = 0;
+      if (existingSummaries.length > 0) {
+        // 获取最新摘要
+        const lastSummary = existingSummaries[0];
+        // 尝试获取 endMessageId（需要从后端返回）
+        const summaryData = lastSummary as unknown as { endMessageId?: number };
+        if (summaryData.endMessageId) {
+          // 找到这个消息在 recentMessages 中的位置
+          const lastSummaryIndex = recentMessages.findIndex(
+            (m) => m.id <= summaryData.endMessageId!
+          );
+          if (lastSummaryIndex >= 0) {
+            summarizedMessageCount = lastSummaryIndex + 1;
+          }
+        }
+      }
+
+      // 计算未摘要的消息数量
+      const unsummarizedCount = messageCount - summarizedMessageCount;
+
+      // 检查是否需要生成新摘要
+      if (unsummarizedCount >= SUMMARY_THRESHOLD) {
+        console.log("[AIChat] 触发摘要生成，未摘要消息数量:", unsummarizedCount);
+
+        // 获取需要摘要的消息（未摘要的部分）
+        const messagesToSummarize = recentMessages
+          .slice(summarizedMessageCount)
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+          }));
+
+        if (messagesToSummarize.length >= SUMMARY_THRESHOLD) {
+          // 调用 Python 服务生成摘要
+          const result = await window.electronAPI.generateSummary(
+            conversationId,
+            messagesToSummarize,
+            currentModel?.id
+          );
+
+          if (result.success) {
+            console.log("[AIChat] 摘要生成成功:", result.summary?.substring(0, 50));
+          } else {
+            console.error("[AIChat] 摘要生成失败:", result.error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("检查摘要生成失败:", error);
+    }
+  }, [currentModel?.id]);
+
   // ===== WebSocket 消息处理 =====
 
   useEffect(() => {
@@ -218,6 +288,9 @@ const AIChatComponent: React.FC = () => {
             });
             await loadMessages(cid);
             await loadConversations();
+
+            // 检查是否需要生成摘要（每10条消息触发一次）
+            await checkAndGenerateSummary(cid);
           } catch (error) {
             console.error("保存 AI 消息失败:", error);
           }
@@ -298,6 +371,7 @@ const AIChatComponent: React.FC = () => {
     loadMessages,
     loadConversations,
     activeConversation?.id,
+    checkAndGenerateSummary,
   ]);
 
   // ===== 对话管理 =====
@@ -469,6 +543,29 @@ const AIChatComponent: React.FC = () => {
         }));
     } catch (error) {
       console.error("获取历史消息失败:", error);
+    }
+
+    // 获取记忆上下文（长期记忆 + 历史摘要）
+    let memoryContext = "";
+    try {
+      const memoryResult = await window.electronAPI.getMemoryContext();
+      if (memoryResult.success && memoryResult.contextPrompt) {
+        memoryContext = memoryResult.contextPrompt;
+        console.log("[AIChat] 已加载记忆上下文:", memoryContext.substring(0, 100));
+      }
+    } catch (error) {
+      console.error("获取记忆上下文失败:", error);
+    }
+
+    // 如果有记忆上下文，注入到历史消息开头
+    if (memoryContext) {
+      history = [
+        {
+          role: "system" as const,
+          content: `以下是用户的背景信息，请参考这些信息回答问题：\n\n${memoryContext}`,
+        },
+        ...history,
+      ];
     }
 
     // 根据 agentMode 选择发送方式

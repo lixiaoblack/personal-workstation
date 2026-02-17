@@ -253,6 +253,50 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_knowledge_name ON knowledge(name);
     CREATE INDEX IF NOT EXISTS idx_knowledge_documents_knowledge_id ON knowledge_documents(knowledge_id);
   `);
+
+  // ========== 多轮对话状态管理 ==========
+
+  // 对话摘要表（每10条消息生成一次摘要）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS conversation_summaries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL,
+      start_message_id INTEGER NOT NULL,
+      end_message_id INTEGER NOT NULL,
+      summary TEXT NOT NULL,
+      key_topics TEXT,
+      message_count INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 用户长期记忆表（存储用户偏好、项目上下文、任务进度等）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS user_memory (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      memory_type TEXT NOT NULL,
+      memory_key TEXT NOT NULL,
+      memory_value TEXT NOT NULL,
+      source_conversation_id INTEGER,
+      confidence REAL DEFAULT 1.0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (source_conversation_id) REFERENCES conversations(id) ON DELETE SET NULL
+    );
+  `);
+
+  // 摘要和记忆索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_conversation_summaries_conversation_id ON conversation_summaries(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_user_memory_type ON user_memory(memory_type);
+    CREATE INDEX IF NOT EXISTS idx_user_memory_key ON user_memory(memory_key);
+  `);
+
+  // 唯一约束：memory_type + memory_key 组合唯一
+  database.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_memory_type_key ON user_memory(memory_type, memory_key);
+  `);
 }
 
 export default {

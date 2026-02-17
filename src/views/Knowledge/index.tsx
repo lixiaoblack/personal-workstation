@@ -11,7 +11,6 @@ import {
   Button,
   Card,
   Input,
-  List,
   Modal,
   Form,
   Select,
@@ -25,33 +24,25 @@ import {
   Table,
   Upload,
   Progress,
-  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   SearchOutlined,
-  FileAddOutlined,
   DatabaseOutlined,
   FileTextOutlined,
   SettingOutlined,
   CloudUploadOutlined,
   FilePdfOutlined,
   CodeOutlined,
-  InboxOutlined,
   CheckCircleOutlined,
   LoadingOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import type { UploadFile } from "antd/es/upload/interface";
-import type {
-  KnowledgeInfo,
-  KnowledgeDocumentInfo,
-  ModelConfigListItem,
-} from "@/types/electron";
-import { formatFileSize, KNOWLEDGE_CONFIG } from "./config";
+import type { KnowledgeInfo, KnowledgeDocumentInfo, ModelConfigListItem } from "@/types/electron";
+import { formatFileSize } from "./config";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { Dragger } = Upload;
 
 // 文档状态类型
@@ -276,7 +267,7 @@ const KnowledgePage: React.FC = () => {
   };
 
   // 上传文件
-  const handleUpload = async (file: File) => {
+  const handleUpload = async () => {
     if (!selectedKnowledge) return false;
 
     setUploading(true);

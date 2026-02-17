@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.23 | 2026-02-17 | 多轮对话状态管理（摘要生成+记忆系统） |
 | 0.5.22 | 2026-02-17 | 知识库智能匹配与全库搜索 |
 | 0.5.21 | 2026-02-16 | AIChat 页面组件拆分与知识库集成 |
 | 0.5.20 | 2026-02-17 | RAG 知识库功能完整实现 |
@@ -42,6 +43,31 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.23
+
+- **多轮对话状态管理**
+  - 数据库迁移：新增 conversation_summaries（对话摘要）和 user_memory（用户记忆）表
+  - Python 记忆服务（memory_service.py）：
+    - generate_summary()：使用 LLM 生成对话摘要
+    - extract_memory()：从对话中提取用户偏好、项目信息、任务进度
+  - Electron 记忆服务（memoryService.ts）：
+    - createSummary：创建对话摘要
+    - getSummariesByConversation：获取对话的摘要列表
+    - saveMemory/saveMemories：保存用户记忆
+    - getAllMemories/getMemoriesByType：查询记忆
+    - buildMemoryContext：构建记忆上下文提示
+  - WebSocket 消息类型扩展：
+    - MEMORY_GENERATE_SUMMARY / MEMORY_GENERATE_SUMMARY_RESPONSE
+    - MEMORY_EXTRACT / MEMORY_EXTRACT_RESPONSE
+  - 前端集成：
+    - 发送消息时自动加载记忆上下文（长期记忆 + 历史摘要）
+    - 记忆上下文作为 system 消息注入到历史记录
+    - 流式结束后检查是否需要生成摘要（每 10 条消息触发）
+  - 触发机制：
+    - checkAndGenerateSummary 函数检测未摘要消息数量
+    - 达到阈值时调用 Python LLM 服务生成摘要
+    - 摘要自动保存到数据库
 
 ### 新增 (Added) - v0.5.22
 

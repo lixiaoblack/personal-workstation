@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 36 |
-| 待处理 | 0 |
+| 已完成 | 37 |
+| 待处理 | 1 |
 
 ---
 
@@ -176,6 +176,16 @@
   - 支持显示 thought/tool_call/tool_result/answer 四种步骤类型
   - 工具调用详情展示（工具名、参数、结果）
 
+- [x] AI-020: LangGraph 智能体 - 多轮对话状态管理 | 完成时间: 2026-02-17
+  - 数据库迁移：创建 conversation_summaries 和 user_memory 表
+  - Python 记忆服务：实现摘要生成和记忆提取（memory_service.py）
+  - Electron 记忆服务：添加摘要和记忆的查询/存储 API（memoryService.ts）
+  - WebSocket 消息类型：添加 Memory 相关消息类型
+  - 前端集成：新对话时加载摘要和记忆注入上下文
+  - 触发机制：消息达到阈值（10条）时自动生成摘要
+  - 摘要生成：通过 Python LLM 服务生成对话摘要
+  - 记忆上下文：将用户偏好、项目信息、历史摘要注入 LLM 提示
+
 - [x] AI-021: Skills 系统 - 技能注册机制 | 完成时间: 2026-02-17 21:00
   - 创建 Skills 模块目录结构（agent/skills/）
   - 实现 Skill 基类和类型定义（base.py）
@@ -204,7 +214,6 @@
 ### 待处理
 
 - [ ] AI-019: LangGraph 智能体 - Deep Agents 集成 | 创建时间: 2026-02-17
-- [ ] AI-020: LangGraph 智能体 - 多轮对话状态管理 | 创建时间: 2026-02-17
 
 ---
 

@@ -296,6 +296,101 @@ export interface ElectronAPI {
     canceled: boolean;
     filePaths: string[];
   }>;
+
+  // Memory 记忆管理
+  getMemoryContext: () => Promise<{
+    success: boolean;
+    memories: Array<{
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+      confidence: number;
+    }>;
+    summaries: Array<{
+      id: number;
+      conversationId: number;
+      summary: string;
+      keyTopics: string[];
+    }>;
+    contextPrompt: string;
+    error?: string;
+  }>;
+  saveMemory: (
+    memoryType: string,
+    memoryKey: string,
+    memoryValue: string,
+    sourceConversationId?: number,
+    confidence?: number
+  ) => Promise<{
+    success: boolean;
+    memory?: {
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+    };
+    error?: string;
+  }>;
+  saveMemories: (
+    memories: Array<{
+      type: string;
+      key: string;
+      value: string;
+      sourceConversationId?: number;
+    }>
+  ) => Promise<{ success: boolean; error?: string }>;
+  createSummary: (
+    conversationId: number,
+    startMessageId: number,
+    endMessageId: number,
+    summary: string,
+    keyTopics: string[],
+    messageCount: number
+  ) => Promise<{
+    success: boolean;
+    summary?: { id: number; conversationId: number; summary: string };
+    error?: string;
+  }>;
+  listMemories: (
+    memoryType?: string
+  ) => Promise<{
+    success: boolean;
+    memories: Array<{
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+      confidence: number;
+      createdAt: number;
+      updatedAt: number;
+    }>;
+    error?: string;
+  }>;
+  deleteMemory: (memoryId: number) => Promise<{ success: boolean; error?: string }>;
+  getConversationSummaries: (
+    conversationId: number
+  ) => Promise<{
+    success: boolean;
+    summaries: Array<{
+      id: number;
+      conversationId: number;
+      summary: string;
+      keyTopics: string[];
+    }>;
+    error?: string;
+  }>;
+  generateSummary: (
+    conversationId: number,
+    messages: Array<{ role: string; content: string }>,
+    modelId?: number
+  ) => Promise<{
+    success: boolean;
+    summary?: string;
+    keyTopics?: string[];
+    pendingTasks?: string[];
+    error?: string;
+  }>;
 }
 
 declare global {

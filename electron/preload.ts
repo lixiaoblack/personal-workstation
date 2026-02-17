@@ -309,6 +309,124 @@ contextBridge.exposeInMainWorld("electronAPI", {
     canceled: boolean;
     filePaths: string[];
   }> => ipcRenderer.invoke("knowledge:selectFiles"),
+
+  // Memory 记忆管理
+  getMemoryContext: (): Promise<{
+    success: boolean;
+    memories: Array<{
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+      confidence: number;
+    }>;
+    summaries: Array<{
+      id: number;
+      conversationId: number;
+      summary: string;
+      keyTopics: string[];
+    }>;
+    contextPrompt: string;
+    error?: string;
+  }> => ipcRenderer.invoke("memory:getContext"),
+  saveMemory: (
+    memoryType: string,
+    memoryKey: string,
+    memoryValue: string,
+    sourceConversationId?: number,
+    confidence?: number
+  ): Promise<{
+    success: boolean;
+    memory?: {
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+    };
+    error?: string;
+  }> =>
+    ipcRenderer.invoke(
+      "memory:save",
+      memoryType,
+      memoryKey,
+      memoryValue,
+      sourceConversationId,
+      confidence
+    ),
+  saveMemories: (
+    memories: Array<{
+      type: string;
+      key: string;
+      value: string;
+      sourceConversationId?: number;
+    }>
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("memory:saveBatch", memories),
+  createSummary: (
+    conversationId: number,
+    startMessageId: number,
+    endMessageId: number,
+    summary: string,
+    keyTopics: string[],
+    messageCount: number
+  ): Promise<{
+    success: boolean;
+    summary?: { id: number; conversationId: number; summary: string };
+    error?: string;
+  }> =>
+    ipcRenderer.invoke(
+      "memory:createSummary",
+      conversationId,
+      startMessageId,
+      endMessageId,
+      summary,
+      keyTopics,
+      messageCount
+    ),
+  listMemories: (
+    memoryType?: string
+  ): Promise<{
+    success: boolean;
+    memories: Array<{
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+      confidence: number;
+      createdAt: number;
+      updatedAt: number;
+    }>;
+    error?: string;
+  }> => ipcRenderer.invoke("memory:list", memoryType),
+  deleteMemory: (
+    memoryId: number
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("memory:delete", memoryId),
+  getConversationSummaries: (
+    conversationId: number
+  ): Promise<{
+    success: boolean;
+    summaries: Array<{
+      id: number;
+      conversationId: number;
+      summary: string;
+      keyTopics: string[];
+    }>;
+    error?: string;
+  }> => ipcRenderer.invoke("memory:getSummaries", conversationId),
+
+  // 生成摘要（通过 Python LLM 服务）
+  generateSummary: (
+    conversationId: number,
+    messages: Array<{ role: string; content: string }>,
+    modelId?: number
+  ): Promise<{
+    success: boolean;
+    summary?: string;
+    keyTopics?: string[];
+    pendingTasks?: string[];
+    error?: string;
+  }> => ipcRenderer.invoke("memory:generateSummary", conversationId, messages, modelId),
 });
 
 // 类型声明
@@ -439,6 +557,101 @@ export interface ElectronAPI {
   selectKnowledgeFiles: () => Promise<{
     canceled: boolean;
     filePaths: string[];
+  }>;
+
+  // Memory 记忆管理
+  getMemoryContext: () => Promise<{
+    success: boolean;
+    memories: Array<{
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+      confidence: number;
+    }>;
+    summaries: Array<{
+      id: number;
+      conversationId: number;
+      summary: string;
+      keyTopics: string[];
+    }>;
+    contextPrompt: string;
+    error?: string;
+  }>;
+  saveMemory: (
+    memoryType: string,
+    memoryKey: string,
+    memoryValue: string,
+    sourceConversationId?: number,
+    confidence?: number
+  ) => Promise<{
+    success: boolean;
+    memory?: {
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+    };
+    error?: string;
+  }>;
+  saveMemories: (
+    memories: Array<{
+      type: string;
+      key: string;
+      value: string;
+      sourceConversationId?: number;
+    }>
+  ) => Promise<{ success: boolean; error?: string }>;
+  createSummary: (
+    conversationId: number,
+    startMessageId: number,
+    endMessageId: number,
+    summary: string,
+    keyTopics: string[],
+    messageCount: number
+  ) => Promise<{
+    success: boolean;
+    summary?: { id: number; conversationId: number; summary: string };
+    error?: string;
+  }>;
+  listMemories: (
+    memoryType?: string
+  ) => Promise<{
+    success: boolean;
+    memories: Array<{
+      id: number;
+      memoryType: string;
+      memoryKey: string;
+      memoryValue: string;
+      confidence: number;
+      createdAt: number;
+      updatedAt: number;
+    }>;
+    error?: string;
+  }>;
+  deleteMemory: (memoryId: number) => Promise<{ success: boolean; error?: string }>;
+  getConversationSummaries: (
+    conversationId: number
+  ) => Promise<{
+    success: boolean;
+    summaries: Array<{
+      id: number;
+      conversationId: number;
+      summary: string;
+      keyTopics: string[];
+    }>;
+    error?: string;
+  }>;
+  generateSummary: (
+    conversationId: number,
+    messages: Array<{ role: string; content: string }>,
+    modelId?: number
+  ) => Promise<{
+    success: boolean;
+    summary?: string;
+    keyTopics?: string[];
+    pendingTasks?: string[];
+    error?: string;
   }>;
 }
 

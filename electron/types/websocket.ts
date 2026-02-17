@@ -69,6 +69,22 @@ export enum MessageType {
   KNOWLEDGE_SEARCH_RESPONSE = "knowledge_search_response", // 搜索知识库响应
   KNOWLEDGE_LIST_DOCUMENTS = "knowledge_list_documents", // 列出知识库文档
   KNOWLEDGE_LIST_DOCUMENTS_RESPONSE = "knowledge_list_documents_response", // 列出知识库文档响应
+
+  // Memory 记忆相关
+  MEMORY_GET_CONTEXT = "memory_get_context", // 获取记忆上下文
+  MEMORY_GET_CONTEXT_RESPONSE = "memory_get_context_response", // 获取记忆上下文响应
+  MEMORY_SAVE = "memory_save", // 保存记忆
+  MEMORY_SAVE_RESPONSE = "memory_save_response", // 保存记忆响应
+  MEMORY_CREATE_SUMMARY = "memory_create_summary", // 创建摘要
+  MEMORY_CREATE_SUMMARY_RESPONSE = "memory_create_summary_response", // 创建摘要响应
+  MEMORY_LIST = "memory_list", // 获取记忆列表
+  MEMORY_LIST_RESPONSE = "memory_list_response", // 获取记忆列表响应
+  MEMORY_DELETE = "memory_delete", // 删除记忆
+  MEMORY_DELETE_RESPONSE = "memory_delete_response", // 删除记忆响应
+  MEMORY_GENERATE_SUMMARY = "memory_generate_summary", // 生成摘要（通过 LLM）
+  MEMORY_GENERATE_SUMMARY_RESPONSE = "memory_generate_summary_response", // 生成摘要响应
+  MEMORY_EXTRACT = "memory_extract", // 提取记忆（通过 LLM）
+  MEMORY_EXTRACT_RESPONSE = "memory_extract_response", // 提取记忆响应
 }
 
 // 基础消息结构
@@ -598,6 +614,147 @@ export interface AgentToolResultMessage extends BaseMessage {
   iteration: number;
 }
 
+// ========== Memory 记忆消息 ==========
+
+// 获取记忆上下文
+export interface MemoryGetContextMessage extends BaseMessage {
+  type: MessageType.MEMORY_GET_CONTEXT;
+}
+
+export interface MemoryGetContextResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_GET_CONTEXT_RESPONSE;
+  success: boolean;
+  memories: Array<{
+    id: number;
+    memoryType: string;
+    memoryKey: string;
+    memoryValue: string;
+    confidence: number;
+  }>;
+  summaries: Array<{
+    id: number;
+    conversationId: number;
+    summary: string;
+    keyTopics: string[];
+  }>;
+  contextPrompt: string;
+}
+
+// 保存记忆
+export interface MemorySaveMessage extends BaseMessage {
+  type: MessageType.MEMORY_SAVE;
+  memoryType: "preference" | "project" | "task" | "fact" | "context";
+  memoryKey: string;
+  memoryValue: string;
+  sourceConversationId?: number;
+  confidence?: number;
+}
+
+export interface MemorySaveResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_SAVE_RESPONSE;
+  success: boolean;
+  memory?: {
+    id: number;
+    memoryType: string;
+    memoryKey: string;
+    memoryValue: string;
+  };
+  error?: string;
+}
+
+// 创建摘要
+export interface MemoryCreateSummaryMessage extends BaseMessage {
+  type: MessageType.MEMORY_CREATE_SUMMARY;
+  conversationId: number;
+  startMessageId: number;
+  endMessageId: number;
+  summary: string;
+  keyTopics: string[];
+  messageCount: number;
+}
+
+export interface MemoryCreateSummaryResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_CREATE_SUMMARY_RESPONSE;
+  success: boolean;
+  summary?: {
+    id: number;
+    conversationId: number;
+    summary: string;
+  };
+  error?: string;
+}
+
+// 获取记忆列表
+export interface MemoryListMessage extends BaseMessage {
+  type: MessageType.MEMORY_LIST;
+  memoryType?: "preference" | "project" | "task" | "fact" | "context";
+}
+
+export interface MemoryListResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_LIST_RESPONSE;
+  success: boolean;
+  memories: Array<{
+    id: number;
+    memoryType: string;
+    memoryKey: string;
+    memoryValue: string;
+    confidence: number;
+    createdAt: number;
+    updatedAt: number;
+  }>;
+}
+
+// 删除记忆
+export interface MemoryDeleteMessage extends BaseMessage {
+  type: MessageType.MEMORY_DELETE;
+  memoryId: number;
+}
+
+export interface MemoryDeleteResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_DELETE_RESPONSE;
+  success: boolean;
+  error?: string;
+}
+
+// 生成摘要（通过 LLM）
+export interface MemoryGenerateSummaryMessage extends BaseMessage {
+  type: MessageType.MEMORY_GENERATE_SUMMARY;
+  conversationId: number;
+  messages: Array<{ role: string; content: string }>;
+  modelId?: number;
+}
+
+export interface MemoryGenerateSummaryResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_GENERATE_SUMMARY_RESPONSE;
+  success: boolean;
+  conversationId: number;
+  summary?: string;
+  keyTopics?: string[];
+  pendingTasks?: string[];
+  error?: string;
+}
+
+// 提取记忆（通过 LLM）
+export interface MemoryExtractMessage extends BaseMessage {
+  type: MessageType.MEMORY_EXTRACT;
+  conversationId?: number;
+  messages: Array<{ role: string; content: string }>;
+  modelId?: number;
+}
+
+export interface MemoryExtractResponseMessage extends BaseMessage {
+  type: MessageType.MEMORY_EXTRACT_RESPONSE;
+  success: boolean;
+  conversationId?: number;
+  memories?: {
+    preferences?: Record<string, string>;
+    projects?: Record<string, string>;
+    tasks?: Record<string, string>;
+    facts?: Record<string, string>;
+  };
+  error?: string;
+}
+
 // 联合类型
 export type WebSocketMessage =
   | ConnectionAckMessage
@@ -645,7 +802,21 @@ export type WebSocketMessage =
   | KnowledgeSearchMessage
   | KnowledgeSearchResponseMessage
   | KnowledgeListDocumentsMessage
-  | KnowledgeListDocumentsResponseMessage;
+  | KnowledgeListDocumentsResponseMessage
+  | MemoryGetContextMessage
+  | MemoryGetContextResponseMessage
+  | MemorySaveMessage
+  | MemorySaveResponseMessage
+  | MemoryCreateSummaryMessage
+  | MemoryCreateSummaryResponseMessage
+  | MemoryListMessage
+  | MemoryListResponseMessage
+  | MemoryDeleteMessage
+  | MemoryDeleteResponseMessage
+  | MemoryGenerateSummaryMessage
+  | MemoryGenerateSummaryResponseMessage
+  | MemoryExtractMessage
+  | MemoryExtractResponseMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

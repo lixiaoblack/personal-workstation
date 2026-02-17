@@ -429,18 +429,23 @@ class SkillToolAdapter(BaseTool):
         """
         从技能配置构建参数 schema
 
+        使用 Pydantic v2 的 create_model 动态创建模型。
+
         Args:
             skill: BaseSkill 实例
 
         Returns:
             Pydantic Model 类
         """
+        from pydantic import create_model
+
         parameters = skill.config.parameters
 
         if not parameters:
             return None
 
-        # 动态创建 Pydantic Model
+        # 使用 pydantic.create_model 动态创建模型
+        # Pydantic v2 格式: field_name: (type, Field(...))
         fields = {}
         for param_name, param_config in parameters.items():
             param_type = str  # 默认字符串类型
@@ -448,15 +453,17 @@ class SkillToolAdapter(BaseTool):
             param_required = param_config.get("required", False)
 
             if param_required:
+                # 必填字段：使用 Field(...) 作为默认值
                 fields[param_name] = (param_type, Field(description=param_desc))
             else:
+                # 可选字段：使用 Field(default="") 作为默认值
                 fields[param_name] = (param_type, Field(default="", description=param_desc))
 
-        # 动态创建类
-        return type(
+        # 动态创建 Pydantic 模型
+        return create_model(
             f"{skill.name.capitalize()}ArgsSchema",
-            (ToolSchema,),
-            fields
+            __base__=ToolSchema,
+            **fields
         )
 
     def _run(self, **kwargs) -> str:

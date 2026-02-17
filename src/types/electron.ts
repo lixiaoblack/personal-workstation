@@ -62,6 +62,10 @@ export type {
   OllamaModel,
   OllamaStatus,
   OllamaTestResult,
+  // Skills 技能相关类型
+  SkillInfo,
+  SkillType,
+  SkillTrigger,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -103,6 +107,7 @@ import type {
   OllamaStatus,
   OllamaModel,
   OllamaTestResult,
+  SkillInfo,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -199,6 +204,27 @@ export interface ElectronAPI {
   getOllamaStatus: (host?: string) => Promise<OllamaStatus>;
   getOllamaModels: (host?: string) => Promise<OllamaModel[]>;
   testOllamaConnection: (host?: string) => Promise<OllamaTestResult>;
+
+  // Skills 技能相关 API
+  getSkillList: () => Promise<{
+    success: boolean;
+    skills: SkillInfo[];
+    count: number;
+    error?: string;
+  }>;
+  executeSkill: (skillName: string, parameters?: Record<string, unknown>) => Promise<{
+    success: boolean;
+    skillName: string;
+    result?: string;
+    error?: string;
+  }>;
+  reloadSkills: (skillName?: string) => Promise<{
+    success: boolean;
+    skillName?: string;
+    message?: string;
+    count?: number;
+    error?: string;
+  }>;
 }
 
 declare global {

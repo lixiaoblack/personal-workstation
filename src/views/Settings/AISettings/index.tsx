@@ -1,6 +1,6 @@
 /**
  * AISettings AI 模型设置页面
- * 包含 Python 环境检测、服务管理、模型配置管理
+ * 包含 Python 环境检测、服务管理、模型配置管理、技能管理
  * 配置变更后自动同步 MobX Store
  */
 import React, { useState, useEffect } from "react";
@@ -14,10 +14,12 @@ import type {
   ModelConfig,
   ModelConfigListItem,
   CreateModelConfigInput,
+  SkillInfo,
 } from "@/types/electron";
 import { modelStore } from "@/stores";
 import { ModelConfigCard } from "./components/ModelConfigCard";
 import { ModelConfigModal } from "./components/ModelConfigModal";
+import { SkillsCard } from "./components/SkillsCard";
 
 const AISettings: React.FC = () => {
   const navigate = useNavigate();
@@ -47,6 +49,10 @@ const AISettings: React.FC = () => {
   const [editingConfig, setEditingConfig] = useState<ModelConfig | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
 
+  // Skills 技能状态
+  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+
   // 初始化
   useEffect(() => {
     const init = async () => {
@@ -55,6 +61,7 @@ const AISettings: React.FC = () => {
         loadInstallGuide(),
         loadServiceInfo(),
         loadModelConfigs(),
+        loadSkills(),
       ]);
     };
     init();
@@ -117,6 +124,46 @@ const AISettings: React.FC = () => {
       message.error("加载模型配置失败");
     } finally {
       setModelLoading(false);
+    }
+  };
+
+  // 加载技能列表
+  const loadSkills = async () => {
+    setSkillsLoading(true);
+    try {
+      const result = await window.electronAPI.getSkillList();
+      if (result.success) {
+        setSkills(result.skills);
+      } else {
+        console.error("加载技能列表失败:", result.error);
+      }
+    } catch (error) {
+      console.error("加载技能列表失败:", error);
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  // 重载技能
+  const handleReloadSkills = async (skillName?: string) => {
+    const result = await window.electronAPI.reloadSkills(skillName);
+    if (result.success) {
+      await loadSkills();
+    } else {
+      throw new Error(result.error || "重载失败");
+    }
+  };
+
+  // 执行技能
+  const handleExecuteSkill = async (
+    skillName: string,
+    parameters: Record<string, unknown>
+  ): Promise<string | null> => {
+    const result = await window.electronAPI.executeSkill(skillName, parameters);
+    if (result.success) {
+      return result.result || "执行成功";
+    } else {
+      throw new Error(result.error || "执行失败");
     }
   };
 
@@ -578,6 +625,22 @@ const AISettings: React.FC = () => {
     </div>
   );
 
+  // 渲染技能管理区域
+  const renderSkillsSection = () => (
+    <div>
+      <div className="flex items-center gap-2 mb-6">
+        <span className="material-symbols-outlined text-primary">extension</span>
+        <h2 className="text-xl font-bold text-text-primary">技能管理</h2>
+      </div>
+      <SkillsCard
+        skills={skills}
+        loading={skillsLoading}
+        onReload={handleReloadSkills}
+        onExecute={handleExecuteSkill}
+      />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-bg-primary">
       {/* 顶部导航栏 */}
@@ -602,6 +665,8 @@ const AISettings: React.FC = () => {
         <div className="space-y-10">
           {/* 模型配置 */}
           <section>{renderModelConfigSection()}</section>
+          {/* 技能管理 */}
+          <section>{renderSkillsSection()}</section>
           {/* Python 环境 & 服务 */}
           <section>
             <div className="flex items-center gap-2 mb-6">

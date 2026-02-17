@@ -31,6 +31,12 @@ const CodeBlock: React.FC<{
   );
 };
 
+// 安全的内容过滤：移除空的代码块
+const sanitizeMarkdown = (content: string): string => {
+  // 移除空的代码块 ```\n``` 或 ```\n\n```
+  return content.replace(/```\s*```/g, "").replace(/```\n*```/g, "");
+};
+
 // Markdown 组件配置
 const components: Components = {
   // 代码块
@@ -54,6 +60,27 @@ const components: Components = {
         {String(children).replace(/\n$/, "")}
       </CodeBlock>
     );
+  },
+  // pre 标签（代码块容器）
+  pre: ({ children }) => {
+    // 检查 children 是否为空或只包含空白
+    const hasContent = React.Children.toArray(children).some((child) => {
+      if (typeof child === "string") {
+        return child.trim().length > 0;
+      }
+      // 如果是 React 元素，检查是否有内容
+      if (React.isValidElement(child)) {
+        // CodeBlock 组件会在内容为空时返回 null
+        return child !== null;
+      }
+      return true;
+    });
+
+    if (!hasContent) {
+      return null;
+    }
+
+    return <pre className="my-3">{children}</pre>;
   },
   // 段落
   p: ({ children }) => (
@@ -126,10 +153,13 @@ const components: Components = {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(
   ({ content, className = "" }) => {
+    // 清理内容：移除空的代码块
+    const sanitizedContent = sanitizeMarkdown(content);
+
     return (
       <div className={`markdown-content ${className}`}>
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-          {content}
+          {sanitizedContent}
         </ReactMarkdown>
       </div>
     );

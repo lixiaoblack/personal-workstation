@@ -100,7 +100,8 @@ class CalculatorSkill(BuiltinSkill):
         # 简单的安全检查
         expression = expression.strip()
         allowed_chars = set("0123456789+-*/.() %^")
-        allowed_chars.update(c.lower() for c in "sqrtabscoundminmaxrtpwelg10xp")
+        allowed_chars.update(c.lower()
+                             for c in "sqrtabscoundminmaxrtpwelg10xp")
 
         for char in expression:
             if char.lower() not in allowed_chars and not char.isalpha():
@@ -185,13 +186,15 @@ class DateTimeSkill(BuiltinSkill):
             return f"今天是 {now.strftime('%Y年%m月%d日')} {weekday}"
 
         elif "明天" in query:
-            tomorrow = datetime(now.year, now.month, now.day) + __import__("datetime").timedelta(days=1)
+            tomorrow = datetime(now.year, now.month, now.day) + \
+                __import__("datetime").timedelta(days=1)
             weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
             weekday = weekdays[tomorrow.weekday()]
             return f"明天是 {tomorrow.strftime('%Y年%m月%d日')} {weekday}"
 
         elif "昨天" in query:
-            yesterday = datetime(now.year, now.month, now.day) - __import__("datetime").timedelta(days=1)
+            yesterday = datetime(now.year, now.month, now.day) - \
+                __import__("datetime").timedelta(days=1)
             weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
             weekday = weekdays[yesterday.weekday()]
             return f"昨天是 {yesterday.strftime('%Y年%m月%d日')} {weekday}"

@@ -629,7 +629,9 @@ const AISettings: React.FC = () => {
   const renderSkillsSection = () => (
     <div>
       <div className="flex items-center gap-2 mb-6">
-        <span className="material-symbols-outlined text-primary">extension</span>
+        <span className="material-symbols-outlined text-primary">
+          extension
+        </span>
         <h2 className="text-xl font-bold text-text-primary">技能管理</h2>
       </div>
       <SkillsCard

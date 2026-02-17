@@ -375,19 +375,22 @@ function registerIpcHandlers() {
   });
 
   // 执行技能
-  ipcMain.handle("skill:execute", async (_, skillName: string, parameters?: Record<string, unknown>) => {
-    const wsInfo = websocketService.getServerInfo();
+  ipcMain.handle(
+    "skill:execute",
+    async (_, skillName: string, parameters?: Record<string, unknown>) => {
+      const wsInfo = websocketService.getServerInfo();
 
-    if (!wsInfo.running || !wsInfo.pythonConnected) {
-      return {
-        success: false,
-        skillName,
-        error: "Python 服务未连接",
-      };
+      if (!wsInfo.running || !wsInfo.pythonConnected) {
+        return {
+          success: false,
+          skillName,
+          error: "Python 服务未连接",
+        };
+      }
+
+      return websocketService.executeSkill(skillName, parameters);
     }
-
-    return websocketService.executeSkill(skillName, parameters);
-  });
+  );
 
   // 重载技能
   ipcMain.handle("skill:reload", async (_, skillName?: string) => {

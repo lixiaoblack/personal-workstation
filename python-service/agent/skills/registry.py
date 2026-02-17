@@ -111,7 +111,8 @@ class SkillRegistry:
         if skill.name not in self._trigger_index[trigger]:
             self._trigger_index[trigger].append(skill.name)
 
-        logger.info(f"已注册技能: {skill.name} (类型: {skill.config.type.value}, 触发: {trigger.value})")
+        logger.info(
+            f"已注册技能: {skill.name} (类型: {skill.config.type.value}, 触发: {trigger.value})")
 
     def unregister(self, name: str) -> bool:
         """

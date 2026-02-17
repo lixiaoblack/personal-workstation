@@ -391,6 +391,142 @@ class EchoTool(BaseTool):
         return f"Echo: {message}"
 
 
+# ==================== Skill 工具适配器 ====================
+
+class SkillToolAdapter(BaseTool):
+    """
+    技能工具适配器
+
+    将 Skill 包装成 Tool，让 Agent 可以通过工具调用使用技能。
+
+    这个适配器的作用：
+    1. 将技能注册为 Agent 可调用的工具
+    2. 同步调用技能的异步执行方法
+    3. 转换技能参数为工具参数格式
+
+    示例：
+        skill = CalculatorSkill()
+        tool = SkillToolAdapter(skill)
+        registry.register(tool)
+        # 现在 Agent 可以通过工具调用技能了
+    """
+
+    def __init__(self, skill):
+        """
+        初始化技能工具适配器
+
+        Args:
+            skill: BaseSkill 实例
+        """
+        self._skill = skill
+        self.name = skill.name
+        self.description = skill.description
+
+        # 从技能配置构建参数 schema
+        self.args_schema = self._build_args_schema(skill)
+
+    def _build_args_schema(self, skill):
+        """
+        从技能配置构建参数 schema
+
+        Args:
+            skill: BaseSkill 实例
+
+        Returns:
+            Pydantic Model 类
+        """
+        parameters = skill.config.parameters
+
+        if not parameters:
+            return None
+
+        # 动态创建 Pydantic Model
+        fields = {}
+        for param_name, param_config in parameters.items():
+            param_type = str  # 默认字符串类型
+            param_desc = param_config.get("description", "")
+            param_required = param_config.get("required", False)
+
+            if param_required:
+                fields[param_name] = (param_type, Field(description=param_desc))
+            else:
+                fields[param_name] = (param_type, Field(default="", description=param_desc))
+
+        # 动态创建类
+        return type(
+            f"{skill.name.capitalize()}ArgsSchema",
+            (ToolSchema,),
+            fields
+        )
+
+    def _run(self, **kwargs) -> str:
+        """
+        执行技能（同步包装）
+
+        由于 Agent 工具是同步的，我们需要在事件循环中执行异步技能。
+
+        Args:
+            **kwargs: 技能参数
+
+        Returns:
+            技能执行结果
+        """
+        import asyncio
+
+        try:
+            # 尝试在现有事件循环中运行
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果事件循环正在运行，创建一个新的任务
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        self._skill.execute(**kwargs)
+                    )
+                    return future.result()
+            else:
+                # 如果没有运行的事件循环，直接运行
+                return loop.run_until_complete(self._skill.execute(**kwargs))
+        except RuntimeError:
+            # 没有事件循环，创建一个新的
+            return asyncio.run(self._skill.execute(**kwargs))
+
+
+def register_skills_as_tools(skill_registry, tool_registry):
+    """
+    将所有技能注册为工具
+
+    这个函数将技能注册中心的技能包装成工具，注册到工具注册中心。
+    这样 Agent 就可以通过工具调用使用技能了。
+
+    Args:
+        skill_registry: 技能注册中心
+        tool_registry: 工具注册中心
+
+    Returns:
+        注册的工具数量
+    """
+    count = 0
+    for skill in skill_registry.list_skills(enabled_only=True):
+        try:
+            # 创建工具适配器
+            tool = SkillToolAdapter(skill)
+
+            # 检查工具是否已存在
+            if tool.name not in tool_registry.list_tools():
+                tool_registry.register(tool)
+                count += 1
+                logger.info(f"已将技能 {skill.name} 注册为工具")
+            else:
+                logger.debug(f"工具 {tool.name} 已存在，跳过注册")
+
+        except Exception as e:
+            logger.error(f"注册技能 {skill.name} 为工具失败: {e}")
+
+    return count
+
+
 # ==================== 全局工具注册中心 ====================
 
 # 创建全局工具注册中心实例

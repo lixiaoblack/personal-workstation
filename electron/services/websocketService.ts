@@ -669,7 +669,9 @@ async function sendSkillRequest<T>(
       return;
     }
 
-    const messageId = `skill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const messageId = `skill_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
     const message = createMessage(messageType as never, data || {});
 
     // 设置超时

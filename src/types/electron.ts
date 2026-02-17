@@ -212,7 +212,10 @@ export interface ElectronAPI {
     count: number;
     error?: string;
   }>;
-  executeSkill: (skillName: string, parameters?: Record<string, unknown>) => Promise<{
+  executeSkill: (
+    skillName: string,
+    parameters?: Record<string, unknown>
+  ) => Promise<{
     success: boolean;
     skillName: string;
     result?: string;

@@ -37,9 +37,10 @@ def init_skills_system():
     1. 初始化技能注册中心
     2. 注册内置技能
     3. 加载用户自定义技能
+    4. 将技能注册为 Agent 工具
     """
     from agent.skills import global_skill_registry, init_builtin_skills, SkillLoader
-    from agent.tools import global_tool_registry
+    from agent.tools import global_tool_registry, register_skills_as_tools
 
     # 1. 注册内置技能
     init_builtin_skills(global_skill_registry)
@@ -58,6 +59,10 @@ def init_skills_system():
         logger.info(f"从 {skills_dir} 加载了 {len(skills)} 个自定义技能")
 
     logger.info(f"Skills 系统初始化完成，共 {len(global_skill_registry)} 个技能")
+
+    # 4. 将技能注册为 Agent 工具（让 Agent 可以调用技能）
+    tool_count = register_skills_as_tools(global_skill_registry, global_tool_registry)
+    logger.info(f"已将 {tool_count} 个技能注册为 Agent 工具")
 
 
 class AgentService:

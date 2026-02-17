@@ -209,7 +209,8 @@ class SkillConfig(BaseModel):
     type: SkillType = Field(default=SkillType.CUSTOM, description="技能类型")
 
     # 触发方式
-    trigger: SkillTrigger = Field(default=SkillTrigger.MANUAL, description="触发方式")
+    trigger: SkillTrigger = Field(
+        default=SkillTrigger.MANUAL, description="触发方式")
 
     # 触发关键词（当 trigger=keyword 时使用）
     trigger_keywords: List[str] = Field(
@@ -578,7 +579,8 @@ class YamlSkill(BaseSkill):
                 logger.info(f"技能 {self.name} 执行工具 {tool_binding.tool_name} 成功")
 
             except Exception as e:
-                logger.error(f"技能 {self.name} 执行工具 {tool_binding.tool_name} 失败: {e}")
+                logger.error(
+                    f"技能 {self.name} 执行工具 {tool_binding.tool_name} 失败: {e}")
                 return f"工具执行失败: {str(e)}"
 
         # 如果只有一个工具，直接返回结果

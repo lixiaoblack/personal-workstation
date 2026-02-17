@@ -375,7 +375,8 @@ class SkillLoader:
                                     old_name = name
                                     break
                             if old_name:
-                                self.loader._skill_registry.unregister(old_name)
+                                self.loader._skill_registry.unregister(
+                                    old_name)
                             # 注册新的
                             self.loader._skill_registry.register(skill)
                         if on_modified:
@@ -466,4 +467,3 @@ def load_skills_from_directory(
     """
     loader = SkillLoader(tool_registry, skill_registry)
     return loader.load_from_directory(directory)
-

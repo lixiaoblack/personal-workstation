@@ -227,7 +227,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Skills 技能相关
   getSkillList: (): Promise<SkillListResult> =>
     ipcRenderer.invoke("skill:getList"),
-  executeSkill: (skillName: string, parameters?: Record<string, unknown>): Promise<SkillExecuteResult> =>
+  executeSkill: (
+    skillName: string,
+    parameters?: Record<string, unknown>
+  ): Promise<SkillExecuteResult> =>
     ipcRenderer.invoke("skill:execute", skillName, parameters),
   reloadSkills: (skillName?: string): Promise<SkillReloadResult> =>
     ipcRenderer.invoke("skill:reload", skillName),
@@ -322,7 +325,10 @@ export interface ElectronAPI {
 
   // Skills 技能相关
   getSkillList: () => Promise<SkillListResult>;
-  executeSkill: (skillName: string, parameters?: Record<string, unknown>) => Promise<SkillExecuteResult>;
+  executeSkill: (
+    skillName: string,
+    parameters?: Record<string, unknown>
+  ) => Promise<SkillExecuteResult>;
   reloadSkills: (skillName?: string) => Promise<SkillReloadResult>;
 }
 

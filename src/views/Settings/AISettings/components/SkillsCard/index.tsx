@@ -10,7 +10,10 @@ interface SkillsCardProps {
   skills: SkillInfo[];
   loading: boolean;
   onReload: (skillName?: string) => Promise<void>;
-  onExecute: (skillName: string, parameters: Record<string, unknown>) => Promise<string | null>;
+  onExecute: (
+    skillName: string,
+    parameters: Record<string, unknown>
+  ) => Promise<string | null>;
 }
 
 const { TextArea } = Input;
@@ -76,7 +79,9 @@ const SkillsCard: React.FC<SkillsCardProps> = ({
     setReloading(true);
     try {
       await onReload(skillName);
-      message.success(skillName ? `技能 ${skillName} 重载成功` : "所有技能重载成功");
+      message.success(
+        skillName ? `技能 ${skillName} 重载成功` : "所有技能重载成功"
+      );
     } catch (error) {
       message.error("重载失败");
     } finally {
@@ -128,7 +133,9 @@ const SkillsCard: React.FC<SkillsCardProps> = ({
       newEnabled.delete(skillName);
     }
     setEnabledSkills(newEnabled);
-    message.info(`技能 ${skillName} ${enabled ? "已启用" : "已禁用"}（功能开发中）`);
+    message.info(
+      `技能 ${skillName} ${enabled ? "已启用" : "已禁用"}（功能开发中）`
+    );
   };
 
   return (
@@ -142,9 +149,7 @@ const SkillsCard: React.FC<SkillsCardProps> = ({
           </div>
           <div>
             <h3 className="font-bold text-text-primary">技能管理</h3>
-            <p className="text-xs text-text-tertiary">
-              管理和执行智能体技能
-            </p>
+            <p className="text-xs text-text-tertiary">管理和执行智能体技能</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -154,9 +159,7 @@ const SkillsCard: React.FC<SkillsCardProps> = ({
           <Button
             size="small"
             icon={
-              <span className="material-symbols-outlined text-sm">
-                refresh
-              </span>
+              <span className="material-symbols-outlined text-sm">refresh</span>
             }
             onClick={() => handleReload()}
             loading={reloading}
@@ -193,9 +196,16 @@ const SkillsCard: React.FC<SkillsCardProps> = ({
                     {skill.displayName}
                   </span>
                   <Tag color={getTypeColor(skill.type)} className="text-xs">
-                    {skill.type === "builtin" ? "内置" : skill.type === "custom" ? "自定义" : "组合"}
+                    {skill.type === "builtin"
+                      ? "内置"
+                      : skill.type === "custom"
+                      ? "自定义"
+                      : "组合"}
                   </Tag>
-                  <Tag color={getTriggerColor(skill.trigger)} className="text-xs">
+                  <Tag
+                    color={getTriggerColor(skill.trigger)}
+                    className="text-xs"
+                  >
                     {getTriggerLabel(skill.trigger)}
                   </Tag>
                 </div>
@@ -224,7 +234,9 @@ const SkillsCard: React.FC<SkillsCardProps> = ({
                 <Switch
                   size="small"
                   checked={enabledSkills.has(skill.name)}
-                  onChange={(checked) => handleToggleEnabled(skill.name, checked)}
+                  onChange={(checked) =>
+                    handleToggleEnabled(skill.name, checked)
+                  }
                 />
                 <Button
                   size="small"

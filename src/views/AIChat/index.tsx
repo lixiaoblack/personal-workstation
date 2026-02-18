@@ -170,71 +170,85 @@ const AIChatComponent: React.FC = () => {
 
   const SUMMARY_THRESHOLD = 10; // 每10条消息生成一次摘要
 
-  const checkAndGenerateSummary = useCallback(async (conversationId: number) => {
-    try {
-      // 获取当前对话的消息数量
-      const recentMessages = await window.electronAPI.getRecentMessages(
-        conversationId,
-        100 // 获取足够多的消息来计算
-      );
-      const messageCount = recentMessages.length;
+  const checkAndGenerateSummary = useCallback(
+    async (conversationId: number) => {
+      try {
+        // 获取当前对话的消息数量
+        const recentMessages = await window.electronAPI.getRecentMessages(
+          conversationId,
+          100 // 获取足够多的消息来计算
+        );
+        const messageCount = recentMessages.length;
 
-      // 获取已有的摘要
-      const summariesResult = await window.electronAPI.getConversationSummaries(conversationId);
-      const existingSummaries = summariesResult.success ? summariesResult.summaries : [];
+        // 获取已有的摘要
+        const summariesResult =
+          await window.electronAPI.getConversationSummaries(conversationId);
+        const existingSummaries = summariesResult.success
+          ? summariesResult.summaries
+          : [];
 
-      // 计算已摘要的消息数量（通过 endMessageId 判断）
-      let summarizedMessageCount = 0;
-      if (existingSummaries.length > 0) {
-        // 获取最新摘要
-        const lastSummary = existingSummaries[0];
-        // 尝试获取 endMessageId（需要从后端返回）
-        const summaryData = lastSummary as unknown as { endMessageId?: number };
-        if (summaryData.endMessageId) {
-          // 找到这个消息在 recentMessages 中的位置
-          const lastSummaryIndex = recentMessages.findIndex(
-            (m) => m.id <= summaryData.endMessageId!
-          );
-          if (lastSummaryIndex >= 0) {
-            summarizedMessageCount = lastSummaryIndex + 1;
+        // 计算已摘要的消息数量（通过 endMessageId 判断）
+        let summarizedMessageCount = 0;
+        if (existingSummaries.length > 0) {
+          // 获取最新摘要
+          const lastSummary = existingSummaries[0];
+          // 尝试获取 endMessageId（需要从后端返回）
+          const summaryData = lastSummary as unknown as {
+            endMessageId?: number;
+          };
+          if (summaryData.endMessageId) {
+            // 找到这个消息在 recentMessages 中的位置
+            const lastSummaryIndex = recentMessages.findIndex(
+              (m) => m.id <= summaryData.endMessageId!
+            );
+            if (lastSummaryIndex >= 0) {
+              summarizedMessageCount = lastSummaryIndex + 1;
+            }
           }
         }
-      }
 
-      // 计算未摘要的消息数量
-      const unsummarizedCount = messageCount - summarizedMessageCount;
+        // 计算未摘要的消息数量
+        const unsummarizedCount = messageCount - summarizedMessageCount;
 
-      // 检查是否需要生成新摘要
-      if (unsummarizedCount >= SUMMARY_THRESHOLD) {
-        console.log("[AIChat] 触发摘要生成，未摘要消息数量:", unsummarizedCount);
-
-        // 获取需要摘要的消息（未摘要的部分）
-        const messagesToSummarize = recentMessages
-          .slice(summarizedMessageCount)
-          .map((m) => ({
-            role: m.role,
-            content: m.content,
-          }));
-
-        if (messagesToSummarize.length >= SUMMARY_THRESHOLD) {
-          // 调用 Python 服务生成摘要
-          const result = await window.electronAPI.generateSummary(
-            conversationId,
-            messagesToSummarize,
-            currentModel?.id
+        // 检查是否需要生成新摘要
+        if (unsummarizedCount >= SUMMARY_THRESHOLD) {
+          console.log(
+            "[AIChat] 触发摘要生成，未摘要消息数量:",
+            unsummarizedCount
           );
 
-          if (result.success) {
-            console.log("[AIChat] 摘要生成成功:", result.summary?.substring(0, 50));
-          } else {
-            console.error("[AIChat] 摘要生成失败:", result.error);
+          // 获取需要摘要的消息（未摘要的部分）
+          const messagesToSummarize = recentMessages
+            .slice(summarizedMessageCount)
+            .map((m) => ({
+              role: m.role,
+              content: m.content,
+            }));
+
+          if (messagesToSummarize.length >= SUMMARY_THRESHOLD) {
+            // 调用 Python 服务生成摘要
+            const result = await window.electronAPI.generateSummary(
+              conversationId,
+              messagesToSummarize,
+              currentModel?.id
+            );
+
+            if (result.success) {
+              console.log(
+                "[AIChat] 摘要生成成功:",
+                result.summary?.substring(0, 50)
+              );
+            } else {
+              console.error("[AIChat] 摘要生成失败:", result.error);
+            }
           }
         }
+      } catch (error) {
+        console.error("检查摘要生成失败:", error);
       }
-    } catch (error) {
-      console.error("检查摘要生成失败:", error);
-    }
-  }, [currentModel?.id]);
+    },
+    [currentModel?.id]
+  );
 
   // ===== WebSocket 消息处理 =====
 
@@ -551,7 +565,10 @@ const AIChatComponent: React.FC = () => {
       const memoryResult = await window.electronAPI.getMemoryContext();
       if (memoryResult.success && memoryResult.contextPrompt) {
         memoryContext = memoryResult.contextPrompt;
-        console.log("[AIChat] 已加载记忆上下文:", memoryContext.substring(0, 100));
+        console.log(
+          "[AIChat] 已加载记忆上下文:",
+          memoryContext.substring(0, 100)
+        );
       }
     } catch (error) {
       console.error("获取记忆上下文失败:", error);

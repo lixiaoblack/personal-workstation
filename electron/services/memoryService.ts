@@ -322,7 +322,9 @@ export function getMemoriesByType(
  */
 export function deleteMemory(memoryId: number): boolean {
   const db = getDatabase();
-  const result = db.prepare("DELETE FROM user_memory WHERE id = ?").run(memoryId);
+  const result = db
+    .prepare("DELETE FROM user_memory WHERE id = ?")
+    .run(memoryId);
   return result.changes > 0;
 }
 

@@ -39,7 +39,11 @@ import {
   LoadingOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import type { KnowledgeInfo, KnowledgeDocumentInfo, ModelConfigListItem } from "@/types/electron";
+import type {
+  KnowledgeInfo,
+  KnowledgeDocumentInfo,
+  ModelConfigListItem,
+} from "@/types/electron";
 import { formatFileSize } from "./config";
 
 const { Text, Paragraph } = Typography;

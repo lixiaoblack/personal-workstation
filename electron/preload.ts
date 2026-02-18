@@ -351,7 +351,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     summary: string,
     keyTopics: string[],
     messageCount: number
-  ): Promise<Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">> =>
+  ): Promise<
+    Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">
+  > =>
     ipcRenderer.invoke(
       "memory:createSummary",
       conversationId,
@@ -387,8 +389,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
     modelId?: number
-  ): Promise<Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">> =>
-    ipcRenderer.invoke("memory:generateSummary", conversationId, messages, modelId),
+  ): Promise<
+    Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
+  > =>
+    ipcRenderer.invoke(
+      "memory:generateSummary",
+      conversationId,
+      messages,
+      modelId
+    ),
 });
 
 // 类型声明
@@ -508,9 +517,7 @@ export interface ElectronAPI {
     query: string,
     topK?: number
   ) => Promise<KnowledgeSearchResultData>;
-  listKnowledgeDocuments: (
-    knowledgeId: string
-  ) => Promise<{
+  listKnowledgeDocuments: (knowledgeId: string) => Promise<{
     success: boolean;
     documents: KnowledgeDocumentInfo[];
     count: number;
@@ -547,16 +554,16 @@ export interface ElectronAPI {
     summary: string,
     keyTopics: string[],
     messageCount: number
-  ) => Promise<Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">>;
+  ) => Promise<
+    Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">
+  >;
   listMemories: (
     memoryType?: string
   ) => Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">>;
   deleteMemory: (
     memoryId: number
   ) => Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">>;
-  getConversationSummaries: (
-    conversationId: number
-  ) => Promise<{
+  getConversationSummaries: (conversationId: number) => Promise<{
     success: boolean;
     summaries: Array<{
       id: number;
@@ -570,7 +577,9 @@ export interface ElectronAPI {
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
     modelId?: number
-  ) => Promise<Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">>;
+  ) => Promise<
+    Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
+  >;
 }
 
 declare global {

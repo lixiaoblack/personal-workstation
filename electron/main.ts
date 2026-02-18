@@ -722,29 +722,35 @@ function registerIpcHandlers() {
   );
 
   // 批量保存记忆
-  ipcMain.handle("memory:saveBatch", async (_event, memories: Array<{
-    type: string;
-    key: string;
-    value: string;
-    sourceConversationId?: number;
-  }>) => {
-    try {
-      memoryService.saveMemories(
-        memories.map((m) => ({
-          type: m.type as memoryService.UserMemory["memoryType"],
-          key: m.key,
-          value: m.value,
-          sourceConversationId: m.sourceConversationId,
-        }))
-      );
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: String(error),
-      };
+  ipcMain.handle(
+    "memory:saveBatch",
+    async (
+      _event,
+      memories: Array<{
+        type: string;
+        key: string;
+        value: string;
+        sourceConversationId?: number;
+      }>
+    ) => {
+      try {
+        memoryService.saveMemories(
+          memories.map((m) => ({
+            type: m.type as memoryService.UserMemory["memoryType"],
+            key: m.key,
+            value: m.value,
+            sourceConversationId: m.sourceConversationId,
+          }))
+        );
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: String(error),
+        };
+      }
     }
-  });
+  );
 
   // 创建摘要
   ipcMain.handle(
@@ -819,7 +825,8 @@ function registerIpcHandlers() {
     "memory:getSummaries",
     async (_event, conversationId: number) => {
       try {
-        const summaries = memoryService.getSummariesByConversation(conversationId);
+        const summaries =
+          memoryService.getSummariesByConversation(conversationId);
         return {
           success: true,
           summaries,
@@ -860,7 +867,8 @@ function registerIpcHandlers() {
           );
           const messageCount = recentMessages.length;
           const startMessageId = recentMessages[0]?.id || 0;
-          const endMessageId = recentMessages[recentMessages.length - 1]?.id || 0;
+          const endMessageId =
+            recentMessages[recentMessages.length - 1]?.id || 0;
 
           memoryService.createSummary(
             conversationId,

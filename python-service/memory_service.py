@@ -199,7 +199,8 @@ class MemoryService:
                 return {}
 
             # 构建提示
-            prompt = self.MEMORY_EXTRACTION_PROMPT.format(conversation=conversation_text)
+            prompt = self.MEMORY_EXTRACTION_PROMPT.format(
+                conversation=conversation_text)
 
             # 调用 LLM
             response = await model_router.chat_async(
@@ -238,7 +239,8 @@ class MemoryService:
         except json.JSONDecodeError:
             # 尝试提取 JSON 块
             import re
-            json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', response)
+            json_match = re.search(
+                r'```(?:json)?\s*([\s\S]*?)\s*```', response)
             if json_match:
                 try:
                     return json.loads(json_match.group(1))

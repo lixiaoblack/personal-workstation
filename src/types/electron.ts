@@ -336,16 +336,16 @@ export interface ElectronAPI {
     summary: string,
     keyTopics: string[],
     messageCount: number
-  ) => Promise<Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">>;
+  ) => Promise<
+    Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">
+  >;
   listMemories: (
     memoryType?: string
   ) => Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">>;
   deleteMemory: (
     memoryId: number
   ) => Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">>;
-  getConversationSummaries: (
-    conversationId: number
-  ) => Promise<{
+  getConversationSummaries: (conversationId: number) => Promise<{
     success: boolean;
     summaries: Array<{
       id: number;
@@ -359,7 +359,9 @@ export interface ElectronAPI {
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
     modelId?: number
-  ) => Promise<Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">>;
+  ) => Promise<
+    Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
+  >;
 }
 
 declare global {

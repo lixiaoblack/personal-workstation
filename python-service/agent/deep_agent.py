@@ -174,9 +174,12 @@ class DeepAgentWrapper:
 
         if self._model_config is None:
             if self.model_id:
-                self._model_config = model_router.get_model_config(self.model_id)
+                self._model_config = model_router.get_config(self.model_id)
             else:
-                self._model_config = model_router.get_default_model_config()
+                # 获取默认模型（第一个已注册的模型）
+                if model_router._models:
+                    first_model_id = list(model_router._models.keys())[0]
+                    self._model_config = model_router.get_config(first_model_id)
 
         return self._model_config or {}
 
@@ -190,9 +193,22 @@ class DeepAgentWrapper:
             模型字符串，如 "openai:gpt-4" 或 "anthropic:claude-3-sonnet"
         """
         config = self._get_model_config()
+        if not config:
+            return "openai:gpt-4"  # 默认模型
 
-        provider = config.get("provider", "").lower()
-        model_id = config.get("model_id", "")
+        # ModelConfig 是对象，需要使用属性访问
+        provider = ""
+        model_id = ""
+
+        if hasattr(config, 'provider'):
+            provider = config.provider.value if hasattr(config.provider, 'value') else str(config.provider)
+            model_id = config.model_id
+        else:
+            # 兼容字典格式
+            provider = config.get("provider", "")
+            model_id = config.get("model_id", "")
+
+        provider = provider.lower() if provider else ""
 
         # 映射 provider 名称到 Deep Agents 格式
         provider_map = {
@@ -222,40 +238,38 @@ class DeepAgentWrapper:
         """
         try:
             from deepagents import create_deep_agent
-            from langchain.tools import Tool as LangChainTool
 
-            # 转换工具为 LangChain Tool 格式
-            lc_tools = []
+            # 转换工具为可调用函数列表（Deep Agents 支持直接传递函数）
+            # 根据文档，create_deep_agent 接受 tools 参数，可以是函数列表
+            tool_functions = []
             for tool in self.custom_tools:
-                # 使用闭包正确捕获 tool 变量
-                def make_tool_func(t):
-                    def tool_func(**kwargs):
+                # 将工具包装为函数，保留工具名称和描述
+                def create_tool_wrapper(t):
+                    def tool_wrapper(**kwargs):
                         return t.run(**kwargs)
-                    return tool_func
-
-                lc_tool = LangChainTool(
-                    name=tool.name,
-                    description=tool.description,
-                    func=make_tool_func(tool)
-                )
-                lc_tools.append(lc_tool)
+                    # 设置函数属性，Deep Agents 会自动识别
+                    tool_wrapper.__name__ = t.name
+                    tool_wrapper.__doc__ = t.description
+                    return tool_wrapper
+                tool_functions.append(create_tool_wrapper(tool))
 
             # 获取模型配置
             model_str = self._build_model_string()
 
-            logger.info(f"[DeepAgent] 创建 Agent，模型: {model_str}, 工具数量: {len(lc_tools)}")
+            logger.info(f"[DeepAgent] 创建 Agent，模型: {model_str}, 工具数量: {len(tool_functions)}")
 
             # 创建 Deep Agent
             agent = create_deep_agent(
                 model=model_str,
-                tools=lc_tools,
+                tools=tool_functions,
                 system_prompt=self.system_prompt
             )
 
             return agent
 
         except ImportError as e:
-            logger.warning(f"[DeepAgent] Deep Agents SDK 未安装，降级到 ReAct Agent: {e}")
+            logger.warning(
+                f"[DeepAgent] Deep Agents SDK 未安装，降级到 ReAct Agent: {e}")
             return None
         except Exception as e:
             logger.error(f"[DeepAgent] 创建 Agent 失败: {e}")
@@ -297,18 +311,22 @@ class DeepAgentWrapper:
         formatted_messages = []
         for msg in messages:
             if isinstance(msg, HumanMessage):
-                formatted_messages.append({"role": "user", "content": msg.content})
+                formatted_messages.append(
+                    {"role": "user", "content": msg.content})
             elif isinstance(msg, AIMessage):
-                formatted_messages.append({"role": "assistant", "content": msg.content})
+                formatted_messages.append(
+                    {"role": "assistant", "content": msg.content})
             else:
-                formatted_messages.append({"role": "user", "content": str(msg.content)})
+                formatted_messages.append(
+                    {"role": "user", "content": str(msg.content)})
 
         try:
             # 执行 Agent
             result = self._agent.invoke({"messages": formatted_messages})
 
             # 提取最终响应
-            final_message = result.get("messages", [])[-1] if result.get("messages") else None
+            final_message = result.get(
+                "messages", [])[-1] if result.get("messages") else None
 
             return {
                 "output": final_message.content if final_message else "",
@@ -358,11 +376,14 @@ class DeepAgentWrapper:
         formatted_messages = []
         for msg in messages:
             if isinstance(msg, HumanMessage):
-                formatted_messages.append({"role": "user", "content": msg.content})
+                formatted_messages.append(
+                    {"role": "user", "content": msg.content})
             elif isinstance(msg, AIMessage):
-                formatted_messages.append({"role": "assistant", "content": msg.content})
+                formatted_messages.append(
+                    {"role": "assistant", "content": msg.content})
             else:
-                formatted_messages.append({"role": "user", "content": str(msg.content)})
+                formatted_messages.append(
+                    {"role": "user", "content": str(msg.content)})
 
         try:
             iteration = 0
@@ -427,9 +448,11 @@ class DeepAgentWrapper:
         if messages:
             for msg in messages:
                 if isinstance(msg, HumanMessage):
-                    formatted_messages.append({"role": "user", "content": msg.content})
+                    formatted_messages.append(
+                        {"role": "user", "content": msg.content})
                 elif isinstance(msg, AIMessage):
-                    formatted_messages.append({"role": "assistant", "content": msg.content})
+                    formatted_messages.append(
+                        {"role": "assistant", "content": msg.content})
 
         formatted_messages.append({"role": "user", "content": input_text})
 
@@ -480,9 +503,11 @@ class DeepAgentWrapper:
         if messages:
             for msg in messages:
                 if isinstance(msg, HumanMessage):
-                    formatted_messages.append({"role": "user", "content": msg.content})
+                    formatted_messages.append(
+                        {"role": "user", "content": msg.content})
                 elif isinstance(msg, AIMessage):
-                    formatted_messages.append({"role": "assistant", "content": msg.content})
+                    formatted_messages.append(
+                        {"role": "assistant", "content": msg.content})
 
         formatted_messages.append({"role": "user", "content": input_text})
 

@@ -336,7 +336,8 @@ class MessageHandler:
                     # Deep Agent 返回 None，降级到 ReAct Agent
                     logger.info("[Agent] Deep Agent 不可用，降级到 ReAct Agent")
                 except Exception as e:
-                    logger.warning(f"[Agent] Deep Agent 执行失败，降级到 ReAct Agent: {e}")
+                    logger.warning(
+                        f"[Agent] Deep Agent 执行失败，降级到 ReAct Agent: {e}")
 
             # 使用 ReAct Agent（默认或降级）
             return await self._run_react_agent(
@@ -449,7 +450,8 @@ class MessageHandler:
 
                 # 如果是流式内容，发送流式消息
                 if step_type == "stream_chunk":
-                    full_content = step.get("full_content", full_content + step_content)
+                    full_content = step.get(
+                        "full_content", full_content + step_content)
                     await self.send_callback({
                         "type": "chat_stream_chunk",
                         "id": f"{msg_id}_chunk",

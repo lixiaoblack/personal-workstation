@@ -9,12 +9,14 @@ ReAct = Reasoning + Acting（推理 + 行动）
 模块结构：
 - state.py: 定义 Agent 的状态结构
 - tools.py: 工具注册和管理
-- graph.py: LangGraph 工作流定义
+- graph.py: LangGraph 工作流定义（ReAct Agent）
+- deep_agent.py: Deep Agents 封装（高级智能体能力）
 """
 
 from .state import AgentState, AgentStep
 from .tools import ToolRegistry, BaseTool
 from .graph import ReActAgent
+from .deep_agent import DeepAgentWrapper, MessageSender, create_deep_agent
 
 __all__ = [
     "AgentState",
@@ -22,4 +24,7 @@ __all__ = [
     "ToolRegistry",
     "BaseTool",
     "ReActAgent",
+    "DeepAgentWrapper",
+    "MessageSender",
+    "create_deep_agent",
 ]

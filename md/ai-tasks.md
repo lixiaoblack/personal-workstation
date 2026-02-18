@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 37 |
-| 待处理 | 1 |
+| 已完成 | 38 |
+| 待处理 | 0 |
 
 ---
 
@@ -211,9 +211,16 @@
   - 添加 WebSocket 消息类型（skill_list/execute/reload）
   - 实现 message_handler 技能处理函数
 
+- [x] AI-019: LangGraph 智能体 - Deep Agents 集成 | 完成时间: 2026-02-18
+  - 安装 deepagents 依赖包
+  - 创建 DeepAgentWrapper 封装类
+  - 集成 Skills 和 Knowledge 工具
+  - 更新 message_handler 支持 Deep Agent
+  - 实现降级策略（Deep Agent → ReAct Agent）
+
 ### 待处理
 
-- [ ] AI-019: LangGraph 智能体 - Deep Agents 集成 | 创建时间: 2026-02-17
+暂无
 
 ---
 

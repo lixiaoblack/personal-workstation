@@ -106,6 +106,33 @@
   - 创建 components/index.ts 组件导出索引
   - 主文件从 1360 行精简到约 500 行
 
+### 新增 (Added) - v0.5.21
+
+- **Deep Agents 集成**
+  - 安装 deepagents SDK（高级智能体能力）
+  - 创建 DeepAgentWrapper 封装类（agent/deep_agent.py）
+  - MessageSender 消息发送器接口
+  - 自动降级策略：Deep Agent → ReAct Agent → 普通聊天
+  - 模型配置映射（支持 OpenAI、Anthropic、Azure、Google、Ollama 等）
+  - 流式输出支持
+
+- **Deep Agents 核心能力**
+  - **任务规划 (Planning)**：write_todos 工具分解复杂任务
+  - **上下文管理 (Context Management)**：文件系统工具管理大型上下文
+  - **子智能体生成 (Subagent Spawning)**：task 工具隔离上下文执行子任务
+  - **长期记忆 (Long-term Memory)**：跨对话持久化记忆
+
+- **工具集成**
+  - Skills 工具自动注册到 Deep Agent
+  - Knowledge 工具支持知识库检索
+  - 自定义工具通过 LangChain Tool 格式集成
+
+- **message_handler 重构**
+  - 新增 _run_deep_agent 方法
+  - 新增 _run_react_agent 方法
+  - 支持 useDeepAgent 参数控制 Agent 类型
+  - 自动降级保证系统稳定性
+
 ### 新增 (Added) - v0.5.20
 
 - **RAG 知识库功能**
@@ -388,6 +415,6 @@
 
 ---
 
-*文档版本: v1.8*
+*文档版本: v1.9*
 *创建时间: 2026-02-13*
-*最后更新: 2026-02-17*
+*最后更新: 2026-02-18*

@@ -85,6 +85,12 @@ export enum MessageType {
   MEMORY_GENERATE_SUMMARY_RESPONSE = "memory_generate_summary_response", // 生成摘要响应
   MEMORY_EXTRACT = "memory_extract", // 提取记忆（通过 LLM）
   MEMORY_EXTRACT_RESPONSE = "memory_extract_response", // 提取记忆响应
+
+  // Web Crawl 网页采集相关
+  WEB_CRAWL = "web_crawl", // 网页采集请求
+  WEB_CRAWL_RESPONSE = "web_crawl_response", // 网页采集响应
+  WEB_FETCH = "web_fetch", // 网页内容获取请求
+  WEB_FETCH_RESPONSE = "web_fetch_response", // 网页内容获取响应
 }
 
 // 基础消息结构
@@ -641,6 +647,54 @@ export interface MemoryGetContextResponseMessage extends BaseMessage {
   contextPrompt: string;
 }
 
+// ========== Web Crawl 网页采集消息 ==========
+
+/**
+ * 网页采集请求消息
+ */
+export interface WebCrawlMessage extends BaseMessage {
+  type: MessageType.WEB_CRAWL;
+  url: string;
+  knowledgeId: string;
+  title?: string;
+  chunkSize?: number;
+}
+
+/**
+ * 网页采集响应消息
+ */
+export interface WebCrawlResponseMessage extends BaseMessage {
+  type: MessageType.WEB_CRAWL_RESPONSE;
+  success: boolean;
+  url?: string;
+  title?: string;
+  chunks?: number;
+  knowledgeId?: string;
+  documentCount?: number;
+  error?: string;
+}
+
+/**
+ * 网页内容获取请求消息
+ */
+export interface WebFetchMessage extends BaseMessage {
+  type: MessageType.WEB_FETCH;
+  url: string;
+  maxLength?: number;
+}
+
+/**
+ * 网页内容获取响应消息
+ */
+export interface WebFetchResponseMessage extends BaseMessage {
+  type: MessageType.WEB_FETCH_RESPONSE;
+  success: boolean;
+  url?: string;
+  title?: string;
+  content?: string;
+  error?: string;
+}
+
 // 保存记忆
 export interface MemorySaveMessage extends BaseMessage {
   type: MessageType.MEMORY_SAVE;
@@ -817,7 +871,11 @@ export type WebSocketMessage =
   | MemoryGenerateSummaryMessage
   | MemoryGenerateSummaryResponseMessage
   | MemoryExtractMessage
-  | MemoryExtractResponseMessage;
+  | MemoryExtractResponseMessage
+  | WebCrawlMessage
+  | WebCrawlResponseMessage
+  | WebFetchMessage
+  | WebFetchResponseMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

@@ -134,8 +134,14 @@ def init_skills_system():
     logger.info("已注册知识库检索工具")
 
     # 6. 注册网页搜索工具
+    from agent.web_search_tool import register_web_search_tools
     register_web_search_tools(global_tool_registry)
     logger.info("已注册网页搜索工具")
+
+    # 7. 注册网页采集工具
+    from agent.web_crawler import register_web_crawl_tools
+    register_web_crawl_tools(global_tool_registry)
+    logger.info("已注册网页采集工具")
 
 
 class AgentService:

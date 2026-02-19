@@ -234,18 +234,18 @@ class DeepAgentWrapper:
         """
         创建 LangChain ChatModel 实例
 
-        根据模型配置创建对应的 ChatModel，支持自定义 API base URL。
+        根据 Deep Agents SDK 文档，使用 init_chat_model 创建模型，
+        支持自定义 API base URL 等配置。
 
         Returns:
             LangChain ChatModel 实例
         """
-        from langchain_openai import ChatOpenAI
-        from langchain_ollama import ChatOllama
+        from langchain.chat_models import init_chat_model
 
         config = self._get_model_config()
         if not config:
             # 默认使用 OpenAI
-            return ChatOpenAI(model="gpt-4")
+            return init_chat_model("gpt-4")
 
         # 提取配置
         if hasattr(config, 'provider'):
@@ -265,27 +265,51 @@ class DeepAgentWrapper:
             max_tokens = config.get("max_tokens", 4096)
 
         provider = provider.lower() if provider else "openai"
+
+        # 构建模型 kwargs
         model_kwargs = {"temperature": temperature}
         if max_tokens:
             model_kwargs["max_tokens"] = max_tokens
 
-        logger.info(f"[DeepAgent] 创建 ChatModel, provider={provider}, model={model_id}, base_url={api_base_url}")
+        # 对于 OpenAI 兼容接口（百炼、智谱、Ollama 等），使用 openai provider
+        # 并传递自定义 base_url
+        if provider in ["ollama", "bailian", "zhipu"]:
+            # 这些使用 OpenAI 兼容接口
+            if api_key:
+                model_kwargs["api_key"] = api_key
+            if api_base_url:
+                model_kwargs["base_url"] = api_base_url
 
-        if provider == "ollama":
-            # Ollama 模型
-            return ChatOllama(
-                model=model_id,
-                base_url=api_base_url or "http://localhost:11434",
-                temperature=temperature,
-            )
-        else:
-            # OpenAI 兼容接口（包括百炼、智谱等）
-            return ChatOpenAI(
-                model=model_id,
-                api_key=api_key,
-                base_url=api_base_url,
+            logger.info(f"[DeepAgent] 创建 ChatModel, provider=openai (兼容), model={model_id}, base_url={api_base_url}")
+
+            return init_chat_model(
+                model_id,
+                model_provider="openai",
                 **model_kwargs
             )
+
+        # 其他 provider
+        if api_key:
+            model_kwargs["api_key"] = api_key
+        if api_base_url and provider == "openai":
+            model_kwargs["base_url"] = api_base_url
+
+        # 映射 provider 名称
+        provider_map = {
+            "openai": "openai",
+            "anthropic": "anthropic",
+            "azure": "azure_openai",
+            "google": "google_genai",
+        }
+        mapped_provider = provider_map.get(provider, provider)
+
+        logger.info(f"[DeepAgent] 创建 ChatModel, provider={mapped_provider}, model={model_id}")
+
+        return init_chat_model(
+            model_id,
+            model_provider=mapped_provider,
+            **model_kwargs
+        )
 
     def _create_agent(self):
         """

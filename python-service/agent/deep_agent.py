@@ -514,7 +514,7 @@ class DeepAgentWrapper:
         try:
             full_content = ""
 
-            async for chunk in model_router.chat_stream(
+            async for chunk in model_router.chat_stream_async(
                 messages=formatted_messages,
                 model_id=self.model_id
             ):

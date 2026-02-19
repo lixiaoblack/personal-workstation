@@ -303,7 +303,7 @@ class KnowledgeListTool(BaseTool):
     知识库列表工具
 
     列出所有可用的知识库，帮助用户了解有哪些知识库可以查询。
-    使用前端传来的元数据获取知识库名称和描述。
+    通过 FrontendBridge 调用前端 knowledgeService 获取完整的知识库信息。
     """
 
     name = "knowledge_list"
@@ -315,7 +315,7 @@ class KnowledgeListTool(BaseTool):
         """获取知识库列表"""
         try:
             import asyncio
-            knowledge_list = asyncio.run(self._list_async())
+            knowledge_list = asyncio.run(self._list_via_bridge())
 
             if not knowledge_list:
                 return "当前没有可用的知识库。请先创建知识库并上传文档。"
@@ -338,29 +338,76 @@ class KnowledgeListTool(BaseTool):
             logger.error(f"获取知识库列表失败: {e}")
             return f"获取失败: {str(e)}"
 
-    async def _list_async(self) -> List[Dict[str, Any]]:
-        """异步获取知识库列表，结合 LanceDB 数据和元数据"""
+    async def _list_via_bridge(self) -> List[Dict[str, Any]]:
+        """通过 FrontendBridge 获取知识库列表"""
+        from agent.frontend_bridge_tool import (
+            _global_ws_send_callback,
+            _pending_bridge_requests
+        )
+        import time
+
+        if not _global_ws_send_callback:
+            logger.warning("[KnowledgeListTool] WebSocket 未连接，使用本地缓存")
+            return await self._list_local()
+
+        # 生成请求 ID
+        request_id = f"kb_list_{int(time.time() * 1000)}"
+
+        # 创建 Future 等待响应
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        _pending_bridge_requests[request_id] = future
+
+        # 构建请求消息
+        message = {
+            "type": "frontend_bridge_request",
+            "id": request_id,
+            "timestamp": int(time.time() * 1000),
+            "service": "knowledgeService",
+            "method": "listKnowledge",
+            "params": {},
+            "requestId": request_id,
+        }
+
+        try:
+            # 发送请求
+            await _global_ws_send_callback(message)
+            logger.info("[KnowledgeListTool] 发送 FrontendBridge 请求")
+
+            # 等待响应（超时 10 秒）
+            response = await asyncio.wait_for(future, timeout=10.0)
+
+            if response.get("success"):
+                result = response.get("result", [])
+                logger.info(f"[KnowledgeListTool] 获取到 {len(result)} 个知识库")
+                return result
+            else:
+                logger.error(f"[KnowledgeListTool] 调用失败: {response.get('error')}")
+                return await self._list_local()
+
+        except asyncio.TimeoutError:
+            _pending_bridge_requests.pop(request_id, None)
+            logger.warning("[KnowledgeListTool] FrontendBridge 超时，使用本地缓存")
+            return await self._list_local()
+        except Exception as e:
+            _pending_bridge_requests.pop(request_id, None)
+            logger.error(f"[KnowledgeListTool] 异常: {e}")
+            return await self._list_local()
+
+    async def _list_local(self) -> List[Dict[str, Any]]:
+        """本地备份方法：从 LanceDB 获取知识库列表"""
         from rag.vectorstore import get_vectorstore
 
         vectorstore = get_vectorstore()
         stats = vectorstore.get_stats()
-
-        # 获取 LanceDB 中的集合信息
         collections = stats.get("collections", [])
 
-        # 结合元数据
         result = []
         for col in collections:
             kb_id = col.get("id", "")
-            # 从元数据获取名称和描述
             metadata = KnowledgeRetrieverTool._knowledge_metadata.get(
                 kb_id, {})
-
-            # 如果元数据中没有名称，尝试从 ID 解析或使用默认值
-            name = metadata.get("name")
-            if not name:
-                # 尝试生成一个更友好的名称
-                name = f"知识库 {kb_id[-6:]}" if kb_id else "未命名"
+            name = metadata.get("name") or f"知识库 {kb_id[-6:]}"
 
             result.append({
                 "id": kb_id,
@@ -369,7 +416,6 @@ class KnowledgeListTool(BaseTool):
                 "documentCount": col.get("document_count", 0),
             })
 
-        logger.info(f"[KnowledgeListTool] 知识库列表: {result}")
         return result
 
 
@@ -397,9 +443,8 @@ class KnowledgeCreateTool(BaseTool):
     """
     知识库创建工具
 
-    创建一个新的知识库，同时创建：
-    1. LanceDB 向量存储集合（用于检索）
-    2. Electron SQLite 记录（用于前端展示）
+    创建一个新的知识库。
+    通过 FrontendBridge 调用前端 knowledgeService 统一创建 SQLite 记录和 LanceDB 集合。
 
     使用场景：
     - 用户想要创建新的知识库来存储文档
@@ -426,7 +471,7 @@ class KnowledgeCreateTool(BaseTool):
         import asyncio
 
         try:
-            result = asyncio.run(self._create_async(
+            result = asyncio.run(self._create_via_bridge(
                 name=name,
                 description=description,
                 embedding_model=embedding_model,
@@ -449,88 +494,74 @@ class KnowledgeCreateTool(BaseTool):
             logger.error(f"[KnowledgeCreateTool] 创建失败: {e}")
             return f"创建失败: {str(e)}"
 
-    async def _create_async(
+    async def _create_via_bridge(
         self,
         name: str,
         description: Optional[str],
         embedding_model: str,
         embedding_model_name: str
     ) -> Dict[str, Any]:
-        """异步创建知识库"""
-        from rag.vectorstore import get_vectorstore
-        from rag.embeddings import EmbeddingService, EmbeddingModelType
+        """通过 FrontendBridge 创建知识库"""
+        from agent.frontend_bridge_tool import (
+            _global_ws_send_callback,
+            _pending_bridge_requests
+        )
         import time
 
-        # 生成知识库 ID
-        knowledge_id = f"kb_{int(time.time() * 1000)}"
+        if not _global_ws_send_callback:
+            return {"success": False, "error": "WebSocket 未连接，无法创建知识库"}
 
-        # 创建向量存储
-        vectorstore = get_vectorstore()
+        # 生成请求 ID
+        request_id = f"kb_create_{int(time.time() * 1000)}"
 
-        # 确定嵌入模型类型和维度
-        model_type = EmbeddingModelType.OLLAMA if embedding_model == "ollama" else EmbeddingModelType.OPENAI
-        embedding_service = EmbeddingService(
-            model_type=model_type,
-            model_name=embedding_model_name,
-        )
+        # 创建 Future 等待响应
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        _pending_bridge_requests[request_id] = future
 
-        # 创建集合
-        success = vectorstore.create_collection(knowledge_id, embedding_service.dimension)
+        # 构建请求消息
+        message = {
+            "type": "frontend_bridge_request",
+            "id": request_id,
+            "timestamp": int(time.time() * 1000),
+            "service": "knowledgeService",
+            "method": "createKnowledge",
+            "params": {
+                "name": name,
+                "description": description,
+                "embeddingModel": embedding_model,
+                "embeddingModelName": embedding_model_name,
+            },
+            "requestId": request_id,
+        }
 
-        if success:
-            # 同步到 Electron（通过全局消息处理器）
-            await self._sync_to_electron(
-                knowledge_id=knowledge_id,
-                name=name,
-                description=description,
-                embedding_model=embedding_model,
-                embedding_model_name=embedding_model_name
-            )
-
-            return {
-                "success": True,
-                "knowledge": {
-                    "id": knowledge_id,
-                    "name": name,
-                    "description": description,
-                    "embeddingModel": embedding_model,
-                    "embeddingModelName": embedding_model_name,
-                    "documentCount": 0,
-                    "createdAt": int(time.time() * 1000),
-                }
-            }
-        else:
-            return {"success": False, "error": "创建向量存储失败"}
-
-    async def _sync_to_electron(
-        self,
-        knowledge_id: str,
-        name: str,
-        description: Optional[str],
-        embedding_model: str,
-        embedding_model_name: str
-    ):
-        """同步知识库到 Electron SQLite"""
-        # 尝试获取全局的消息发送回调
         try:
-            # 从 main.py 获取发送回调
-            import main as main_module
-            if hasattr(main_module, '_global_send_callback') and main_module._global_send_callback:
-                import time
-                sync_message = {
-                    "type": "knowledge_sync_create",
-                    "id": f"sync_{knowledge_id}",
-                    "timestamp": int(time.time() * 1000),
-                    "knowledgeId": knowledge_id,
-                    "name": name,
-                    "description": description or "",
-                    "embeddingModel": embedding_model,
-                    "embeddingModelName": embedding_model_name,
+            # 发送请求
+            await _global_ws_send_callback(message)
+            logger.info(f"[KnowledgeCreateTool] 发送 FrontendBridge 请求: {name}")
+
+            # 等待响应（超时 15 秒）
+            response = await asyncio.wait_for(future, timeout=15.0)
+
+            if response.get("success"):
+                result = response.get("result", {})
+                logger.info(f"[KnowledgeCreateTool] 创建成功: {result.get('id')}")
+                return {
+                    "success": True,
+                    "knowledge": result,
                 }
-                await main_module._global_send_callback(sync_message)
-                logger.info(f"[KnowledgeCreateTool] 同步到 Electron: {knowledge_id}")
+            else:
+                error = response.get("error", "未知错误")
+                logger.error(f"[KnowledgeCreateTool] 创建失败: {error}")
+                return {"success": False, "error": error}
+
+        except asyncio.TimeoutError:
+            _pending_bridge_requests.pop(request_id, None)
+            return {"success": False, "error": "请求超时，前端服务未响应"}
         except Exception as e:
-            logger.warning(f"[KnowledgeCreateTool] 同步到 Electron 失败: {e}")
+            _pending_bridge_requests.pop(request_id, None)
+            logger.error(f"[KnowledgeCreateTool] 异常: {e}")
+            return {"success": False, "error": str(e)}
 
 
 def register_knowledge_tools():

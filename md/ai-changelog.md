@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.24 | 2026-02-19 | 知识库服务 FrontendBridge 化改造 |
 | 0.5.23 | 2026-02-17 | 多轮对话状态管理（摘要生成+记忆系统） |
 | 0.5.22 | 2026-02-17 | 知识库智能匹配与全库搜索 |
 | 0.5.21 | 2026-02-16 | AIChat 页面组件拆分与知识库集成 |
@@ -43,6 +44,25 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.24
+
+- **知识库服务 FrontendBridge 化改造**
+  - 前端 knowledgeService 统一处理 SQLite + LanceDB 操作
+    - createKnowledge() 改为异步函数，先创建 SQLite 记录，再创建 LanceDB 集合
+    - deleteKnowledge() 改为异步函数，先删除 SQLite 记录，再删除 LanceDB 集合
+    - 添加 createLanceDBCollection() 辅助函数调用 Python 创建向量存储
+    - 添加 deleteLanceDBCollection() 辅助函数调用 Python 删除向量存储
+  - Python message_handler 简化
+    - _handle_knowledge_create() 简化为仅创建 LanceDB 集合
+    - _handle_knowledge_delete() 简化为仅删除 LanceDB 集合
+    - 移除 _sync_knowledge_to_electron() 同步逻辑
+    - _handle_knowledge_list() 添加提示说明 FrontendBridge 方式
+  - Agent knowledge_tool 优化
+    - KnowledgeListTool 改为通过 FrontendBridge 调用 knowledgeService.listKnowledge()
+    - KnowledgeCreateTool 改为通过 FrontendBridge 调用 knowledgeService.createKnowledge()
+    - 保留本地 LanceDB 作为 Fallback（WebSocket 未连接时使用）
+    - 移除直接操作 LanceDB 的代码，统一走 FrontendBridge
 
 ### 新增 (Added) - v0.5.23
 

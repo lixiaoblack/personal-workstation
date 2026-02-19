@@ -9,7 +9,7 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 38 |
+| 已完成 | 39 |
 | 待处理 | 0 |
 
 ---
@@ -338,12 +338,22 @@
   - 修复 EmbeddingService 方法名错误
   - 修复 Agent 流式输出问题
 
+- [x] AI-037: 知识库服务 FrontendBridge 化改造 | 完成时间: 2026-02-19
+  - 前端 knowledgeService 统一处理 SQLite + LanceDB 操作
+  - 添加 createLanceDBCollection/deleteLanceDBCollection 辅助函数
+  - 修改 createKnowledge/deleteKnowledge 为异步函数
+  - 简化 Python message_handler 知识库消息处理
+  - 移除 _sync_knowledge_to_electron 等同步逻辑
+  - 优化 Agent knowledge_tool 使用 FrontendBridge 调用
+  - knowledge_list/create 工具改为桥接调用
+  - 保留本地 LanceDB 作为 Fallback
+
 ### 待处理
 
 暂无
 
 ---
 
-*文档版本: v1.7*
+*文档版本: v1.8*
 *创建时间: 2026-02-13*
-*最后更新: 2026-02-17*
+*最后更新: 2026-02-19*

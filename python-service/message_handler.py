@@ -1125,30 +1125,32 @@ class MessageHandler:
             }
 
     # ==================== Knowledge 知识库相关消息处理 ====================
+    # 注意：知识库的创建/删除/列表现在统一由前端通过 FrontendBridge 处理
+    # Python 端只保留 LanceDB 向量操作和搜索功能
 
     async def _handle_knowledge_create(self, message: dict) -> dict:
-        """处理创建知识库请求"""
-        name = message.get("name", "")
-        description = message.get("description")
+        """
+        处理创建 LanceDB 集合请求（仅向量存储）
+
+        此接口仅供前端调用，用于创建 LanceDB 向量存储集合。
+        完整的知识库创建流程（SQLite + LanceDB）由前端统一处理。
+        """
+        knowledge_id = message.get("knowledgeId")
         embedding_model = message.get("embeddingModel", "ollama")
         embedding_model_name = message.get(
             "embeddingModelName", "nomic-embed-text")
-        # 优先使用传入的 knowledgeId，否则生成新的
-        knowledge_id = message.get("knowledgeId")
-        # 是否为 Agent 调用（需要同步 Electron SQLite）
-        sync_to_electron = message.get("syncToElectron", False)
 
-        if not name:
+        if not knowledge_id:
             return {
                 "type": "knowledge_create_response",
                 "id": message.get("id"),
                 "timestamp": int(time.time() * 1000),
                 "success": False,
-                "error": "知识库名称不能为空",
+                "error": "知识库 ID 不能为空",
             }
 
         try:
-            from rag.vectorstore import LanceDBVectorStore, get_vectorstore
+            from rag.vectorstore import get_vectorstore
             from rag.embeddings import EmbeddingService, EmbeddingModelType
 
             # 创建向量存储
@@ -1161,53 +1163,20 @@ class MessageHandler:
                 model_name=embedding_model_name,
             )
 
-            # 如果没有传入 ID，生成一个
-            if not knowledge_id:
-                knowledge_id = f"kb_{int(time.time() * 1000)}"
-
             # 创建集合
             success = vectorstore.create_collection(
                 knowledge_id, embedding_service.dimension)
 
-            if success:
-                # 如果是 Agent 调用，同步到 Electron SQLite
-                if sync_to_electron and self.send_callback:
-                    await self._sync_knowledge_to_electron(
-                        knowledge_id=knowledge_id,
-                        name=name,
-                        description=description,
-                        embedding_model=embedding_model,
-                        embedding_model_name=embedding_model_name
-                    )
-
-                return {
-                    "type": "knowledge_create_response",
-                    "id": message.get("id"),
-                    "timestamp": int(time.time() * 1000),
-                    "success": True,
-                    "knowledge": {
-                        "id": knowledge_id,
-                        "name": name,
-                        "description": description,
-                        "embeddingModel": embedding_model,
-                        "embeddingModelName": embedding_model_name,
-                        "documentCount": 0,
-                        "totalChunks": 0,
-                        "createdAt": int(time.time() * 1000),
-                        "updatedAt": int(time.time() * 1000),
-                    },
-                }
-            else:
-                return {
-                    "type": "knowledge_create_response",
-                    "id": message.get("id"),
-                    "timestamp": int(time.time() * 1000),
-                    "success": False,
-                    "error": "创建知识库失败",
-                }
+            return {
+                "type": "knowledge_create_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": success,
+                "knowledgeId": knowledge_id,
+            }
 
         except Exception as e:
-            logger.error(f"创建知识库错误: {e}")
+            logger.error(f"创建 LanceDB 集合错误: {e}")
             return {
                 "type": "knowledge_create_response",
                 "id": message.get("id"),
@@ -1216,47 +1185,13 @@ class MessageHandler:
                 "error": str(e),
             }
 
-    async def _sync_knowledge_to_electron(
-        self,
-        knowledge_id: str,
-        name: str,
-        description: str,
-        embedding_model: str,
-        embedding_model_name: str
-    ):
-        """
-        同步知识库到 Electron SQLite
-
-        当 Agent 创建知识库时，需要同时创建 Electron 端的 SQLite 记录，
-        以便前端界面能正确显示知识库列表。
-
-        Args:
-            knowledge_id: 知识库 ID
-            name: 知识库名称
-            description: 描述
-            embedding_model: 嵌入模型类型
-            embedding_model_name: 嵌入模型名称
-        """
-        try:
-            sync_message = {
-                "type": "knowledge_sync_create",
-                "id": f"sync_{knowledge_id}",
-                "timestamp": int(time.time() * 1000),
-                "knowledgeId": knowledge_id,
-                "name": name,
-                "description": description,
-                "embeddingModel": embedding_model,
-                "embeddingModelName": embedding_model_name,
-            }
-
-            logger.info(f"[Knowledge] 同步知识库到 Electron: {knowledge_id}")
-            await self.send_callback(sync_message)
-
-        except Exception as e:
-            logger.error(f"[Knowledge] 同步知识库到 Electron 失败: {e}")
-
     async def _handle_knowledge_delete(self, message: dict) -> dict:
-        """处理删除知识库请求"""
+        """
+        处理删除 LanceDB 集合请求（仅向量存储）
+
+        此接口仅供前端调用，用于删除 LanceDB 向量存储集合。
+        完整的知识库删除流程（SQLite + LanceDB）由前端统一处理。
+        """
         knowledge_id = message.get("knowledgeId")
 
         if not knowledge_id:
@@ -1283,7 +1218,7 @@ class MessageHandler:
             }
 
         except Exception as e:
-            logger.error(f"删除知识库错误: {e}")
+            logger.error(f"删除 LanceDB 集合错误: {e}")
             return {
                 "type": "knowledge_delete_response",
                 "id": message.get("id"),
@@ -1294,7 +1229,12 @@ class MessageHandler:
             }
 
     async def _handle_knowledge_list(self, message: dict) -> dict:
-        """处理知识库列表请求"""
+        """
+        处理获取 LanceDB 集合列表请求
+
+        注意：此接口返回的是 LanceDB 中的集合信息，不包含 SQLite 中的元数据。
+        完整的知识库列表请通过 FrontendBridge 调用 knowledgeService.listKnowledge()
+        """
         try:
             from rag.vectorstore import get_vectorstore
 
@@ -1308,7 +1248,7 @@ class MessageHandler:
                     "id": collection["id"],
                     "name": collection["id"],  # 使用集合 ID 作为名称
                     "documentCount": collection["document_count"],
-                    "totalChunks": 0,  # TODO: 从数据库获取
+                    "totalChunks": 0,
                     "embeddingModel": "ollama",
                     "embeddingModelName": "nomic-embed-text",
                     "createdAt": int(time.time() * 1000),
@@ -1322,10 +1262,11 @@ class MessageHandler:
                 "success": True,
                 "knowledge": knowledge_list,
                 "count": len(knowledge_list),
+                "note": "此为 LanceDB 集合列表，完整知识库列表请通过 FrontendBridge 获取",
             }
 
         except Exception as e:
-            logger.error(f"获取知识库列表错误: {e}")
+            logger.error(f"获取 LanceDB 集合列表错误: {e}")
             return {
                 "type": "knowledge_list_response",
                 "id": message.get("id"),

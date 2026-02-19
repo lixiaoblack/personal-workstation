@@ -2,27 +2,30 @@
  * 知识库服务
  *
  * 提供知识库的管理功能：
- * 1. 创建/删除知识库
+ * 1. 创建/删除知识库（SQLite + LanceDB）
  * 2. 添加/删除文档
  * 3. 搜索知识库
  */
 import { getDatabase } from "../database";
 import { randomUUID } from "crypto";
 import type { KnowledgeInfo, KnowledgeDocumentInfo } from "../types/websocket";
+import { sendKnowledgeRequest } from "./websocketService";
+import { MessageType } from "../types/websocket";
 
 /**
- * 创建知识库
+ * 创建知识库（同时创建 SQLite 记录和 LanceDB 集合）
  */
-export function createKnowledge(
+export async function createKnowledge(
   name: string,
   description?: string,
   embeddingModel: string = "ollama",
   embeddingModelName: string = "nomic-embed-text"
-): KnowledgeInfo {
+): Promise<KnowledgeInfo> {
   const db = getDatabase();
   const id = `kb_${randomUUID().replace(/-/g, "")}`;
   const now = Date.now();
 
+  // 1. 先创建 SQLite 记录
   const stmt = db.prepare(`
     INSERT INTO knowledge (id, name, description, embedding_model, embedding_model_name, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -38,6 +41,16 @@ export function createKnowledge(
     now
   );
 
+  // 2. 创建 LanceDB 集合
+  try {
+    await createLanceDBCollection(id, embeddingModel, embeddingModelName);
+  } catch (error) {
+    console.error(`[KnowledgeService] 创建 LanceDB 集合失败: ${id}`, error);
+    // 回滚 SQLite 记录
+    db.prepare("DELETE FROM knowledge WHERE id = ?").run(id);
+    throw new Error(`创建知识库失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
   return {
     id,
     name,
@@ -49,6 +62,47 @@ export function createKnowledge(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/**
+ * 创建 LanceDB 向量存储集合
+ */
+async function createLanceDBCollection(
+  knowledgeId: string,
+  embeddingModel: string,
+  embeddingModelName: string
+): Promise<void> {
+  const response = await sendKnowledgeRequest<{
+    success: boolean;
+    error?: string;
+  }>(MessageType.KNOWLEDGE_CREATE, {
+    knowledgeId,
+    name: knowledgeId, // 仅用于 LanceDB 内部，实际名称在 SQLite 中
+    embeddingModel,
+    embeddingModelName,
+    syncToElectron: false, // 前端已创建 SQLite，不需要同步
+  });
+
+  if (!response.success) {
+    throw new Error(response.error || "创建向量存储集合失败");
+  }
+}
+
+/**
+ * 删除 LanceDB 向量存储集合
+ */
+async function deleteLanceDBCollection(knowledgeId: string): Promise<void> {
+  try {
+    await sendKnowledgeRequest<{
+      success: boolean;
+      error?: string;
+    }>(MessageType.KNOWLEDGE_DELETE, {
+      knowledgeId,
+    });
+  } catch (error) {
+    console.error(`[KnowledgeService] 删除 LanceDB 集合失败: ${knowledgeId}`, error);
+    // 删除失败不抛错，因为 SQLite 记录已经删除
+  }
 }
 
 /**
@@ -98,15 +152,26 @@ export function createKnowledgeWithId(
 }
 
 /**
- * 删除知识库
+ * 删除知识库（同时删除 SQLite 记录和 LanceDB 集合）
  */
-export function deleteKnowledge(knowledgeId: string): boolean {
+export async function deleteKnowledge(knowledgeId: string): Promise<boolean> {
   const db = getDatabase();
 
+  // 1. 先删除 SQLite 记录
   const stmt = db.prepare("DELETE FROM knowledge WHERE id = ?");
   const result = stmt.run(knowledgeId);
 
-  return result.changes > 0;
+  if (result.changes === 0) {
+    return false;
+  }
+
+  // 2. 删除关联的文档记录
+  db.prepare("DELETE FROM knowledge_documents WHERE knowledge_id = ?").run(knowledgeId);
+
+  // 3. 删除 LanceDB 集合
+  await deleteLanceDBCollection(knowledgeId);
+
+  return true;
 }
 
 /**
@@ -372,6 +437,7 @@ export function updateKnowledge(
 
 export default {
   createKnowledge,
+  createKnowledgeWithId,
   deleteKnowledge,
   listKnowledge,
   getKnowledge,

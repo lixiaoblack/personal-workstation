@@ -663,7 +663,18 @@ class DeepAgentWrapper:
                     if tool_call_info:
                         step_type = "tool_call"
                     else:
-                        step_type = self._parse_step_type(node_name, state_update)
+                        # 已经有工具调用，但没有新的工具调用
+                        # 说明是工具执行后的最终答案，作为流式内容发送
+                        # 不在思考过程中显示，避免重复
+                        if content:
+                            yield {
+                                "node": node_name,
+                                "step_type": "stream_chunk",
+                                "content": content,
+                                "iteration": iteration,
+                                "update": state_update
+                            }
+                        continue
 
                     step_data = {
                         "node": node_name,

@@ -18,7 +18,8 @@ interface AIChatAgentStepsProps {
  */
 const StepItem: React.FC<{ step: AgentStepItem }> = memo(({ step }) => {
   // 过滤掉 None、空内容或无意义的步骤
-  const isValidContent = step.content && step.content !== "None" && step.content.trim() !== "";
+  const isValidContent =
+    step.content && step.content !== "None" && step.content.trim() !== "";
   const isToolCall = step.type === "tool_call" && step.toolCall;
   const isToolResult = step.type === "tool_result";
 

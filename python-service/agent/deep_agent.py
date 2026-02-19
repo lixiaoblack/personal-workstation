@@ -333,14 +333,56 @@ class DeepAgentWrapper:
             # 根据文档，create_deep_agent 接受 tools 参数，可以是函数列表
             tool_functions = []
             for tool in self.custom_tools:
-                # 将工具包装为函数，保留工具名称和描述
+                # 将工具包装为异步函数，避免 asyncio.run() 阻塞事件循环
                 def create_tool_wrapper(t):
-                    def tool_wrapper(**kwargs):
-                        return t.run(**kwargs)
-                    # 设置函数属性，Deep Agents 会自动识别
-                    tool_wrapper.__name__ = t.name
-                    tool_wrapper.__doc__ = t.description
-                    return tool_wrapper
+                    async def async_tool_wrapper(**kwargs):
+                        # 如果工具有异步执行方法，使用异步方法
+                        # FrontendBridgeTool 使用 _call_async
+                        if hasattr(t, '_call_async'):
+                            return await t._call_async(**kwargs)
+                        # KnowledgeListTool 使用 _list_via_bridge
+                        elif hasattr(t, '_list_via_bridge'):
+                            result = await t._list_via_bridge()
+                            # 格式化结果
+                            if not result:
+                                return "当前没有可用的知识库。请先创建知识库并上传文档。"
+                            lines = ["可用的知识库：\n"]
+                            for kb in result:
+                                name = kb.get('name', '未命名')
+                                kb_id = kb.get('id', '未知')
+                                doc_count = kb.get('documentCount', 0)
+                                desc = kb.get('description', '')
+                                lines.append(f"- {name} (ID: {kb_id})")
+                                lines.append(f"  文档数: {doc_count}")
+                                if desc:
+                                    lines.append(f"  描述: {desc}")
+                            return "\n".join(lines)
+                        # FrontendBridgeListTool 使用 _list_async
+                        elif hasattr(t, '_list_async'):
+                            return await t._list_async(kwargs.get('service'))
+                        # KnowledgeCreateTool 等使用 _create_via_bridge
+                        elif hasattr(t, '_create_via_bridge'):
+                            result = await t._create_via_bridge(**kwargs)
+                            if result.get("success"):
+                                kb = result.get("knowledge", {})
+                                return (
+                                    f"知识库创建成功！\n"
+                                    f"名称: {kb.get('name')}\n"
+                                    f"ID: {kb.get('id')}\n"
+                                    f"嵌入模型: {kb.get('embeddingModelName')}\n"
+                                    f"现在可以使用 web_crawl 工具添加内容。"
+                                )
+                            return f"创建失败: {result.get('error', '未知错误')}"
+                        else:
+                            # 同步工具直接运行
+                            return t.run(**kwargs)
+
+                    # 设置函数属性
+                    async_tool_wrapper.__name__ = t.name
+                    async_tool_wrapper.__doc__ = t.description
+
+                    # 返回异步版本（Deep Agents 支持异步工具）
+                    return async_tool_wrapper
                 tool_functions.append(create_tool_wrapper(tool))
 
             # 创建 ChatModel 实例（而非字符串），支持自定义 API 配置

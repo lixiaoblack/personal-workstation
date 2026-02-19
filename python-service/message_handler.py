@@ -564,7 +564,8 @@ class MessageHandler:
 
             # 如果流式循环结束但没有收到 answer 类型，手动发送结束消息
             if not has_final_answer:
-                logger.info(f"[DeepAgent] 流式结束，发送结束消息，内容长度: {len(full_content)}")
+                logger.info(
+                    f"[DeepAgent] 流式结束，发送结束消息，内容长度: {len(full_content)}")
                 await self.send_callback({
                     "type": "chat_stream_end",
                     "id": f"{msg_id}_end",

@@ -150,7 +150,8 @@ class FrontendBridgeTool(BaseTool):
         try:
             # 发送请求
             await _global_ws_send_callback(message)
-            logger.info(f"[FrontendBridge] 发送请求: {service}.{method}, requestId: {request_id}")
+            logger.info(
+                f"[FrontendBridge] 发送请求: {service}.{method}, requestId: {request_id}")
 
             # 等待响应（超时 30 秒）
             response = await asyncio.wait_for(future, timeout=30.0)
@@ -195,7 +196,8 @@ class FrontendBridgeTool(BaseTool):
             lines = [f"操作成功，共 {len(result)} 条记录:"]
             for i, item in enumerate(result[:10], 1):  # 最多显示 10 条
                 if isinstance(item, dict):
-                    name = item.get("name") or item.get("title") or item.get("id") or str(item)
+                    name = item.get("name") or item.get(
+                        "title") or item.get("id") or str(item)
                     lines.append(f"  {i}. {name}")
                 else:
                     lines.append(f"  {i}. {item}")
@@ -354,7 +356,8 @@ def handle_bridge_response(message: Dict[str, Any]):
         return
 
     logger.info(f"[FrontendBridge] 收到响应，requestId: {request_id}")
-    logger.debug(f"[FrontendBridge] 待处理请求: {list(_pending_bridge_requests.keys())}")
+    logger.debug(
+        f"[FrontendBridge] 待处理请求: {list(_pending_bridge_requests.keys())}")
 
     future = _pending_bridge_requests.pop(request_id, None)
     if future and not future.done():

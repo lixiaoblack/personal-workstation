@@ -119,6 +119,11 @@ export function useWebSocket(
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as WebSocketMessage;
+          console.log("[WebSocket] 收到消息:", {
+            type: message.type,
+            id: (message as { id?: string }).id,
+            timestamp: Date.now(),
+          });
           setLastMessage(message);
 
           // 处理连接确认

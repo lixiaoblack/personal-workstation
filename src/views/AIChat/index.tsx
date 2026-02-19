@@ -90,6 +90,12 @@ const AIChatComponent: React.FC = () => {
   const loadingRef = useRef(false);
   const agentStepsRef = useRef<AgentStepItem[]>([]);
   const processedMessageIdsRef = useRef<Set<string>>(new Set()); // 已处理的消息 ID
+  const streamStateRef = useRef<StreamState>(streamState); // 追踪流状态的 ref
+
+  // 同步 streamState 到 ref
+  useEffect(() => {
+    streamStateRef.current = streamState;
+  }, [streamState]);
 
   // ===== 数据加载 =====
 
@@ -251,10 +257,20 @@ const AIChatComponent: React.FC = () => {
   useEffect(() => {
     if (!lastMessage) return;
 
+    // 详细日志：打印收到的消息
+    console.log("[AIChat] 收到 WebSocket 消息:", {
+      type: lastMessage.type,
+      id: (lastMessage as { id?: string }).id,
+      timestamp: Date.now(),
+      currentStreamStateRef: streamStateRef.current,
+      currentAgentSteps: agentStepsRef.current.length,
+    });
+
     // 防止重复处理同一消息
     const messageId = (lastMessage as { id?: string }).id;
     if (messageId) {
       if (processedMessageIdsRef.current.has(messageId)) {
+        console.log("[AIChat] 跳过重复消息:", messageId);
         return; // 已处理过，跳过
       }
       processedMessageIdsRef.current.add(messageId);
@@ -272,6 +288,11 @@ const AIChatComponent: React.FC = () => {
     // 流式开始
     if (lastMessage.type === MessageType.CHAT_STREAM_START) {
       const streamStart = lastMessage as ChatStreamStartMessage;
+      console.log("[AIChat] CHAT_STREAM_START:", {
+        conversationId: streamStart.conversationId,
+        previousContent: streamStateRef.current.content,
+        previousAgentSteps: agentStepsRef.current.length,
+      });
       // 重置所有流式状态，确保是全新的
       setStreamState({
         status: "streaming",
@@ -281,12 +302,18 @@ const AIChatComponent: React.FC = () => {
       // 清空之前的 Agent 步骤
       setAgentSteps([]);
       agentStepsRef.current = [];
+      console.log("[AIChat] 状态已重置，开始新的流式传输");
       return;
     }
 
     // 流式内容块
     if (lastMessage.type === MessageType.CHAT_STREAM_CHUNK) {
       const chunk = lastMessage as ChatStreamChunkMessage;
+      console.log("[AIChat] CHAT_STREAM_CHUNK:", {
+        contentLength: chunk.content?.length || 0,
+        contentPreview: chunk.content?.substring(0, 50),
+        currentStreamContent: streamStateRef.current.content?.length || 0,
+      });
       setStreamState((prev) => ({
         ...prev,
         content: prev.content + chunk.content,
@@ -299,9 +326,19 @@ const AIChatComponent: React.FC = () => {
       const streamEnd = lastMessage as ChatStreamEndMessage;
       const fullContent = streamEnd.fullContent;
 
+      console.log("[AIChat] CHAT_STREAM_END:", {
+        conversationId: streamEnd.conversationId,
+        fullContentLength: fullContent?.length || 0,
+        fullContentPreview: fullContent?.substring(0, 100),
+        agentStepsCount: agentStepsRef.current.length,
+        currentStreamStateRef: streamStateRef.current,
+      });
+
       // 先保存 agentSteps，然后重置状态
       const savedAgentSteps = [...agentStepsRef.current];
-      const cid = streamEnd.conversationId || streamState.conversationId;
+      const cid = streamEnd.conversationId || streamStateRef.current.conversationId;
+
+      console.log("[AIChat] 准备重置状态，保存的 agentSteps:", savedAgentSteps.length, "cid:", cid);
 
       // 立即重置所有流式状态，防止新消息显示旧内容
       setStreamState({
@@ -312,6 +349,8 @@ const AIChatComponent: React.FC = () => {
       setAgentSteps([]);
       agentStepsRef.current = [];
       loadingRef.current = false;
+
+      console.log("[AIChat] 状态已重置");
 
       // 保存 AI 消息到数据库（附带保存的 Agent 步骤）
       if (cid && fullContent) {
@@ -404,7 +443,6 @@ const AIChatComponent: React.FC = () => {
     }
   }, [
     lastMessage,
-    streamState.conversationId,
     loadMessages,
     loadConversations,
     activeConversation?.id,
@@ -491,13 +529,13 @@ const AIChatComponent: React.FC = () => {
   // 选择对话
   const handleSelectConversation = useCallback(
     async (conversationId: number) => {
-      if (streamState.status === "streaming") {
+      if (streamStateRef.current.status === "streaming") {
         message.warning("正在生成回复，请稍后再切换对话");
         return;
       }
       await loadMessages(conversationId);
     },
-    [loadMessages, streamState.status]
+    [loadMessages]
   );
 
   // ===== 发送消息 =====
@@ -509,10 +547,17 @@ const AIChatComponent: React.FC = () => {
       message.warning("请先配置模型");
       return;
     }
-    if (streamState.status === "streaming") {
+    if (streamStateRef.current.status === "streaming") {
       message.warning("正在生成回复，请稍后再发送");
       return;
     }
+
+    console.log("[AIChat] handleSend 开始:", {
+      content: content.substring(0, 50),
+      currentStreamStateRef: streamStateRef.current,
+      currentAgentSteps: agentStepsRef.current.length,
+      activeConversationId: activeConversation?.id,
+    });
 
     // 如果没有当前对话，创建新对话
     let conversationId = activeConversation?.id;
@@ -537,6 +582,8 @@ const AIChatComponent: React.FC = () => {
     // 清空之前的 Agent 步骤
     setAgentSteps([]);
     agentStepsRef.current = [];
+
+    console.log("[AIChat] 准备发送消息，conversationId:", conversationId);
 
     // 添加用户消息
     const userMessage: Message = {
@@ -622,6 +669,13 @@ const AIChatComponent: React.FC = () => {
         };
       });
 
+      console.log("[AIChat] 发送 Agent 消息:", {
+        content: content.substring(0, 50),
+        conversationId: String(conversationId),
+        modelId: currentModel.id,
+        knowledgeId: selectedKnowledgeId,
+      });
+
       sendAgentChat({
         content,
         conversationId: String(conversationId),
@@ -631,6 +685,12 @@ const AIChatComponent: React.FC = () => {
         knowledgeMetadata,
       });
     } else {
+      console.log("[AIChat] 发送普通聊天消息:", {
+        content: content.substring(0, 50),
+        conversationId: String(conversationId),
+        modelId: currentModel.id,
+      });
+
       sendChat({
         content,
         conversationId: String(conversationId),
@@ -644,7 +704,6 @@ const AIChatComponent: React.FC = () => {
     connectionState,
     currentModel,
     activeConversation,
-    streamState.status,
     sendChat,
     sendAgentChat,
     agentMode,

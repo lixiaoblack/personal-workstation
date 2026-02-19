@@ -592,6 +592,8 @@ class DeepAgentWrapper:
 
         try:
             iteration = 0
+            # 快速通道：跟踪是否检测到真正的工具调用
+            has_real_tool_call = False
 
             # 流式执行 Agent
             async for event in self._agent.astream({"messages": formatted_messages}):
@@ -607,10 +609,21 @@ class DeepAgentWrapper:
                     # 单个 Command 对象，直接处理
                     logger.debug(
                         f"[DeepAgent] Event type: {type(event).__name__}")
+                    content = self._extract_content(event)
+                    # 快速通道：如果没有工具调用，直接输出内容
+                    if not has_real_tool_call:
+                        yield {
+                            "node": "agent",
+                            "step_type": "stream_chunk",
+                            "content": content,
+                            "iteration": iteration,
+                            "update": event
+                        }
+                        continue
                     step_data = {
                         "node": "agent",
                         "step_type": "thought",
-                        "content": self._extract_content(event),
+                        "content": content,
                         "iteration": iteration,
                         "update": event
                     }
@@ -622,16 +635,39 @@ class DeepAgentWrapper:
                     logger.debug(
                         f"[DeepAgent] Event: node={node_name}, update_type={type(state_update).__name__}")
 
+                    # 检测是否有真正的工具调用
+                    tool_call_info = self._extract_tool_call(state_update)
+                    if tool_call_info:
+                        has_real_tool_call = True
+                        logger.info(f"[DeepAgent] 检测到工具调用: {tool_call_info}")
+
                     # 解析步骤类型
                     step_type = self._parse_step_type(node_name, state_update)
                     content = self._extract_content(state_update)
 
+                    # 快速通道逻辑：
+                    # - 如果没有真正的工具调用，不发送 thought/tool_call 步骤
+                    # - 直接发送流式内容
+                    if not has_real_tool_call:
+                        # 没有工具调用，直接流式输出
+                        if content:
+                            yield {
+                                "node": node_name,
+                                "step_type": "stream_chunk",
+                                "content": content,
+                                "iteration": iteration,
+                                "update": state_update
+                            }
+                        continue
+
+                    # 有工具调用，发送详细的思考步骤
                     step_data = {
                         "node": node_name,
                         "step_type": step_type,
                         "content": content,
                         "iteration": iteration,
-                        "update": state_update
+                        "update": state_update,
+                        "tool_call": tool_call_info  # 包含工具调用信息
                     }
 
                     # 发送步骤消息
@@ -640,6 +676,7 @@ class DeepAgentWrapper:
                             conversation_id=conversation_id,
                             step_type=step_type,
                             content=content,
+                            tool_call=tool_call_info,  # 传递工具调用信息
                             iteration=iteration
                         )
 
@@ -852,6 +889,90 @@ class DeepAgentWrapper:
         if content is None:
             return ""
         return str(content) if content else ""
+
+    def _extract_tool_call(self, state_update) -> Optional[Dict]:
+        """
+        提取工具调用信息
+
+        检测 LLM 是否真正调用了工具。
+
+        Args:
+            state_update: 状态更新（可能是 dict、list 或 LangGraph 的 Command 对象）
+
+        Returns:
+            工具调用信息字典，如果没有工具调用返回 None
+            格式: {"name": "tool_name", "arguments": {...}}
+        """
+        # 处理 LangGraph 的 Command 对象（如 Overwrite）
+        if hasattr(state_update, '__class__') and state_update.__class__.__name__ in ['Overwrite', 'Command']:
+            try:
+                if hasattr(state_update, 'value'):
+                    value = state_update.value
+                    if isinstance(value, list) and value:
+                        last_item = value[-1]
+                        return self._extract_tool_call_from_message(last_item)
+                    elif hasattr(value, 'tool_calls'):
+                        return self._extract_tool_call_from_message(value)
+            except Exception as e:
+                logger.debug(f"[DeepAgent] 处理 Overwrite 对象失败: {e}")
+            return None
+
+        # 处理字典类型
+        if isinstance(state_update, dict):
+            messages = state_update.get("messages", [])
+            if messages and hasattr(messages, '__class__') and messages.__class__.__name__ == 'Overwrite':
+                return self._extract_tool_call(messages)  # 递归处理
+
+            if messages:
+                last_msg = messages[-1] if isinstance(messages, list) else messages
+                return self._extract_tool_call_from_message(last_msg)
+
+        # 处理列表类型
+        if isinstance(state_update, list):
+            if state_update:
+                last_item = state_update[-1]
+                return self._extract_tool_call_from_message(last_item)
+
+        return None
+
+    def _extract_tool_call_from_message(self, message) -> Optional[Dict]:
+        """
+        从消息对象中提取工具调用信息
+
+        Args:
+            message: LangChain 消息对象
+
+        Returns:
+            工具调用信息字典，如果没有工具调用返回 None
+        """
+        # 检查 AIMessage 的 tool_calls 属性
+        if hasattr(message, 'tool_calls') and message.tool_calls:
+            # tool_calls 是一个列表
+            first_tool_call = message.tool_calls[0]
+            if isinstance(first_tool_call, dict):
+                return {
+                    "name": first_tool_call.get("name", "unknown"),
+                    "arguments": first_tool_call.get("args", {})
+                }
+            elif hasattr(first_tool_call, 'name'):
+                return {
+                    "name": first_tool_call.name,
+                    "arguments": getattr(first_tool_call, 'args', {})
+                }
+
+        # 检查 additional_kwargs 中的 tool_calls（OpenAI 格式）
+        if hasattr(message, 'additional_kwargs'):
+            tool_calls = message.additional_kwargs.get('tool_calls', [])
+            if tool_calls:
+                first_tool_call = tool_calls[0]
+                if isinstance(first_tool_call, dict):
+                    function = first_tool_call.get('function', {})
+                    return {
+                        "name": function.get('name', 'unknown'),
+                        "arguments": function.get('arguments', {})
+                    }
+
+        return None
 
     def _extract_steps(self, result: Dict) -> List[AgentStep]:
         """

@@ -340,11 +340,12 @@ class KnowledgeListTool(BaseTool):
 
     async def _list_via_bridge(self) -> List[Dict[str, Any]]:
         """通过 FrontendBridge 获取知识库列表"""
+        import asyncio
+        import time
         from agent.frontend_bridge_tool import (
             _global_ws_send_callback,
             _pending_bridge_requests
         )
-        import time
 
         if not _global_ws_send_callback:
             logger.warning("[KnowledgeListTool] WebSocket 未连接，使用本地缓存")
@@ -502,11 +503,12 @@ class KnowledgeCreateTool(BaseTool):
         embedding_model_name: str
     ) -> Dict[str, Any]:
         """通过 FrontendBridge 创建知识库"""
+        import asyncio
+        import time
         from agent.frontend_bridge_tool import (
             _global_ws_send_callback,
             _pending_bridge_requests
         )
-        import time
 
         if not _global_ws_send_callback:
             return {"success": False, "error": "WebSocket 未连接，无法创建知识库"}

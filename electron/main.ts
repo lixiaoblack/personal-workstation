@@ -416,7 +416,7 @@ function registerIpcHandlers() {
   ipcMain.handle("knowledge:create", async (_event, input) => {
     try {
       // 先在本地数据库创建，生成 ID
-      const knowledge = knowledgeService.createKnowledge(
+      const knowledge = await knowledgeService.createKnowledge(
         input.name,
         input.description,
         input.embeddingModel,

@@ -56,6 +56,7 @@ export function useWebSocket(
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectCountRef = useRef(0);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const connectingRef = useRef(false); // 防止重复连接
 
   // 清理重连定时器
   const clearReconnectTimer = useCallback(() => {
@@ -67,9 +68,12 @@ export function useWebSocket(
 
   // 连接 WebSocket
   const connect = useCallback(async () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    // 防止重复连接
+    if (connectingRef.current || wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
+
+    connectingRef.current = true;
 
     try {
       setConnectionState(ConnectionState.CONNECTING);
@@ -138,6 +142,8 @@ export function useWebSocket(
     } catch (error) {
       console.error("[WebSocket] 连接失败:", error);
       setConnectionState(ConnectionState.ERROR);
+    } finally {
+      connectingRef.current = false;
     }
   }, [reconnectAttempts, reconnectInterval]);
 

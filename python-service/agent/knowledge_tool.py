@@ -373,28 +373,33 @@ class KnowledgeListTool(BaseTool):
         try:
             # 发送请求
             await _global_ws_send_callback(message)
-            logger.info(
-                f"[KnowledgeListTool] 发送 FrontendBridge 请求: {request_id}")
+            logger.info(f"[KnowledgeListTool] 发送 FrontendBridge 请求: {request_id}")
 
-            # 等待响应（超时 10 秒）
-            response = await asyncio.wait_for(future, timeout=10.0)
-
-            if response.get("success"):
-                result = response.get("result", [])
-                logger.info(f"[KnowledgeListTool] 获取到 {len(result)} 个知识库")
-                return result
-            else:
-                logger.error(
-                    f"[KnowledgeListTool] 调用失败: {response.get('error')}")
-                return await self._list_local()
-
-        except asyncio.TimeoutError:
+            # 使用非阻塞轮询方式等待响应
+            # 这样可以让事件循环有机会处理其他任务
+            start_time = time.time()
+            timeout = 10.0
+            
+            while time.time() - start_time < timeout:
+                # 检查 future 是否已完成
+                if future.done():
+                    response = future.result()
+                    if response.get("success"):
+                        result = response.get("result", [])
+                        logger.info(f"[KnowledgeListTool] 获取到 {len(result)} 个知识库")
+                        return result
+                    else:
+                        logger.error(f"[KnowledgeListTool] 调用失败: {response.get('error')}")
+                        return await self._list_local()
+                
+                # 让事件循环处理其他任务（包括 WebSocket 消息）
+                await asyncio.sleep(0.05)  # 50ms
+            
+            # 超时
             _pending_bridge_requests.pop(request_id, None)
-            logger.warning(
-                f"[KnowledgeListTool] FrontendBridge 超时: {request_id}")
-            logger.debug(
-                f"[KnowledgeListTool] 待处理请求: {list(_pending_bridge_requests.keys())}")
+            logger.warning(f"[KnowledgeListTool] FrontendBridge 超时: {request_id}")
             return await self._list_local()
+
         except Exception as e:
             _pending_bridge_requests.pop(request_id, None)
             logger.error(f"[KnowledgeListTool] 异常: {e}")
@@ -402,27 +407,33 @@ class KnowledgeListTool(BaseTool):
 
     async def _list_local(self) -> List[Dict[str, Any]]:
         """本地备份方法：从 LanceDB 获取知识库列表"""
+        import asyncio
         from rag.vectorstore import get_vectorstore
 
-        vectorstore = get_vectorstore()
-        stats = vectorstore.get_stats()
-        collections = stats.get("collections", [])
+        # 使用 asyncio.to_thread 在后台线程运行阻塞的同步代码
+        def get_local_stats():
+            vectorstore = get_vectorstore()
+            stats = vectorstore.get_stats()
+            collections = stats.get("collections", [])
 
-        result = []
-        for col in collections:
-            kb_id = col.get("id", "")
-            metadata = KnowledgeRetrieverTool._knowledge_metadata.get(
-                kb_id, {})
-            name = metadata.get("name") or f"知识库 {kb_id[-6:]}"
+            result = []
+            for col in collections:
+                kb_id = col.get("id", "")
+                metadata = KnowledgeRetrieverTool._knowledge_metadata.get(
+                    kb_id, {})
+                name = metadata.get("name") or f"知识库 {kb_id[-6:]}"
 
-            result.append({
-                "id": kb_id,
-                "name": name,
-                "description": metadata.get("description", ""),
-                "documentCount": col.get("document_count", 0),
-            })
+                result.append({
+                    "id": kb_id,
+                    "name": name,
+                    "description": metadata.get("description", ""),
+                    "documentCount": col.get("document_count", 0),
+                })
 
-        return result
+            return result
+
+        # 在线程池中运行阻塞代码，不阻塞事件循环
+        return await asyncio.to_thread(get_local_stats)
 
 
 class KnowledgeCreateSchema(ToolSchema):

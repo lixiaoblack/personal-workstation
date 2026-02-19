@@ -862,19 +862,26 @@ class DeepAgentWrapper:
                 if hasattr(state_update, 'value'):
                     value = state_update.value
                     if isinstance(value, list) and value:
-                        last_item = value[-1]
-                        if hasattr(last_item, 'content'):
-                            content = last_item.content
-                        elif isinstance(last_item, dict):
-                            content = last_item.get("content")
+                        # 从后往前找，找到第一个 AI 消息
+                        for item in reversed(value):
+                            # 跳过用户消息，只提取 AI 消息
+                            if self._is_ai_message(item):
+                                if hasattr(item, 'content'):
+                                    content = item.content
+                                elif isinstance(item, dict):
+                                    content = item.get("content")
+                                if content:
+                                    break
                     elif hasattr(value, 'content'):
-                        content = value.content
+                        # 检查是否是 AI 消息
+                        if self._is_ai_message(value):
+                            content = value.content
                 if content:
                     return str(content) if content is not None else ""
-                return f"[{state_update.__class__.__name__}]"
+                return ""
             except Exception as e:
                 logger.debug(f"[DeepAgent] 处理 Overwrite 对象失败: {e}")
-                return f"[Overwrite: {str(e)}]"
+                return ""
 
         # 处理字典类型
         if isinstance(state_update, dict):
@@ -883,27 +890,73 @@ class DeepAgentWrapper:
             if messages and hasattr(messages, '__class__') and messages.__class__.__name__ == 'Overwrite':
                 return self._extract_content(messages)  # 递归处理
 
-            if messages:
-                last_msg = messages[-1] if isinstance(
-                    messages, list) else messages
-                if hasattr(last_msg, "content"):
-                    content = last_msg.content
-                elif isinstance(last_msg, dict):
-                    content = last_msg.get("content")
+            if messages and isinstance(messages, list):
+                # 从后往前找，找到第一个 AI 消息
+                for msg in reversed(messages):
+                    if self._is_ai_message(msg):
+                        if hasattr(msg, "content"):
+                            content = msg.content
+                        elif isinstance(msg, dict):
+                            content = msg.get("content")
+                        if content:
+                            break
 
         # 处理列表类型
         if isinstance(state_update, list):
-            if state_update:
-                last_item = state_update[-1]
-                if hasattr(last_item, "content"):
-                    content = last_item.content
-                elif isinstance(last_item, dict):
-                    content = last_item.get("content")
+            # 从后往前找，找到第一个 AI 消息
+            for item in reversed(state_update):
+                if self._is_ai_message(item):
+                    if hasattr(item, "content"):
+                        content = item.content
+                    elif isinstance(item, dict):
+                        content = item.get("content")
+                    if content:
+                        break
 
         # 确保返回非 None 字符串
         if content is None:
             return ""
         return str(content) if content else ""
+
+    def _is_ai_message(self, message) -> bool:
+        """
+        检查消息是否是 AI 消息（非用户消息）
+
+        Args:
+            message: LangChain 消息对象
+
+        Returns:
+            是否是 AI 消息
+        """
+        # 检查消息类型
+        if hasattr(message, 'type'):
+            # type 为 'human' 表示用户消息，跳过
+            if message.type == 'human':
+                return False
+            # type 为 'ai' 表示 AI 消息
+            if message.type == 'ai':
+                return True
+
+        # 检查类名
+        if hasattr(message, '__class__'):
+            class_name = message.__class__.__name__
+            # HumanMessage 是用户消息，跳过
+            if class_name == 'HumanMessage':
+                return False
+            # AIMessage 或 ToolMessage 是 AI 相关消息
+            if class_name in ['AIMessage', 'ToolMessage']:
+                return True
+
+        # 字典类型检查 role
+        if isinstance(message, dict):
+            role = message.get('role', '')
+            if role == 'user':
+                return False
+            if role in ['assistant', 'ai', 'tool']:
+                return True
+
+        # 默认情况，无法判断，保守处理返回 True
+        return True
 
     def _extract_tool_call(self, state_update) -> Optional[Dict]:
         """

@@ -146,6 +146,11 @@ def init_skills_system():
     register_web_crawl_tools(global_tool_registry)
     logger.info("已注册网页采集工具")
 
+    # 8. 注册前端桥接工具
+    from agent.frontend_bridge_tool import register_frontend_bridge_tools
+    register_frontend_bridge_tools()
+    logger.info("已注册前端桥接工具")
+
 
 class AgentService:
     """AI 智能体服务"""
@@ -183,6 +188,10 @@ class AgentService:
         # 设置全局发送回调（供知识库创建工具使用）
         _global_send_callback = self._send_message
 
+        # 设置前端桥接工具的 WebSocket 回调
+        from agent.frontend_bridge_tool import set_ws_send_callback
+        set_ws_send_callback(self._send_message)
+
         self.running = True
 
         # 连接到 Electron WebSocket 服务器
@@ -209,6 +218,19 @@ class AgentService:
     async def handle_message(self, message: dict):
         """处理接收到的消息"""
         try:
+            # 处理前端桥接响应
+            msg_type = message.get("type")
+            if msg_type == "frontend_bridge_response":
+                from agent.frontend_bridge_tool import handle_bridge_response
+                handle_bridge_response(message)
+                return
+
+            if msg_type == "frontend_bridge_list_response":
+                from agent.frontend_bridge_tool import handle_bridge_response
+                handle_bridge_response(message)
+                return
+
+            # 处理其他消息
             response = await self.message_handler.process(message)
             if response and self.ws_client:
                 await self.ws_client.send(response)

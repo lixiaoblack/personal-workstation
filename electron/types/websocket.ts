@@ -97,6 +97,12 @@ export enum MessageType {
   WEB_CRAWL_RESPONSE = "web_crawl_response", // 网页采集响应
   WEB_FETCH = "web_fetch", // 网页内容获取请求
   WEB_FETCH_RESPONSE = "web_fetch_response", // 网页内容获取响应
+
+  // Frontend Bridge 前端桥接（Agent -> Electron）
+  FRONTEND_BRIDGE_REQUEST = "frontend_bridge_request", // 桥接调用请求
+  FRONTEND_BRIDGE_RESPONSE = "frontend_bridge_response", // 桥接调用响应
+  FRONTEND_BRIDGE_LIST = "frontend_bridge_list", // 获取可用方法列表
+  FRONTEND_BRIDGE_LIST_RESPONSE = "frontend_bridge_list_response", // 方法列表响应
 }
 
 // 基础消息结构
@@ -745,6 +751,82 @@ export interface WebFetchResponseMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== Frontend Bridge 前端桥接消息类型 ====================
+
+/**
+ * 服务方法参数定义
+ */
+export interface BridgeMethodParam {
+  name: string;
+  type: "string" | "number" | "boolean" | "object" | "array";
+  required: boolean;
+  description: string;
+  default?: unknown;
+}
+
+/**
+ * 服务方法定义
+ */
+export interface BridgeMethod {
+  service: string;
+  method: string;
+  description: string;
+  params: BridgeMethodParam[];
+  returns: string;
+  example?: string;
+}
+
+/**
+ * 桥接调用请求消息
+ */
+export interface FrontendBridgeRequestMessage extends BaseMessage {
+  type: MessageType.FRONTEND_BRIDGE_REQUEST;
+  /** 服务名称，如 'knowledgeService' */
+  service: string;
+  /** 方法名称，如 'createKnowledge' */
+  method: string;
+  /** 调用参数 */
+  params: Record<string, unknown>;
+  /** 请求 ID（用于响应匹配） */
+  requestId: string;
+}
+
+/**
+ * 桥接调用响应消息
+ */
+export interface FrontendBridgeResponseMessage extends BaseMessage {
+  type: MessageType.FRONTEND_BRIDGE_RESPONSE;
+  success: boolean;
+  /** 请求 ID */
+  requestId: string;
+  /** 调用结果 */
+  result?: unknown;
+  /** 错误信息 */
+  error?: string;
+}
+
+/**
+ * 获取可用方法列表请求消息
+ */
+export interface FrontendBridgeListMessage extends BaseMessage {
+  type: MessageType.FRONTEND_BRIDGE_LIST;
+  /** 可选：筛选指定服务 */
+  service?: string;
+}
+
+/**
+ * 可用方法列表响应消息
+ */
+export interface FrontendBridgeListResponseMessage extends BaseMessage {
+  type: MessageType.FRONTEND_BRIDGE_LIST_RESPONSE;
+  success: boolean;
+  /** 可用方法列表 */
+  methods: BridgeMethod[];
+  /** 方法数量 */
+  count: number;
+  error?: string;
+}
+
 // 保存记忆
 export interface MemorySaveMessage extends BaseMessage {
   type: MessageType.MEMORY_SAVE;
@@ -929,7 +1011,11 @@ export type WebSocketMessage =
   | WebCrawlMessage
   | WebCrawlResponseMessage
   | WebFetchMessage
-  | WebFetchResponseMessage;
+  | WebFetchResponseMessage
+  | FrontendBridgeRequestMessage
+  | FrontendBridgeResponseMessage
+  | FrontendBridgeListMessage
+  | FrontendBridgeListResponseMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

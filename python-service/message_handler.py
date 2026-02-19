@@ -92,15 +92,23 @@ class MessageHandler:
         return None  # 不需要响应
 
     async def _handle_chat_message(self, message: dict) -> dict:
-        """处理聊天消息"""
+        """
+        处理聊天消息
+
+        支持两种模式：
+        1. 普通聊天：直接调用 LLM
+        2. 工具增强聊天：使用 Function Calling，让 LLM 可以调用工具
+        """
         content = message.get("content", "")
         conversation_id = message.get("conversationId")
         model_id = message.get("modelId")  # 可选，指定模型
         stream = message.get("stream", False)  # 是否流式输出
         # 优先使用传入的历史记录（滑动窗口策略）
         incoming_history = message.get("history", [])
+        # 是否启用工具（Function Calling）
+        use_tools = message.get("useTools", False)  # 默认不启用
 
-        logger.info(f"收到聊天消息: {content[:50]}...")
+        logger.info(f"收到聊天消息: {content[:50]}... (useTools={use_tools})")
 
         # 如果没有传入历史记录，使用内存中的会话历史（兼容旧客户端）
         if not incoming_history and conversation_id:
@@ -134,6 +142,12 @@ class MessageHandler:
 
             # 添加当前用户消息
             messages.append({"role": "user", "content": content})
+
+            # 如果启用工具，使用 Function Calling
+            if use_tools:
+                return await self._handle_chat_with_tools(
+                    message, messages, model_id, conversation_id
+                )
 
             # 调用模型
             if stream:
@@ -186,6 +200,80 @@ class MessageHandler:
         except Exception as e:
             logger.error(f"处理聊天消息错误: {e}")
             return self._error_response(str(e), message.get("id"))
+
+    async def _handle_chat_with_tools(
+        self,
+        message: dict,
+        messages: list,
+        model_id: Optional[int],
+        conversation_id: str
+    ) -> dict:
+        """
+        使用 Function Calling 的聊天
+
+        让 LLM 可以调用工具获取信息，然后生成回答。
+        """
+        from agent.tools import global_tool_registry
+
+        # 获取所有工具的 OpenAI 格式
+        tools = global_tool_registry.get_openai_tools()
+        logger.info(f"[FunctionCalling] 可用工具数量: {len(tools)}")
+
+        # 定义工具执行器
+        async def tool_executor(tool_name: str, tool_args: dict) -> str:
+            """执行工具并返回结果"""
+            try:
+                result = global_tool_registry.execute_tool(tool_name, tool_args)
+                logger.info(f"[FunctionCalling] 工具 {tool_name} 执行成功")
+                return result
+            except Exception as e:
+                error_msg = f"工具 {tool_name} 执行失败: {str(e)}"
+                logger.error(error_msg)
+                return error_msg
+
+        try:
+            # 使用支持工具的聊天方法
+            response_content = await model_router.chat_with_tools(
+                messages=messages,
+                model_id=model_id,
+                tools=tools,
+                tool_executor=tool_executor
+            )
+
+            # 存储响应
+            if conversation_id and conversation_id in self.conversations:
+                self.conversations[conversation_id].append({
+                    "role": "assistant",
+                    "content": response_content,
+                    "timestamp": int(time.time() * 1000)
+                })
+
+            return {
+                "type": "chat_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "content": response_content,
+                "conversationId": conversation_id,
+                "success": True,
+                "usedTools": True  # 标记使用了工具
+            }
+
+        except Exception as e:
+            logger.error(f"[FunctionCalling] 工具聊天错误: {e}")
+            # 降级到普通聊天
+            response_content = await model_router.chat_async(
+                messages=messages,
+                model_id=model_id
+            )
+            return {
+                "type": "chat_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "content": response_content,
+                "conversationId": conversation_id,
+                "success": True,
+                "fallback": True
+            }
 
     async def _handle_stream_chat(
         self, message: dict, messages: list, model_id: Optional[int]

@@ -124,6 +124,7 @@ export interface ChatMessage extends BaseMessage {
   stream?: boolean; // 是否流式输出，默认 false
   history?: HistoryMessageItem[]; // 历史消息（滑动窗口）
   maxHistoryTokens?: number; // 最大上下文 token 数（可选）
+  useTools?: boolean; // 是否启用工具（Function Calling），默认 false
   metadata?: Record<string, unknown>; // 额外元数据
 }
 

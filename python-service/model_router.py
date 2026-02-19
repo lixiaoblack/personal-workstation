@@ -172,8 +172,19 @@ class ModelRouter:
         self,
         messages: list[Dict[str, str]],
         model_id: Optional[int] = None,
-    ) -> str:
-        """异步聊天"""
+        tools: Optional[list] = None,
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        异步聊天
+
+        Args:
+            messages: 消息列表
+            model_id: 模型 ID
+            tools: 工具列表（OpenAI 格式）
+
+        Returns:
+            响应内容或工具调用信息
+        """
         # 获取模型
         if model_id:
             model = self._models.get(model_id)
@@ -197,7 +208,126 @@ class ModelRouter:
             else:
                 lc_messages.append(HumanMessage(content=content))
 
+        # 如果有工具，绑定工具到模型
+        if tools:
+            try:
+                model = model.bind_tools(tools)
+            except Exception as e:
+                logger.warning(f"模型不支持工具绑定: {e}")
+
         # 异步调用
+        response = await model.ainvoke(lc_messages)
+
+        # 检查是否有工具调用
+        if hasattr(response, 'tool_calls') and response.tool_calls:
+            return {
+                "content": response.content or "",
+                "tool_calls": response.tool_calls,
+                "has_tool_calls": True
+            }
+
+        return response.content
+
+    async def chat_with_tools(
+        self,
+        messages: list[Dict[str, str]],
+        model_id: Optional[int] = None,
+        tools: Optional[list] = None,
+        tool_executor: Optional[callable] = None,
+        max_iterations: int = 5,
+    ) -> str:
+        """
+        支持工具调用的聊天
+
+        自动处理工具调用循环，直到模型返回最终答案。
+
+        Args:
+            messages: 消息列表
+            model_id: 模型 ID
+            tools: 工具列表（OpenAI 格式）
+            tool_executor: 工具执行函数 (tool_name, tool_args) -> result
+            max_iterations: 最大迭代次数
+
+        Returns:
+            最终响应内容
+        """
+        if not tools:
+            return await self.chat_async(messages, model_id)
+
+        # 获取模型
+        if model_id:
+            model = self._models.get(model_id)
+            if not model:
+                raise ValueError(f"模型 {model_id} 未注册")
+        else:
+            if not self._models:
+                raise ValueError("没有可用的模型")
+            model = list(self._models.values())[0]
+
+        # 转换消息格式
+        lc_messages = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+
+            if role == "system":
+                lc_messages.append(SystemMessage(content=content))
+            elif role == "assistant":
+                lc_messages.append(AIMessage(content=content))
+            else:
+                lc_messages.append(HumanMessage(content=content))
+
+        # 绑定工具
+        try:
+            model_with_tools = model.bind_tools(tools)
+        except Exception as e:
+            logger.warning(f"模型不支持工具绑定，使用普通聊天: {e}")
+            response = await model.ainvoke(lc_messages)
+            return response.content
+
+        # 工具调用循环
+        iteration = 0
+        while iteration < max_iterations:
+            iteration += 1
+            logger.info(f"[FunctionCalling] 迭代 {iteration}/{max_iterations}")
+
+            # 调用模型
+            response = await model_with_tools.ainvoke(lc_messages)
+
+            # 检查是否有工具调用
+            if not (hasattr(response, 'tool_calls') and response.tool_calls):
+                # 没有工具调用，返回最终答案
+                return response.content
+
+            # 处理工具调用
+            tool_calls = response.tool_calls
+            logger.info(f"[FunctionCalling] 收到 {len(tool_calls)} 个工具调用")
+
+            # 添加助手消息（包含工具调用）
+            lc_messages.append(response)
+
+            # 执行每个工具调用
+            for tool_call in tool_calls:
+                tool_name = tool_call.get("name") if isinstance(tool_call, dict) else tool_call.name
+                tool_args = tool_call.get("args") if isinstance(tool_call, dict) else tool_call.args
+                tool_id = tool_call.get("id") if isinstance(tool_call, dict) else tool_call.id
+
+                logger.info(f"[FunctionCalling] 执行工具: {tool_name}({tool_args})")
+
+                # 执行工具
+                if tool_executor:
+                    tool_result = await tool_executor(tool_name, tool_args)
+                else:
+                    tool_result = f"错误：未提供工具执行器"
+
+                # 添加工具结果消息
+                from langchain_core.messages import ToolMessage
+                lc_messages.append(ToolMessage(
+                    content=str(tool_result),
+                    tool_call_id=tool_id
+                ))
+
+        # 达到最大迭代次数，返回当前内容
         response = await model.ainvoke(lc_messages)
         return response.content
 

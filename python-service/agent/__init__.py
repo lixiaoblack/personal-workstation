@@ -11,6 +11,7 @@ ReAct = Reasoning + Acting（推理 + 行动）
 - tools.py: 工具注册和管理
 - graph.py: LangGraph 工作流定义（ReAct Agent）
 - deep_agent.py: Deep Agents 封装（高级智能体能力）
+- web_search_tool.py: 网页搜索工具
 """
 
 from .state import AgentState, AgentStep

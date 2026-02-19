@@ -862,19 +862,12 @@ class DeepAgentWrapper:
                 if hasattr(state_update, 'value'):
                     value = state_update.value
                     if isinstance(value, list) and value:
-                        # 从后往前找，找到第一个 AI 消息
-                        for item in reversed(value):
-                            # 跳过用户消息，只提取 AI 消息
-                            if self._is_ai_message(item):
-                                if hasattr(item, 'content'):
-                                    content = item.content
-                                elif isinstance(item, dict):
-                                    content = item.get("content")
-                                if content:
-                                    break
+                        # 优先找没有工具调用的 AI 消息（最终答案）
+                        # 如果没有，再找有工具调用的 AI 消息
+                        content = self._find_ai_content(value)
                     elif hasattr(value, 'content'):
-                        # 检查是否是 AI 消息
-                        if self._is_ai_message(value):
+                        # 检查是否是 AI 消息且没有工具调用
+                        if self._is_ai_message(value) and not self._has_tool_calls(value):
                             content = value.content
                 if content:
                     return str(content) if content is not None else ""
@@ -891,32 +884,71 @@ class DeepAgentWrapper:
                 return self._extract_content(messages)  # 递归处理
 
             if messages and isinstance(messages, list):
-                # 从后往前找，找到第一个 AI 消息
-                for msg in reversed(messages):
-                    if self._is_ai_message(msg):
-                        if hasattr(msg, "content"):
-                            content = msg.content
-                        elif isinstance(msg, dict):
-                            content = msg.get("content")
-                        if content:
-                            break
+                content = self._find_ai_content(messages)
 
         # 处理列表类型
         if isinstance(state_update, list):
-            # 从后往前找，找到第一个 AI 消息
-            for item in reversed(state_update):
-                if self._is_ai_message(item):
-                    if hasattr(item, "content"):
-                        content = item.content
-                    elif isinstance(item, dict):
-                        content = item.get("content")
-                    if content:
-                        break
+            content = self._find_ai_content(state_update)
 
         # 确保返回非 None 字符串
         if content is None:
             return ""
         return str(content) if content else ""
+
+    def _find_ai_content(self, messages: list) -> Optional[str]:
+        """
+        从消息列表中找到 AI 消息的内容
+        
+        优先级：
+        1. 找没有工具调用的 AI 消息（最终答案）
+        2. 如果没有，找有工具调用的 AI 消息
+        
+        Args:
+            messages: 消息列表
+            
+        Returns:
+            内容字符串或 None
+        """
+        content_with_tool_calls = None
+        
+        # 从后往前找
+        for msg in reversed(messages):
+            if self._is_ai_message(msg):
+                msg_content = None
+                if hasattr(msg, 'content'):
+                    msg_content = msg.content
+                elif isinstance(msg, dict):
+                    msg_content = msg.get("content")
+                
+                if msg_content:
+                    # 如果没有工具调用，这是最终答案，直接返回
+                    if not self._has_tool_calls(msg):
+                        return str(msg_content)
+                    # 如果有工具调用，记录下来，后面可能用
+                    if content_with_tool_calls is None:
+                        content_with_tool_calls = str(msg_content)
+        
+        return content_with_tool_calls
+
+    def _has_tool_calls(self, message) -> bool:
+        """
+        检查消息是否有工具调用
+        
+        Args:
+            message: LangChain 消息对象
+            
+        Returns:
+            是否有工具调用
+        """
+        # 检查 tool_calls 属性
+        if hasattr(message, 'tool_calls') and message.tool_calls:
+            return True
+        # 检查 additional_kwargs 中的 tool_calls
+        if hasattr(message, 'additional_kwargs'):
+            tool_calls = message.additional_kwargs.get('tool_calls', [])
+            if tool_calls:
+                return True
+        return False
 
     def _is_ai_message(self, message) -> bool:
         """

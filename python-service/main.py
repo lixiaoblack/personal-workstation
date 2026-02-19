@@ -28,6 +28,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# 全局消息发送回调（用于知识库同步等）
+_global_send_callback = None
+
 
 def get_external_skills_dirs() -> list:
     """
@@ -159,6 +162,7 @@ class AgentService:
 
     async def start(self, ws_host: str, ws_port: int):
         """启动服务"""
+        global _global_send_callback
         logger.info(f"启动 AI 智能体服务，连接到 ws://{ws_host}:{ws_port}")
 
         # 初始化 Skills 系统
@@ -175,6 +179,9 @@ class AgentService:
 
         # 初始化消息处理器，传递发送消息的回调
         self.message_handler = MessageHandler(send_callback=self._send_message)
+
+        # 设置全局发送回调（供知识库创建工具使用）
+        _global_send_callback = self._send_message
 
         self.running = True
 

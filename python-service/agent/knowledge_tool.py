@@ -373,6 +373,166 @@ class KnowledgeListTool(BaseTool):
         return result
 
 
+class KnowledgeCreateSchema(ToolSchema):
+    """知识库创建工具参数"""
+
+    name: str = Field(
+        description="知识库的名称，如 '前端技术栈'、'服务器配置'"
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="知识库的描述信息"
+    )
+    embedding_model: Optional[str] = Field(
+        default="ollama",
+        description="嵌入模型类型：'ollama' 或 'openai'"
+    )
+    embedding_model_name: Optional[str] = Field(
+        default="nomic-embed-text",
+        description="嵌入模型名称，如 'nomic-embed-text'、'text-embedding-3-small'"
+    )
+
+
+class KnowledgeCreateTool(BaseTool):
+    """
+    知识库创建工具
+
+    创建一个新的知识库，同时创建：
+    1. LanceDB 向量存储集合（用于检索）
+    2. Electron SQLite 记录（用于前端展示）
+
+    使用场景：
+    - 用户想要创建新的知识库来存储文档
+    - 在采集网页内容前需要先创建目标知识库
+    """
+
+    name = "knowledge_create"
+    description = (
+        "创建一个新的知识库。"
+        "当用户想要新建知识库来存储文档或网页内容时使用此工具。"
+        "创建后可以使用 web_crawl 工具将网页内容添加到知识库。"
+    )
+
+    args_schema = KnowledgeCreateSchema
+
+    def _run(
+        self,
+        name: str,
+        description: Optional[str] = None,
+        embedding_model: str = "ollama",
+        embedding_model_name: str = "nomic-embed-text"
+    ) -> str:
+        """创建知识库"""
+        import asyncio
+
+        try:
+            result = asyncio.run(self._create_async(
+                name=name,
+                description=description,
+                embedding_model=embedding_model,
+                embedding_model_name=embedding_model_name
+            ))
+
+            if result.get("success"):
+                kb = result.get("knowledge", {})
+                return (
+                    f"知识库创建成功！\n"
+                    f"名称: {kb.get('name')}\n"
+                    f"ID: {kb.get('id')}\n"
+                    f"嵌入模型: {kb.get('embeddingModelName')}\n"
+                    f"现在可以使用 web_crawl 工具添加内容。"
+                )
+            else:
+                return f"创建失败: {result.get('error', '未知错误')}"
+
+        except Exception as e:
+            logger.error(f"[KnowledgeCreateTool] 创建失败: {e}")
+            return f"创建失败: {str(e)}"
+
+    async def _create_async(
+        self,
+        name: str,
+        description: Optional[str],
+        embedding_model: str,
+        embedding_model_name: str
+    ) -> Dict[str, Any]:
+        """异步创建知识库"""
+        from rag.vectorstore import get_vectorstore
+        from rag.embeddings import EmbeddingService, EmbeddingModelType
+        import time
+
+        # 生成知识库 ID
+        knowledge_id = f"kb_{int(time.time() * 1000)}"
+
+        # 创建向量存储
+        vectorstore = get_vectorstore()
+
+        # 确定嵌入模型类型和维度
+        model_type = EmbeddingModelType.OLLAMA if embedding_model == "ollama" else EmbeddingModelType.OPENAI
+        embedding_service = EmbeddingService(
+            model_type=model_type,
+            model_name=embedding_model_name,
+        )
+
+        # 创建集合
+        success = vectorstore.create_collection(knowledge_id, embedding_service.dimension)
+
+        if success:
+            # 同步到 Electron（通过全局消息处理器）
+            await self._sync_to_electron(
+                knowledge_id=knowledge_id,
+                name=name,
+                description=description,
+                embedding_model=embedding_model,
+                embedding_model_name=embedding_model_name
+            )
+
+            return {
+                "success": True,
+                "knowledge": {
+                    "id": knowledge_id,
+                    "name": name,
+                    "description": description,
+                    "embeddingModel": embedding_model,
+                    "embeddingModelName": embedding_model_name,
+                    "documentCount": 0,
+                    "createdAt": int(time.time() * 1000),
+                }
+            }
+        else:
+            return {"success": False, "error": "创建向量存储失败"}
+
+    async def _sync_to_electron(
+        self,
+        knowledge_id: str,
+        name: str,
+        description: Optional[str],
+        embedding_model: str,
+        embedding_model_name: str
+    ):
+        """同步知识库到 Electron SQLite"""
+        # 尝试获取全局的消息发送回调
+        try:
+            # 从 main.py 获取发送回调
+            import main as main_module
+            if hasattr(main_module, '_global_send_callback') and main_module._global_send_callback:
+                import time
+                sync_message = {
+                    "type": "knowledge_sync_create",
+                    "id": f"sync_{knowledge_id}",
+                    "timestamp": int(time.time() * 1000),
+                    "knowledgeId": knowledge_id,
+                    "name": name,
+                    "description": description or "",
+                    "embeddingModel": embedding_model,
+                    "embeddingModelName": embedding_model_name,
+                }
+                await main_module._global_send_callback(sync_message)
+                logger.info(f"[KnowledgeCreateTool] 同步到 Electron: {knowledge_id}")
+        except Exception as e:
+            logger.warning(f"[KnowledgeCreateTool] 同步到 Electron 失败: {e}")
+
+
 def register_knowledge_tools():
     """注册知识库相关工具"""
     global global_tool_registry
@@ -388,6 +548,12 @@ def register_knowledge_tools():
     if knowledge_list_tool.name not in global_tool_registry.list_tools():
         global_tool_registry.register(knowledge_list_tool)
         logger.info("已注册知识库列表工具: knowledge_list")
+
+    # 注册知识库创建工具
+    knowledge_create_tool = KnowledgeCreateTool()
+    if knowledge_create_tool.name not in global_tool_registry.list_tools():
+        global_tool_registry.register(knowledge_create_tool)
+        logger.info("已注册知识库创建工具: knowledge_create")
 
     logger.info(f"当前已注册工具: {global_tool_registry.list_tools()}")
 

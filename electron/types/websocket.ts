@@ -70,6 +70,12 @@ export enum MessageType {
   KNOWLEDGE_LIST_DOCUMENTS = "knowledge_list_documents", // 列出知识库文档
   KNOWLEDGE_LIST_DOCUMENTS_RESPONSE = "knowledge_list_documents_response", // 列出知识库文档响应
 
+  // Knowledge Sync 知识库同步（Python -> Electron）
+  KNOWLEDGE_SYNC_CREATE = "knowledge_sync_create", // 同步创建知识库（Agent 调用）
+  KNOWLEDGE_SYNC_CREATE_RESPONSE = "knowledge_sync_create_response", // 同步创建响应
+  KNOWLEDGE_SYNC_DELETE = "knowledge_sync_delete", // 同步删除知识库（Agent 调用）
+  KNOWLEDGE_SYNC_DELETE_RESPONSE = "knowledge_sync_delete_response", // 同步删除响应
+
   // Memory 记忆相关
   MEMORY_GET_CONTEXT = "memory_get_context", // 获取记忆上下文
   MEMORY_GET_CONTEXT_RESPONSE = "memory_get_context_response", // 获取记忆上下文响应
@@ -552,6 +558,50 @@ export interface KnowledgeListDocumentsResponseMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== Knowledge Sync 消息类型 ====================
+
+/**
+ * 同步创建知识库请求（Python -> Electron）
+ * 
+ * Agent 调用时，Python 创建 LanceDB 后通知 Electron 创建 SQLite 记录
+ */
+export interface KnowledgeSyncCreateMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SYNC_CREATE;
+  knowledgeId: string;
+  name: string;
+  description?: string;
+  embeddingModel?: string;
+  embeddingModelName?: string;
+}
+
+/**
+ * 同步创建知识库响应
+ */
+export interface KnowledgeSyncCreateResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SYNC_CREATE_RESPONSE;
+  success: boolean;
+  knowledgeId: string;
+  error?: string;
+}
+
+/**
+ * 同步删除知识库请求（Python -> Electron）
+ */
+export interface KnowledgeSyncDeleteMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SYNC_DELETE;
+  knowledgeId: string;
+}
+
+/**
+ * 同步删除知识库响应
+ */
+export interface KnowledgeSyncDeleteResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SYNC_DELETE_RESPONSE;
+  success: boolean;
+  knowledgeId: string;
+  error?: string;
+}
+
 // ==================== Agent 相关消息类型 ====================
 
 // 从 conversation.ts 重新导出，避免重复定义
@@ -858,6 +908,10 @@ export type WebSocketMessage =
   | KnowledgeSearchResponseMessage
   | KnowledgeListDocumentsMessage
   | KnowledgeListDocumentsResponseMessage
+  | KnowledgeSyncCreateMessage
+  | KnowledgeSyncCreateResponseMessage
+  | KnowledgeSyncDeleteMessage
+  | KnowledgeSyncDeleteResponseMessage
   | MemoryGetContextMessage
   | MemoryGetContextResponseMessage
   | MemorySaveMessage

@@ -230,6 +230,63 @@ class DeepAgentWrapper:
 
         return f"{mapped_provider}:{model_id}"
 
+    def _create_chat_model(self):
+        """
+        创建 LangChain ChatModel 实例
+
+        根据模型配置创建对应的 ChatModel，支持自定义 API base URL。
+
+        Returns:
+            LangChain ChatModel 实例
+        """
+        from langchain_openai import ChatOpenAI
+        from langchain_ollama import ChatOllama
+
+        config = self._get_model_config()
+        if not config:
+            # 默认使用 OpenAI
+            return ChatOpenAI(model="gpt-4")
+
+        # 提取配置
+        if hasattr(config, 'provider'):
+            provider = config.provider.value if hasattr(config.provider, 'value') else str(config.provider)
+            model_id = config.model_id
+            api_key = config.api_key
+            api_base_url = config.api_base_url
+            temperature = config.temperature
+            max_tokens = config.max_tokens
+        else:
+            # 兼容字典格式
+            provider = config.get("provider", "openai")
+            model_id = config.get("model_id", "gpt-4")
+            api_key = config.get("api_key")
+            api_base_url = config.get("api_base_url")
+            temperature = config.get("temperature", 0.7)
+            max_tokens = config.get("max_tokens", 4096)
+
+        provider = provider.lower() if provider else "openai"
+        model_kwargs = {"temperature": temperature}
+        if max_tokens:
+            model_kwargs["max_tokens"] = max_tokens
+
+        logger.info(f"[DeepAgent] 创建 ChatModel, provider={provider}, model={model_id}, base_url={api_base_url}")
+
+        if provider == "ollama":
+            # Ollama 模型
+            return ChatOllama(
+                model=model_id,
+                base_url=api_base_url or "http://localhost:11434",
+                temperature=temperature,
+            )
+        else:
+            # OpenAI 兼容接口（包括百炼、智谱等）
+            return ChatOpenAI(
+                model=model_id,
+                api_key=api_key,
+                base_url=api_base_url,
+                **model_kwargs
+            )
+
     def _create_agent(self):
         """
         创建 Deep Agent 实例
@@ -253,14 +310,14 @@ class DeepAgentWrapper:
                     return tool_wrapper
                 tool_functions.append(create_tool_wrapper(tool))
 
-            # 获取模型配置
-            model_str = self._build_model_string()
+            # 创建 ChatModel 实例（而非字符串），支持自定义 API 配置
+            chat_model = self._create_chat_model()
 
-            logger.info(f"[DeepAgent] 创建 Agent，模型: {model_str}, 工具数量: {len(tool_functions)}")
+            logger.info(f"[DeepAgent] 创建 Agent，模型类型: {type(chat_model).__name__}, 工具数量: {len(tool_functions)}")
 
             # 创建 Deep Agent
             agent = create_deep_agent(
-                model=model_str,
+                model=chat_model,  # 传递 ChatModel 实例而非字符串
                 tools=tool_functions,
                 system_prompt=self.system_prompt
             )

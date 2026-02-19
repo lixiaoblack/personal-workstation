@@ -17,9 +17,14 @@ import {
   type SkillListResponseMessage,
   type SkillExecuteResponseMessage,
   type SkillReloadResponseMessage,
+  type KnowledgeSyncCreateMessage,
+  type KnowledgeSyncCreateResponseMessage,
+  type KnowledgeSyncDeleteMessage,
+  type KnowledgeSyncDeleteResponseMessage,
   createMessage,
 } from "../types/websocket";
 import { getEnabledModelConfigs } from "./modelConfigService";
+import * as knowledgeService from "./knowledgeService";
 import type { OnlineModelConfig, OllamaModelConfig } from "../types/model";
 import type {
   OllamaStatus,
@@ -532,6 +537,84 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
             console.log(`[WebSocket] Knowledge 响应已处理: ${msgId}`);
           } else {
             console.warn(`[WebSocket] 未找到对应的 Knowledge 请求: ${msgId}`);
+          }
+        }
+      }
+      return;
+    }
+
+    // 处理来自 Python 的 Knowledge Sync 请求（Agent 调用时同步 SQLite）
+    if (
+      message.type === MessageType.KNOWLEDGE_SYNC_CREATE ||
+      message.type === MessageType.KNOWLEDGE_SYNC_DELETE
+    ) {
+      const clientInfo = clients.get(ws);
+      // 确保消息来自 Python 客户端
+      if (clientInfo?.clientType === "python_agent") {
+        console.log(`[WebSocket] 收到 Knowledge Sync 请求: ${message.type}`);
+
+        if (message.type === MessageType.KNOWLEDGE_SYNC_CREATE) {
+          // 同步创建知识库 SQLite 记录
+          const syncMsg = message as KnowledgeSyncCreateMessage;
+          try {
+            const knowledge = knowledgeService.createKnowledgeWithId(
+              syncMsg.knowledgeId,
+              syncMsg.name,
+              syncMsg.description || "",
+              syncMsg.embeddingModel || "ollama",
+              syncMsg.embeddingModelName || "nomic-embed-text"
+            );
+
+            // 发送响应
+            const response: KnowledgeSyncCreateResponseMessage = {
+              type: MessageType.KNOWLEDGE_SYNC_CREATE_RESPONSE,
+              id: syncMsg.id,
+              timestamp: Date.now(),
+              success: !!knowledge,
+              knowledgeId: syncMsg.knowledgeId,
+              error: knowledge ? undefined : "创建知识库记录失败",
+            };
+            ws.send(JSON.stringify(response));
+            console.log(`[WebSocket] Knowledge Sync Create 成功: ${syncMsg.knowledgeId}`);
+          } catch (error) {
+            const response: KnowledgeSyncCreateResponseMessage = {
+              type: MessageType.KNOWLEDGE_SYNC_CREATE_RESPONSE,
+              id: syncMsg.id,
+              timestamp: Date.now(),
+              success: false,
+              knowledgeId: syncMsg.knowledgeId,
+              error: String(error),
+            };
+            ws.send(JSON.stringify(response));
+            console.error(`[WebSocket] Knowledge Sync Create 失败:`, error);
+          }
+        } else if (message.type === MessageType.KNOWLEDGE_SYNC_DELETE) {
+          // 同步删除知识库 SQLite 记录
+          const syncMsg = message as KnowledgeSyncDeleteMessage;
+          try {
+            const success = knowledgeService.deleteKnowledge(syncMsg.knowledgeId);
+
+            const response: KnowledgeSyncDeleteResponseMessage = {
+              type: MessageType.KNOWLEDGE_SYNC_DELETE_RESPONSE,
+              id: syncMsg.id,
+              timestamp: Date.now(),
+              success,
+              knowledgeId: syncMsg.knowledgeId,
+              error: success ? undefined : "删除知识库记录失败",
+            };
+            ws.send(JSON.stringify(response));
+            console.log(`[WebSocket] Knowledge Sync Delete 成功: ${syncMsg.knowledgeId}`);
+          } catch (error) {
+            const response: KnowledgeSyncDeleteResponseMessage = {
+              type: MessageType.KNOWLEDGE_SYNC_DELETE_RESPONSE,
+              id: syncMsg.id,
+              timestamp: Date.now(),
+              success: false,
+              knowledgeId: syncMsg.knowledgeId,
+              error: String(error),
+            };
+            ws.send(JSON.stringify(response));
+            console.error(`[WebSocket] Knowledge Sync Delete 失败:`, error);
           }
         }
       }

@@ -52,6 +52,52 @@ export function createKnowledge(
 }
 
 /**
+ * 使用指定 ID 创建知识库（用于 Agent 调用同步）
+ */
+export function createKnowledgeWithId(
+  id: string,
+  name: string,
+  description?: string,
+  embeddingModel: string = "ollama",
+  embeddingModelName: string = "nomic-embed-text"
+): KnowledgeInfo | null {
+  const db = getDatabase();
+  const now = Date.now();
+
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO knowledge (id, name, description, embedding_model, embedding_model_name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      id,
+      name,
+      description || null,
+      embeddingModel,
+      embeddingModelName,
+      now,
+      now
+    );
+
+    return {
+      id,
+      name,
+      description,
+      embeddingModel,
+      embeddingModelName,
+      documentCount: 0,
+      totalChunks: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+  } catch (error) {
+    console.error(`[KnowledgeService] 创建知识库失败 (id=${id}):`, error);
+    return null;
+  }
+}
+
+/**
  * 删除知识库
  */
 export function deleteKnowledge(knowledgeId: string): boolean {

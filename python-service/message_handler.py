@@ -1135,6 +1135,8 @@ class MessageHandler:
             "embeddingModelName", "nomic-embed-text")
         # 优先使用传入的 knowledgeId，否则生成新的
         knowledge_id = message.get("knowledgeId")
+        # 是否为 Agent 调用（需要同步 Electron SQLite）
+        sync_to_electron = message.get("syncToElectron", False)
 
         if not name:
             return {
@@ -1168,6 +1170,16 @@ class MessageHandler:
                 knowledge_id, embedding_service.dimension)
 
             if success:
+                # 如果是 Agent 调用，同步到 Electron SQLite
+                if sync_to_electron and self.send_callback:
+                    await self._sync_knowledge_to_electron(
+                        knowledge_id=knowledge_id,
+                        name=name,
+                        description=description,
+                        embedding_model=embedding_model,
+                        embedding_model_name=embedding_model_name
+                    )
+
                 return {
                     "type": "knowledge_create_response",
                     "id": message.get("id"),
@@ -1203,6 +1215,45 @@ class MessageHandler:
                 "success": False,
                 "error": str(e),
             }
+
+    async def _sync_knowledge_to_electron(
+        self,
+        knowledge_id: str,
+        name: str,
+        description: str,
+        embedding_model: str,
+        embedding_model_name: str
+    ):
+        """
+        同步知识库到 Electron SQLite
+
+        当 Agent 创建知识库时，需要同时创建 Electron 端的 SQLite 记录，
+        以便前端界面能正确显示知识库列表。
+
+        Args:
+            knowledge_id: 知识库 ID
+            name: 知识库名称
+            description: 描述
+            embedding_model: 嵌入模型类型
+            embedding_model_name: 嵌入模型名称
+        """
+        try:
+            sync_message = {
+                "type": "knowledge_sync_create",
+                "id": f"sync_{knowledge_id}",
+                "timestamp": int(time.time() * 1000),
+                "knowledgeId": knowledge_id,
+                "name": name,
+                "description": description,
+                "embeddingModel": embedding_model,
+                "embeddingModelName": embedding_model_name,
+            }
+
+            logger.info(f"[Knowledge] 同步知识库到 Electron: {knowledge_id}")
+            await self.send_callback(sync_message)
+
+        except Exception as e:
+            logger.error(f"[Knowledge] 同步知识库到 Electron 失败: {e}")
 
     async def _handle_knowledge_delete(self, message: dict) -> dict:
         """处理删除知识库请求"""

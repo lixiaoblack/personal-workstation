@@ -523,6 +523,7 @@ def get_web_crawler() -> WebCrawlerService:
 # ==================== 工具定义 ====================
 
 from agent.tools import BaseTool, ToolSchema, global_tool_registry
+from pydantic import Field
 
 
 class WebCrawlSchema(ToolSchema):

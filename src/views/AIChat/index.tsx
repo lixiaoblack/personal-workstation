@@ -336,9 +336,15 @@ const AIChatComponent: React.FC = () => {
 
       // 先保存 agentSteps，然后重置状态
       const savedAgentSteps = [...agentStepsRef.current];
-      const cid = streamEnd.conversationId || streamStateRef.current.conversationId;
+      const cid =
+        streamEnd.conversationId || streamStateRef.current.conversationId;
 
-      console.log("[AIChat] 准备重置状态，保存的 agentSteps:", savedAgentSteps.length, "cid:", cid);
+      console.log(
+        "[AIChat] 准备重置状态，保存的 agentSteps:",
+        savedAgentSteps.length,
+        "cid:",
+        cid
+      );
 
       // 立即重置所有流式状态，防止新消息显示旧内容
       setStreamState({

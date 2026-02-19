@@ -605,20 +605,23 @@ class DeepAgentWrapper:
             iteration = 0
             # 快速通道：跟踪是否检测到真正的工具调用
             has_real_tool_call = False
-            
+
             # 追踪历史消息数量，用于区分新旧消息
             # formatted_messages 包含历史消息 + 新用户问题
             # 历史消息数量 = 总数 - 1（新用户问题）
-            history_message_count = len(formatted_messages) - 1 if formatted_messages else 0
+            history_message_count = len(
+                formatted_messages) - 1 if formatted_messages else 0
             # 追踪已处理的消息数量
             processed_message_count = history_message_count
-            
-            logger.info(f"[DeepAgent] 开始流式执行，history_message_count={history_message_count}, formatted_messages={len(formatted_messages)}")
+
+            logger.info(
+                f"[DeepAgent] 开始流式执行，history_message_count={history_message_count}, formatted_messages={len(formatted_messages)}")
 
             # 流式执行 Agent
             async for event in self._agent.astream({"messages": formatted_messages}):
                 iteration += 1
-                logger.info(f"[DeepAgent] Event #{iteration}: type={type(event).__name__}")
+                logger.info(
+                    f"[DeepAgent] Event #{iteration}: type={type(event).__name__}")
 
                 # 处理不同类型的 event
                 # LangGraph 可能返回 dict 或 Command 对象（如 Overwrite）
@@ -668,9 +671,10 @@ class DeepAgentWrapper:
                     # 所以不需要再次跳过，使用原始的 history_message_count
                     content, new_msg_count = self._extract_content_with_history_count(
                         state_update, history_message_count)
-                    
-                    logger.info(f"[DeepAgent] 提取内容: content_len={len(content) if content else 0}, new_msg_count={new_msg_count}, history_message_count={history_message_count}")
-                    
+
+                    logger.info(
+                        f"[DeepAgent] 提取内容: content_len={len(content) if content else 0}, new_msg_count={new_msg_count}, history_message_count={history_message_count}")
+
                     # 不要更新 history_message_count，它应该保持不变
 
                     # 快速通道逻辑：
@@ -876,37 +880,38 @@ class DeepAgentWrapper:
     def _extract_content(self, state_update) -> str:
         """
         提取内容（兼容旧接口）
-        
+
         注意：推荐使用 _extract_content_with_history_count 方法，
         该方法可以正确区分历史消息和新消息。
         """
         return self._extract_content_with_history(state_update, 0)
-    
+
     def _extract_content_with_history(self, state_update, history_count: int) -> str:
         """
         提取内容，考虑历史消息数量
-        
+
         Args:
             state_update: 状态更新
             history_count: 历史消息数量（只提取此数量之后的消息）
-            
+
         Returns:
             内容字符串
         """
-        content, _ = self._extract_content_with_history_count(state_update, history_count)
+        content, _ = self._extract_content_with_history_count(
+            state_update, history_count)
         return content
 
     def _extract_content_with_history_count(self, state_update, history_count: int) -> tuple:
         """
         提取内容并返回消息数量，考虑历史消息数量
-        
+
         注意：LangGraph 每个事件返回的消息列表是独立的，不是累积的。
         history_count 主要用于有历史对话的场景，跳过历史消息。
-        
+
         Args:
             state_update: 状态更新（可能是 dict、list 或 LangGraph 的 Command 对象）
             history_count: 历史消息数量（只提取此数量之后的消息）
-            
+
         Returns:
             (内容字符串, 当前消息数量) 元组
         """
@@ -922,7 +927,8 @@ class DeepAgentWrapper:
                         current_count = len(value)
                         # 如果消息数量大于 history_count，说明有新消息
                         if current_count > history_count:
-                            content = self._find_new_ai_content(value, history_count)
+                            content = self._find_new_ai_content(
+                                value, history_count)
                     elif hasattr(value, 'content'):
                         if self._is_ai_message(value):
                             content = value.content
@@ -943,7 +949,8 @@ class DeepAgentWrapper:
                 current_count = len(messages)
                 # 如果消息数量大于 history_count，说明有新消息
                 if current_count > history_count:
-                    content = self._find_new_ai_content(messages, history_count)
+                    content = self._find_new_ai_content(
+                        messages, history_count)
                 else:
                     # 消息数量没有增加，可能是新事件，直接找 AI 消息
                     content = self._find_ai_content_simple(messages)
@@ -952,7 +959,8 @@ class DeepAgentWrapper:
         if isinstance(state_update, list):
             current_count = len(state_update)
             if current_count > history_count:
-                content = self._find_new_ai_content(state_update, history_count)
+                content = self._find_new_ai_content(
+                    state_update, history_count)
             else:
                 content = self._find_ai_content_simple(state_update)
 
@@ -961,18 +969,18 @@ class DeepAgentWrapper:
     def _find_ai_content_simple(self, messages: list) -> Optional[str]:
         """
         简单地从消息列表中提取最后一个 AI 消息的内容
-        
+
         用于处理消息数量没有增加的情况（新事件）。
-        
+
         Args:
             messages: 消息列表
-            
+
         Returns:
             内容字符串或 None
         """
         if not messages:
             return None
-        
+
         # 从后往前找第一个 AI 消息
         for msg in reversed(messages):
             if self._is_ai_message(msg):
@@ -981,68 +989,73 @@ class DeepAgentWrapper:
                     msg_content = msg.content
                 elif isinstance(msg, dict):
                     msg_content = msg.get("content")
-                
+
                 if msg_content:
                     return str(msg_content)
-        
+
         return None
 
     def _find_new_ai_content(self, messages: list, history_count: int) -> Optional[str]:
         """
         从新消息中提取 AI 消息内容
-        
+
         只查找 history_count 之后的消息，避免返回历史消息内容。
-        
+
         Args:
             messages: 消息列表
             history_count: 历史消息数量
-            
+
         Returns:
             内容字符串或 None
         """
         if not messages:
             logger.info(f"[DeepAgent] _find_new_ai_content: messages 为空")
             return None
-        
+
         # 只看新消息部分（从 history_count 开始）
         new_messages = messages[history_count:]
-        
-        logger.info(f"[DeepAgent] _find_new_ai_content: total_msgs={len(messages)}, history_count={history_count}, new_msgs={len(new_messages)}")
-        
+
+        logger.info(
+            f"[DeepAgent] _find_new_ai_content: total_msgs={len(messages)}, history_count={history_count}, new_msgs={len(new_messages)}")
+
         if not new_messages:
             logger.info(f"[DeepAgent] _find_new_ai_content: new_messages 为空")
             return None
-        
+
         # 从新消息中找最后一个 AI 消息
         for msg in reversed(new_messages):
-            msg_type = getattr(msg, 'type', None) if hasattr(msg, 'type') else None
-            msg_class = msg.__class__.__name__ if hasattr(msg, '__class__') else 'unknown'
+            msg_type = getattr(msg, 'type', None) if hasattr(
+                msg, 'type') else None
+            msg_class = msg.__class__.__name__ if hasattr(
+                msg, '__class__') else 'unknown'
             is_ai = self._is_ai_message(msg)
-            logger.info(f"[DeepAgent] _find_new_ai_content: msg_type={msg_type}, class={msg_class}, is_ai={is_ai}")
-            
+            logger.info(
+                f"[DeepAgent] _find_new_ai_content: msg_type={msg_type}, class={msg_class}, is_ai={is_ai}")
+
             if is_ai:
                 msg_content = None
                 if hasattr(msg, 'content'):
                     msg_content = msg.content
                 elif isinstance(msg, dict):
                     msg_content = msg.get("content")
-                
+
                 if msg_content:
                     # 如果有工具调用，返回这个内容（工具调用的思考）
                     # 如果没有工具调用，也返回内容（最终答案）
-                    logger.info(f"[DeepAgent] _find_new_ai_content: 找到 AI 消息，content_len={len(str(msg_content))}")
+                    logger.info(
+                        f"[DeepAgent] _find_new_ai_content: 找到 AI 消息，content_len={len(str(msg_content))}")
                     return str(msg_content)
-        
+
         logger.info(f"[DeepAgent] _find_new_ai_content: 没有找到 AI 消息")
         return None
 
     def _has_tool_calls(self, message) -> bool:
         """
         检查消息是否有工具调用
-        
+
         Args:
             message: LangChain 消息对象
-            
+
         Returns:
             是否有工具调用
         """
@@ -1130,7 +1143,8 @@ class DeepAgentWrapper:
                 return self._extract_tool_call(messages)  # 递归处理
 
             if messages:
-                last_msg = messages[-1] if isinstance(messages, list) else messages
+                last_msg = messages[-1] if isinstance(
+                    messages, list) else messages
                 return self._extract_tool_call_from_message(last_msg)
 
         # 处理列表类型

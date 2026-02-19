@@ -3,9 +3,10 @@
  * 显示单条消息，支持用户消息和 AI 消息
  * 使用 Ant Design X 的 Think 组件显示思考过程
  */
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useState, useEffect } from "react";
 import { Bubble, Think } from "@ant-design/x";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { useTypewriter } from "@/hooks/useTypewriter";
 import {
   formatTime,
   filterThinkingSteps,
@@ -44,6 +45,27 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
 
     // 是否显示思考过程（只有有工具调用时才显示）
     const showThinking = thinkingSteps.length > 0 && hasToolCallsFlag;
+
+    // 打字机效果 - 快速模式（只对 AI 消息生效）
+    const [enableTypewriter, setEnableTypewriter] = useState(!isUser);
+    
+    const { displayText, isTyping, skip } = useTypewriter(
+      isUser ? "" : message.content,
+      {
+        charDelay: 5, // 快速打字
+        enabled: enableTypewriter,
+      }
+    );
+
+    // 打字完成后禁用打字机（避免重复动画）
+    useEffect(() => {
+      if (!isTyping && displayText === message.content) {
+        setEnableTypewriter(false);
+      }
+    }, [isTyping, displayText, message.content]);
+
+    // 用户消息直接显示，AI 消息使用打字机效果
+    const contentToDisplay = isUser ? message.content : displayText;
 
     return (
       <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}>
@@ -92,6 +114,14 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
                     <span className="text-success">思考完成</span>
                   )}
                   {hasError && <span className="text-error">部分失败</span>}
+                  {isTyping && contentToDisplay && (
+                    <button
+                      onClick={skip}
+                      className="text-text-tertiary hover:text-text-secondary transition-colors"
+                    >
+                      跳过
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -116,7 +146,8 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
               placement={isUser ? "end" : "start"}
               variant="filled"
               shape="default"
-              content={message.content}
+              streaming={isTyping}
+              content={contentToDisplay}
               contentRender={(content) => {
                 if (isUser) {
                   return <span className="whitespace-pre-wrap">{content}</span>;

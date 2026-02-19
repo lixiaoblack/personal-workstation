@@ -479,7 +479,29 @@ class DeepAgentWrapper:
             async for event in self._agent.astream({"messages": formatted_messages}):
                 iteration += 1
 
-                for node_name, state_update in event.items():
+                # 处理不同类型的 event
+                # LangGraph 可能返回 dict 或 Command 对象（如 Overwrite）
+                if isinstance(event, dict):
+                    items = event.items()
+                elif hasattr(event, 'items'):
+                    items = event.items()
+                else:
+                    # 单个 Command 对象，直接处理
+                    logger.debug(f"[DeepAgent] Event type: {type(event).__name__}")
+                    step_data = {
+                        "node": "agent",
+                        "step_type": "thought",
+                        "content": self._extract_content(event),
+                        "iteration": iteration,
+                        "update": event
+                    }
+                    yield step_data
+                    continue
+
+                for node_name, state_update in items:
+                    # 调试日志：打印原始事件数据
+                    logger.debug(f"[DeepAgent] Event: node={node_name}, update_type={type(state_update).__name__}")
+
                     # 解析步骤类型
                     step_type = self._parse_step_type(node_name, state_update)
                     content = self._extract_content(state_update)
@@ -504,7 +526,9 @@ class DeepAgentWrapper:
                     yield step_data
 
         except Exception as e:
+            import traceback
             logger.error(f"[DeepAgent] 流式执行失败: {e}")
+            logger.error(f"[DeepAgent] Traceback:\n{traceback.format_exc()}")
             yield {
                 "error": str(e),
                 "step_type": "error",
@@ -627,13 +651,13 @@ class DeepAgentWrapper:
                 "content": f"聊天出错: {str(e)}"
             }
 
-    def _parse_step_type(self, node_name: str, state_update: Dict) -> str:
+    def _parse_step_type(self, node_name: str, state_update) -> str:
         """
         解析步骤类型
 
         Args:
             node_name: 节点名称
-            state_update: 状态更新
+            state_update: 状态更新（可能是 dict 或 LangGraph 的 Command 对象）
 
         Returns:
             步骤类型字符串
@@ -647,23 +671,57 @@ class DeepAgentWrapper:
         else:
             return "thought"
 
-    def _extract_content(self, state_update: Dict) -> str:
+    def _extract_content(self, state_update) -> str:
         """
         提取内容
 
         Args:
-            state_update: 状态更新
+            state_update: 状态更新（可能是 dict、list 或 LangGraph 的 Command 对象）
 
         Returns:
             内容字符串
         """
-        messages = state_update.get("messages", [])
-        if messages:
-            last_msg = messages[-1]
-            if hasattr(last_msg, "content"):
-                return last_msg.content
-            elif isinstance(last_msg, dict):
-                return last_msg.get("content", "")
+        # 处理 LangGraph 的 Command 对象（如 Overwrite）
+        if hasattr(state_update, '__class__') and state_update.__class__.__name__ in ['Overwrite', 'Command']:
+            # Overwrite 对象有 value 属性
+            try:
+                if hasattr(state_update, 'value'):
+                    value = state_update.value
+                    if isinstance(value, list) and value:
+                        last_item = value[-1]
+                        if hasattr(last_item, 'content'):
+                            return last_item.content
+                        elif isinstance(last_item, dict):
+                            return last_item.get("content", "")
+                    elif hasattr(value, 'content'):
+                        return value.content
+                return f"[{state_update.__class__.__name__}]"
+            except Exception as e:
+                logger.debug(f"[DeepAgent] 处理 Overwrite 对象失败: {e}")
+                return f"[Overwrite: {str(e)}]"
+
+        # 处理字典类型
+        if isinstance(state_update, dict):
+            messages = state_update.get("messages", [])
+            # messages 可能是 Overwrite 对象
+            if messages and hasattr(messages, '__class__') and messages.__class__.__name__ == 'Overwrite':
+                return self._extract_content(messages)  # 递归处理
+
+            if messages:
+                last_msg = messages[-1] if isinstance(messages, list) else messages
+                if hasattr(last_msg, "content"):
+                    return last_msg.content
+                elif isinstance(last_msg, dict):
+                    return last_msg.get("content", "")
+
+        # 处理列表类型
+        if isinstance(state_update, list):
+            if state_update:
+                last_item = state_update[-1]
+                if hasattr(last_item, "content"):
+                    return last_item.content
+                elif isinstance(last_item, dict):
+                    return last_item.get("content", "")
 
         return str(state_update)
 

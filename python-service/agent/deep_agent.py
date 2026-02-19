@@ -335,13 +335,23 @@ class DeepAgentWrapper:
             for tool in self.custom_tools:
                 # 将工具包装为异步函数，避免 asyncio.run() 阻塞事件循环
                 def create_tool_wrapper(t):
+                    tool_name = t.name  # 捕获工具名称
+
                     async def async_tool_wrapper(**kwargs):
+                        logger.info(f"[DeepAgent] 异步调用工具: {tool_name}")
+                        import asyncio
+                        logger.debug(f"[DeepAgent] 当前事件循环: {asyncio.get_running_loop()}")
+
                         # 如果工具有异步执行方法，使用异步方法
                         # FrontendBridgeTool 使用 _call_async
                         if hasattr(t, '_call_async'):
-                            return await t._call_async(**kwargs)
+                            logger.info(f"[DeepAgent] 使用 _call_async: {tool_name}")
+                            result = await t._call_async(**kwargs)
+                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                            return result
                         # KnowledgeListTool 使用 _list_via_bridge
                         elif hasattr(t, '_list_via_bridge'):
+                            logger.info(f"[DeepAgent] 使用 _list_via_bridge: {tool_name}")
                             result = await t._list_via_bridge()
                             # 格式化结果
                             if not result:
@@ -356,15 +366,21 @@ class DeepAgentWrapper:
                                 lines.append(f"  文档数: {doc_count}")
                                 if desc:
                                     lines.append(f"  描述: {desc}")
+                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
                             return "\n".join(lines)
                         # FrontendBridgeListTool 使用 _list_async
                         elif hasattr(t, '_list_async'):
-                            return await t._list_async(kwargs.get('service'))
+                            logger.info(f"[DeepAgent] 使用 _list_async: {tool_name}")
+                            result = await t._list_async(kwargs.get('service'))
+                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                            return result
                         # KnowledgeCreateTool 等使用 _create_via_bridge
                         elif hasattr(t, '_create_via_bridge'):
+                            logger.info(f"[DeepAgent] 使用 _create_via_bridge: {tool_name}")
                             result = await t._create_via_bridge(**kwargs)
                             if result.get("success"):
                                 kb = result.get("knowledge", {})
+                                logger.info(f"[DeepAgent] 工具完成: {tool_name}")
                                 return (
                                     f"知识库创建成功！\n"
                                     f"名称: {kb.get('name')}\n"
@@ -372,13 +388,17 @@ class DeepAgentWrapper:
                                     f"嵌入模型: {kb.get('embeddingModelName')}\n"
                                     f"现在可以使用 web_crawl 工具添加内容。"
                                 )
+                            logger.info(f"[DeepAgent] 工具完成(失败): {tool_name}")
                             return f"创建失败: {result.get('error', '未知错误')}"
                         else:
                             # 同步工具直接运行
-                            return t.run(**kwargs)
+                            logger.info(f"[DeepAgent] 使用同步 run: {tool_name}")
+                            result = t.run(**kwargs)
+                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                            return result
 
                     # 设置函数属性
-                    async_tool_wrapper.__name__ = t.name
+                    async_tool_wrapper.__name__ = tool_name
                     async_tool_wrapper.__doc__ = t.description
 
                     # 返回异步版本（Deep Agents 支持异步工具）

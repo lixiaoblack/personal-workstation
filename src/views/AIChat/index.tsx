@@ -46,7 +46,7 @@ const AIChatComponent: React.FC = () => {
   const llmModels = models.filter((m) => m.usageType === "llm" || !m.usageType);
 
   // Agent 模式开关
-  const [agentMode, setAgentMode] = useState(false);
+  const [agentMode, setAgentMode] = useState(true);
 
   // 知识库列表和选中状态
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeInfo[]>([]);

@@ -422,9 +422,10 @@ class MessageHandler:
                         incoming_history=incoming_history,
                         msg_id=msg_id,
                     )
+                    # 如果 Deep Agent 完成执行（包括返回 {"completed": True}），直接返回
                     if result is not None:
                         return result
-                    # Deep Agent 返回 None，降级到 ReAct Agent
+                    # Deep Agent 返回 None（SDK 未安装），降级到 ReAct Agent
                     logger.info("[Agent] Deep Agent 不可用，降级到 ReAct Agent")
                 except Exception as e:
                     logger.warning(
@@ -564,10 +565,10 @@ class MessageHandler:
                     })
 
             logger.info(f"[DeepAgent] 执行完成")
-            return None  # 通过流式消息发送，不返回响应
+            return {"completed": True}  # 返回标记表示 Deep Agent 已完成执行
 
         except ImportError as e:
-            logger.debug(f"[DeepAgent] SDK 未安装: {e}")
+            logger.info(f"[DeepAgent] SDK 未安装，降级到 ReAct Agent: {e}")
             return None  # Deep Agent 不可用，返回 None 让调用者降级
         except Exception as e:
             logger.error(f"[DeepAgent] 执行错误: {e}")

@@ -296,12 +296,16 @@ class DeepAgentWrapper:
 
         Returns:
             执行结果
+
+        Note:
+            当 Deep Agents SDK 未安装时，不会自动降级到普通 LLM 聊天，
+            而是抛出 ImportError，让调用者决定如何降级。
         """
         self._ensure_agent()
 
         if self._agent is None:
-            # 降级到普通聊天
-            return self._fallback_chat(input_text, messages)
+            # Deep Agent 不可用，抛出异常让调用者处理降级
+            raise ImportError("Deep Agents SDK 未安装，请降级到 ReAct Agent")
 
         # 构建消息
         if messages is None:
@@ -359,14 +363,16 @@ class DeepAgentWrapper:
 
         Yields:
             状态更新字典
+
+        Note:
+            当 Deep Agents SDK 未安装时，不会自动降级到普通 LLM 聊天，
+            而是抛出 ImportError，让调用者决定如何降级。
         """
         self._ensure_agent()
 
         if self._agent is None:
-            # 降级到普通流式聊天
-            async for chunk in self._fallback_stream(input_text, messages):
-                yield chunk
-            return
+            # Deep Agent 不可用，抛出异常让调用者处理降级
+            raise ImportError("Deep Agents SDK 未安装，请降级到 ReAct Agent")
 
         # 构建消息
         if messages is None:

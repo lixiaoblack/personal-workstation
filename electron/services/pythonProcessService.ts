@@ -18,6 +18,7 @@ import type {
 import { DEFAULT_PYTHON_SERVICE_CONFIG } from "../types/python";
 import { detectPythonEnvironment } from "./pythonEnvService";
 import { getServerInfo } from "./websocketService";
+import { getDatabasePath } from "../database/index";
 
 // 服务实例
 let serviceProcess: ChildProcess | null = null;
@@ -61,6 +62,25 @@ function getServiceDirectory(): string {
   }
 
   return path.join(process.resourcesPath, "python-service");
+}
+
+/**
+ * 获取 Python 可执行文件路径
+ */
+function getPythonExecutable(): string {
+  const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+  const platform = process.platform;
+
+  if (isDev) {
+    // 开发环境：返回 null，使用 getPythonInterpreter 获取
+    return "";
+  }
+
+  // 生产环境：使用打包后的可执行文件
+  const serviceDir = getServiceDirectory();
+  const exeName =
+    platform === "win32" ? "python-service.exe" : "python-service";
+  return path.join(serviceDir, exeName);
 }
 
 /**
@@ -138,23 +158,43 @@ export async function startPythonService(
     serviceStatus = "starting";
     addLog("info", "正在启动 Python 服务...");
 
-    // 获取 Python 解释器
-    const pythonPath = await getPythonInterpreter(serviceConfig);
-    addLog("info", `使用 Python: ${pythonPath}`);
-
     // 获取服务目录
     const serviceDir = getServiceDirectory();
 
-    // 检查服务脚本是否存在
-    const scriptPath =
-      serviceConfig.scriptPath || path.join(serviceDir, "main.py");
-    if (!fs.existsSync(scriptPath)) {
-      // 如果脚本不存在，创建一个简单的测试服务
-      await createTestService(serviceDir, scriptPath);
+    // 检查是否是生产环境
+    const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+
+    // 获取可执行文件路径
+    const packagedExePath = getPythonExecutable();
+
+    let execPath: string;
+    let execArgs: string[];
+
+    if (isDev || !packagedExePath || !fs.existsSync(packagedExePath)) {
+      // 开发环境：使用 Python 解释器运行脚本
+      const pythonPath = await getPythonInterpreter(serviceConfig);
+      addLog("info", `开发模式 - 使用 Python: ${pythonPath}`);
+
+      const scriptPath =
+        serviceConfig.scriptPath || path.join(serviceDir, "main.py");
+      if (!fs.existsSync(scriptPath)) {
+        await createTestService(serviceDir, scriptPath);
+      }
+
+      execPath = pythonPath;
+      execArgs = [scriptPath];
+    } else {
+      // 生产环境：使用打包后的可执行文件
+      addLog("info", `生产模式 - 使用可执行文件: ${packagedExePath}`);
+      execPath = packagedExePath;
+      execArgs = [];
     }
 
     // 获取 WebSocket 服务器信息
     const wsInfo = getServerInfo();
+
+    // 获取数据库路径
+    const dbPath = getDatabasePath();
 
     // 构建环境变量
     const env: NodeJS.ProcessEnv = {
@@ -165,11 +205,15 @@ export async function startPythonService(
       // 传递 Electron WebSocket 服务器信息
       WS_HOST: "127.0.0.1",
       WS_PORT: String(wsInfo.port),
+      // 传递 HTTP API 端口
+      HTTP_PORT: String(serviceConfig.httpPort || 8766),
+      // 传递数据库路径
+      DB_PATH: dbPath,
       ...serviceConfig.env,
     };
 
     // 启动进程
-    serviceProcess = spawn(pythonPath, [scriptPath], {
+    serviceProcess = spawn(execPath, execArgs, {
       cwd: serviceConfig.workDir || serviceDir,
       env,
       stdio: ["pipe", "pipe", "pipe"],

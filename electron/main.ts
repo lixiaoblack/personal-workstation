@@ -481,7 +481,7 @@ function registerIpcHandlers() {
   // 列出知识库
   ipcMain.handle("knowledge:list", async () => {
     try {
-      const knowledge = knowledgeService.listKnowledge();
+      const knowledge = await knowledgeService.listKnowledge();
       return {
         success: true,
         knowledge,
@@ -500,7 +500,7 @@ function registerIpcHandlers() {
   // 获取知识库详情
   ipcMain.handle("knowledge:get", async (_event, knowledgeId: string) => {
     try {
-      const knowledge = knowledgeService.getKnowledge(knowledgeId);
+      const knowledge = await knowledgeService.getKnowledge(knowledgeId);
       return {
         success: !!knowledge,
         knowledge: knowledge ? [knowledge] : [],
@@ -651,7 +651,7 @@ function registerIpcHandlers() {
     "knowledge:listDocuments",
     async (_event, knowledgeId: string) => {
       try {
-        const documents = knowledgeService.listDocuments(knowledgeId);
+        const documents = await knowledgeService.listDocuments(knowledgeId);
         return {
           success: true,
           documents,
@@ -825,8 +825,9 @@ function registerIpcHandlers() {
     "memory:getSummaries",
     async (_event, conversationId: number) => {
       try {
-        const summaries =
-          memoryService.getSummariesByConversation(conversationId);
+        const summaries = await memoryService.getSummariesByConversation(
+          conversationId
+        );
         return {
           success: true,
           summaries,
@@ -870,7 +871,7 @@ function registerIpcHandlers() {
           const endMessageId =
             recentMessages[recentMessages.length - 1]?.id || 0;
 
-          memoryService.createSummary(
+          await memoryService.createSummary(
             conversationId,
             startMessageId,
             endMessageId,

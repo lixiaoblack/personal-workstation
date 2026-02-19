@@ -76,11 +76,6 @@ const AIChatComponent: React.FC = () => {
   // Agent 步骤状态
   const [agentSteps, setAgentSteps] = useState<AgentStepItem[]>([]);
 
-  // 展开的思考过程消息 ID 集合
-  const [expandedThoughts, setExpandedThoughts] = useState<Set<number>>(
-    new Set()
-  );
-
   // 输入内容
   const [inputValue, setInputValue] = useState("");
 
@@ -649,19 +644,6 @@ const AIChatComponent: React.FC = () => {
     loadConversations,
   ]);
 
-  // 切换消息展开状态
-  const toggleMessageExpand = useCallback((messageId: number) => {
-    setExpandedThoughts((prev) => {
-      const next = new Set(prev);
-      if (next.has(messageId)) {
-        next.delete(messageId);
-      } else {
-        next.add(messageId);
-      }
-      return next;
-    });
-  }, []);
-
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* 对话历史侧边栏 */}
@@ -700,8 +682,6 @@ const AIChatComponent: React.FC = () => {
                   key={msg.id}
                   message={msg}
                   currentModel={currentModel}
-                  isExpanded={expandedThoughts.has(msg.id)}
-                  onToggleExpand={() => toggleMessageExpand(msg.id)}
                 />
               ))}
               {streamState.status === "streaming" && (

@@ -7,7 +7,9 @@
   "main": "./dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && electron-builder",
+    "build:python": "node scripts/build-python.js",
+    "build": "pnpm run build:python && vite build && electron-builder",
+    "build:skip-python": "vite build && electron-builder",
     "preview": "vite preview",
     "lint": "eslint ."
   },
@@ -56,5 +58,38 @@
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.personal.workstation",
+    "productName": "Personal Workstation",
+    "directories": {
+      "output": "dist"
+    },
+    "extraResources": [
+      {
+        "from": "dist/python-service",
+        "to": "python-service",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true
+    }
   }
 }

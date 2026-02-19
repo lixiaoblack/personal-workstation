@@ -685,28 +685,32 @@ md/
 
 ---
 
-## FrontendBridge 前端桥接规范
+## Python 数据服务架构
 
 ### 概述
 
-FrontendBridge 是一个通用的跨端调用机制，让 Agent 可以调用 Electron 前端的服务方法。通过一个统一的桥接工具，Agent 可以操作前端数据库、管理对话、保存记忆等，无需为每个操作单独创建工具。
+Python 服务采用双通道架构，同时运行 WebSocket 服务和 HTTP API 服务：
+
+1. **WebSocket 服务** - 用于 Agent 流式响应和实时通信
+2. **HTTP API 服务** - 用于数据操作（知识库、对话、记忆等）
 
 ### 架构设计
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ Agent                                                        │
-│   ↓ 调用 frontend_bridge 工具                                │
-│   {"service": "knowledgeService", "method": "xxx", ...}      │
+│ Electron 主进程                                              │
+│   ↓ WebSocket Server (ws://localhost:8765)                   │
 ├──────────────────────────────────────────────────────────────┤
-│ Python: FrontendBridgeTool                                   │
-│   ↓ WebSocket: frontend_bridge_request                       │
+│ Python 服务 (main.py)                                        │
+│   ├── WebSocket Client - 连接 Electron，处理 Agent 消息      │
+│   └── HTTP Server (http://127.0.0.1:8766) - 数据 API        │
 ├──────────────────────────────────────────────────────────────┤
-│ Electron: websocketService                                   │
-│   ↓ 根据注册表调用对应方法                                    │
-├──────────────────────────────────────────────────────────────┤
-│ Electron: Service (knowledgeService / conversationService)   │
-│   ↓ 返回结果                                                 │
+│ FastAPI 数据服务 (db_service.py)                             │
+│   /api/knowledge/*     知识库管理                            │
+│   /api/conversations/* 对话管理                              │
+│   /api/messages/*      消息管理                              │
+│   /api/memories/*      记忆管理                              │
+│   /api/users/*         用户管理                              │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -714,157 +718,105 @@ FrontendBridge 是一个通用的跨端调用机制，让 Agent 可以调用 Ele
 
 | 文件 | 位置 | 职责 |
 |------|------|------|
-| 方法注册表 | `electron/services/bridgeRegistry.ts` | 定义可调用的方法、参数、返回值 |
-| 消息类型 | `electron/types/websocket.ts` | 定义桥接消息协议 |
-| WebSocket 处理 | `electron/services/websocketService.ts` | 处理桥接请求和响应 |
-| Python 工具 | `python-service/agent/frontend_bridge_tool.py` | Agent 调用接口 |
+| 主入口 | `python-service/main.py` | 启动 WebSocket 客户端和 HTTP 服务 |
+| 数据服务 | `python-service/db_service.py` | FastAPI HTTP API，统一数据访问层 |
+| 消息处理 | `python-service/message_handler.py` | WebSocket 消息处理和 Agent 调度 |
+| 模型路由 | `python-service/model_router.py` | 多模型支持（OpenAI/Ollama） |
+| 向量检索 | `python-service/rag/` | RAG 知识库检索 |
 
-### 使用方式
+### HTTP API 端点
 
-#### Agent 调用示例
+#### 知识库 API (`/api/knowledge/*`)
 
-```python
-# 查看可用方法
-frontend_bridge_list()
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/knowledge` | GET | 获取知识库列表 |
+| `/api/knowledge` | POST | 创建知识库 |
+| `/api/knowledge/{id}` | GET | 获取知识库详情 |
+| `/api/knowledge/{id}` | PUT | 更新知识库信息 |
+| `/api/knowledge/{id}` | DELETE | 删除知识库 |
+| `/api/knowledge/{id}/documents` | GET | 获取知识库文档列表 |
 
-# 调用知识库服务
-frontend_bridge(
-    service="knowledgeService",
-    method="createKnowledge",
-    params={"name": "前端技术栈", "description": "前端技术文档合集"}
-)
+#### 对话 API (`/api/conversations/*`)
 
-# 调用记忆服务
-frontend_bridge(
-    service="memoryService",
-    method="saveMemory",
-    params={
-        "memoryType": "preference",
-        "memoryKey": "preferred_framework",
-        "memoryValue": "React"
-    }
-)
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/conversations` | GET | 获取对话列表（分组） |
+| `/api/conversations` | POST | 创建对话 |
+| `/api/conversations/{id}` | GET | 获取对话详情（含消息） |
+| `/api/conversations/{id}` | PUT | 更新对话 |
+| `/api/conversations/{id}` | DELETE | 删除对话 |
+| `/api/conversations/{id}/messages` | GET | 获取对话消息 |
+| `/api/conversations/{id}/messages` | POST | 添加消息 |
 
-# 调用对话服务
-frontend_bridge(
-    service="conversationService",
-    method="createConversation",
-    params={"title": "新对话", "modelName": "gpt-4"}
-)
+#### 记忆 API (`/api/memories/*`)
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/memories` | GET | 获取所有记忆 |
+| `/api/memories` | POST | 保存记忆 |
+| `/api/memories/type/{type}` | GET | 按类型获取记忆 |
+| `/api/memories/{id}` | DELETE | 删除记忆 |
+| `/api/memories/context` | GET | 构建记忆上下文 |
+
+#### 用户 API (`/api/users/*`)
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/users/{id}` | GET | 获取用户信息 |
+| `/api/users/{id}` | PUT | 更新用户资料 |
+
+### Skills 系统
+
+Skills 是可热加载的技能模块，让 Agent 具备特定能力。
+
+#### 技能目录结构
+
+```
+python-service/skills/           # 内置技能目录
+~/.personal-workstation/skills/  # 用户自定义技能目录
+$SKILLS_DIR/                     # 环境变量指定的目录
 ```
 
-### 可用服务列表
+#### 技能文件格式 (YAML)
 
-#### knowledgeService (知识库服务)
-
-| 方法 | 描述 | 参数 |
-|------|------|------|
-| createKnowledge | 创建知识库 | name, description?, embeddingModel?, embeddingModelName? |
-| deleteKnowledge | 删除知识库 | knowledgeId |
-| listKnowledge | 获取知识库列表 | 无 |
-| getKnowledge | 获取知识库详情 | knowledgeId |
-| updateKnowledge | 更新知识库信息 | knowledgeId, data |
-| listDocuments | 获取知识库文档列表 | knowledgeId |
-
-#### conversationService (对话服务)
-
-| 方法 | 描述 | 参数 |
-|------|------|------|
-| createConversation | 创建对话 | title?, modelId?, modelName? |
-| deleteConversation | 删除对话 | id |
-| getConversationList | 获取对话列表 | 无 |
-| getConversationById | 获取对话详情 | id |
-| updateConversationTitle | 更新对话标题 | id, title |
-
-#### memoryService (记忆服务)
-
-| 方法 | 描述 | 参数 |
-|------|------|------|
-| saveMemory | 保存记忆 | memoryType, memoryKey, memoryValue, sourceConversationId?, confidence? |
-| getAllMemories | 获取所有记忆 | 无 |
-| getMemoriesByType | 按类型获取记忆 | memoryType |
-| deleteMemory | 删除记忆 | memoryId |
-| buildMemoryContext | 构建记忆上下文 | 无 |
-
-#### userService (用户服务)
-
-| 方法 | 描述 | 参数 |
-|------|------|------|
-| getCurrentUser | 获取当前用户信息 | userId |
-| updateProfile | 更新用户资料 | userId, data |
-
-### 添加新方法
-
-要添加新的可调用方法，需要：
-
-1. **在 `bridgeRegistry.ts` 中注册方法**：
-
-```typescript
-{
-  service: "xxxService",
-  method: "methodName",
-  description: "方法描述",
-  params: [
-    param("paramName", "string", true, "参数描述"),
-  ],
-  returns: "返回值描述",
-  example: '{"paramName": "value"}',
-}
+```yaml
+name: code_explainer
+description: 代码解释技能
+version: "1.0.0"
+author: system
+system_prompt: |
+  你是一个专业的代码解释助手...
+tools:
+  - name: explain_code
+    description: 解释代码功能
+    parameters:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 要解释的代码
+      required: [code]
 ```
-
-2. **确保服务已导入**：
-
-```typescript
-import * as xxxService from "./xxxService";
-```
-
-3. **更新 SERVICE_MAP**：
-
-```typescript
-const SERVICE_MAP = {
-  // ...
-  xxxService: xxxService as unknown as Record<string, (...args: unknown[]) => unknown>,
-};
-```
-
-### 安全规范
-
-1. **方法注册检查**：只有注册表中的方法才能被调用
-2. **服务来源验证**：只接受来自 Python 客户端的请求
-3. **参数验证**：方法参数会根据注册表定义进行验证
-4. **错误处理**：所有错误都会返回清晰的错误信息
 
 ### 消息协议
 
-#### 请求消息
+#### WebSocket 消息类型
 
-```typescript
-interface FrontendBridgeRequestMessage {
-  type: "frontend_bridge_request";
-  service: string;      // 服务名称
-  method: string;       // 方法名称
-  params: object;       // 调用参数
-  requestId: string;    // 请求 ID
-}
-```
-
-#### 响应消息
-
-```typescript
-interface FrontendBridgeResponseMessage {
-  type: "frontend_bridge_response";
-  requestId: string;    // 对应请求 ID
-  success: boolean;     // 是否成功
-  result?: any;         // 返回结果
-  error?: string;       // 错误信息
-}
-```
+| 类型 | 方向 | 描述 |
+|------|------|------|
+| `chat` | Electron → Python | 普通 LLM 聊天请求 |
+| `agent_chat` | Electron → Python | Agent 模式聊天请求 |
+| `chat_stream_start` | Python → Electron | 流式开始 |
+| `chat_stream_chunk` | Python → Electron | 流式内容块 |
+| `chat_stream_end` | Python → Electron | 流式结束 |
+| `agent_step` | Python → Electron | Agent 步骤更新 |
+| `chat_error` | Python → Electron | 错误消息 |
 
 ### 优势
 
-1. **统一接口**：一个工具覆盖所有前端服务操作
-2. **自动发现**：Agent 可以查询可用方法列表
-3. **易扩展**：新增方法只需在注册表添加定义
-4. **类型安全**：完整的参数和返回值类型定义
-5. **统一错误处理**：集中管理权限校验和错误
+1. **双通道设计**：WebSocket 处理实时流式响应，HTTP API 处理数据操作
+2. **离线优先**：支持 Ollama 本地模型，无需联网即可运行
+3. **热加载技能**：Skills 支持运行时加载，无需重启服务
+4. **统一数据层**：所有数据库操作通过 HTTP API，便于维护和调试
 

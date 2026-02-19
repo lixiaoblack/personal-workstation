@@ -121,6 +121,8 @@ export interface PythonServiceConfig {
   scriptPath?: string;
   // 服务端口
   port?: number;
+  // HTTP API 端口
+  httpPort?: number;
   // 工作目录
   workDir?: string;
   // 环境变量

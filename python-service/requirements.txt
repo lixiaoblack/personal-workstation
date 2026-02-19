@@ -1,32 +1,37 @@
 # AI Agent Python Service Dependencies
-# WebSocket 客户端
+
+# ==================== HTTP 数据服务 ====================
+fastapi>=0.109.0
+uvicorn>=0.27.0
+
+# ==================== WebSocket 客户端 ====================
 websockets>=12.0
 
-# HTTP 客户端（Ollama API）
+# ==================== HTTP 客户端（Ollama API）====================
 httpx>=0.25.0
 
-# AI 智能体框架
+# ==================== AI 智能体框架 ====================
 langgraph>=1.0.0
 langchain>=1.0.0
 langchain-community>=0.3.0
 langchain-openai>=0.2.0
 langchain-ollama>=0.2.0
 
-# Deep Agents SDK（高级智能体能力）
+# ==================== Deep Agents SDK（高级智能体能力）====================
 deepagents>=0.3.0
 
-# 向量数据库
+# ==================== 向量数据库 ====================
 lancedb>=0.10.0
 
-# 文档处理
+# ==================== 文档处理 ====================
 pypdf>=4.0.0           # PDF 解析
 beautifulsoup4>=4.12.0 # HTML 解析
 lxml>=5.0.0            # XML 解析
 
-# Skills 系统依赖
+# ==================== Skills 系统依赖 ====================
 pyyaml>=6.0          # YAML 配置解析
 watchdog>=4.0.0      # 文件监听（热重载）
 pydantic>=2.0.0      # 数据验证
 
-# 网页搜索工具
+# ==================== 网页搜索工具 ====================
 duckduckgo-search>=6.0.0  # DuckDuckGo 搜索（无需 API 密钥）

@@ -123,11 +123,6 @@ class WebSocketClient:
                     msg_type = data.get('type')
                     logger.debug(f"收到消息: {msg_type}")
 
-                    # 对于桥接响应，打印更详细的信息
-                    if msg_type in ['frontend_bridge_response', 'frontend_bridge_list_response']:
-                        logger.info(
-                            f"[WebSocketClient] 收到桥接响应: requestId={data.get('requestId')}")
-
                     await self.on_message(data)
                 except json.JSONDecodeError as e:
                     logger.error(f"消息解析错误: {e}")

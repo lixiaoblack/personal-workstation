@@ -4,6 +4,25 @@
 
 ---
 
+## [0.5.13] - 2026-02-19
+
+### 修复 (Fixed)
+
+- 修复普通 LLM 模式下的双重打字机效果问题
+  - 移除 `AIChatStreamingMessage` 组件中的 `useTypewriter` hook
+  - 普通 LLM 模式通过 WebSocket 流式传输，内容本身已经是逐字到达的
+  - 避免流式传输与打字机效果的二次叠加延迟
+
+### 修改 (Changed)
+
+- 更新 `.qoder/rules/rules.md` 项目规范
+  - 删除已废弃的 FrontendBridge 前端桥接规范
+  - 添加 Python 数据服务架构说明（HTTP API + WebSocket 双通道）
+  - 添加 HTTP API 端点文档（知识库、对话、记忆、用户）
+  - 添加 Skills 系统说明和消息协议类型
+
+---
+
 ## [0.5.7] - 2026-02-18
 
 ### 新增 (Added)

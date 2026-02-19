@@ -1,11 +1,17 @@
 /**
  * AIChatMessage - 消息渲染组件
  * 显示单条消息，支持用户消息和 AI 消息
+ * 使用 Ant Design X 的 Think 组件显示思考过程
  */
-import React, { memo } from "react";
-import { Bubble } from "@ant-design/x";
+import React, { memo, useMemo } from "react";
+import { Bubble, Think } from "@ant-design/x";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
-import { formatTime } from "../../config";
+import {
+  formatTime,
+  filterThinkingSteps,
+  hasToolCalls,
+  hasErrors,
+} from "../../config";
 import type { AgentStepItem } from "../../config";
 import AIChatAgentSteps from "../AIChatAgentSteps";
 import type { Message, ModelConfig } from "@/types/electron";
@@ -13,23 +19,31 @@ import type { Message, ModelConfig } from "@/types/electron";
 interface AIChatMessageProps {
   message: Message;
   currentModel: ModelConfig | null;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  isExpanded?: boolean;
 }
 
 const AIChatMessage: React.FC<AIChatMessageProps> = memo(
-  ({ message, currentModel, isExpanded, onToggleExpand }) => {
+  ({ message, currentModel, isExpanded }) => {
     const isUser = message.role === "user";
 
-    // 检查消息是否包含 Agent 思考步骤
-    const agentStepsInMessage =
-      (message.metadata?.agentSteps as AgentStepItem[]) || [];
-    const hasAgentSteps = agentStepsInMessage.length > 0;
+    // 过滤掉 answer 类型
+    const thinkingSteps = useMemo(() => {
+      const agentStepsInMessage =
+        (message.metadata?.agentSteps as AgentStepItem[]) || [];
+      return filterThinkingSteps(agentStepsInMessage);
+    }, [message.metadata?.agentSteps]);
 
-    // 过滤掉 answer 类型（答案已显示在消息内容中）
-    const thinkingSteps = agentStepsInMessage.filter(
-      (step) => step.type !== "answer"
+    // 是否有工具调用
+    const hasToolCallsFlag = useMemo(
+      () => hasToolCalls(thinkingSteps),
+      [thinkingSteps]
     );
+
+    // 是否有错误
+    const hasError = useMemo(() => hasErrors(thinkingSteps), [thinkingSteps]);
+
+    // 是否显示思考过程（只有有工具调用时才显示）
+    const showThinking = thinkingSteps.length > 0 && hasToolCallsFlag;
 
     return (
       <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}>
@@ -74,21 +88,27 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
                     AI 助手 ({currentModel?.name || "未知模型"})
                   </span>
                   <span>{formatTime(message.timestamp)}</span>
-                  {hasAgentSteps && (
+                  {showThinking && (
                     <span className="text-success">思考完成</span>
                   )}
+                  {hasError && <span className="text-error">部分失败</span>}
                 </>
               )}
             </div>
 
-            {/* Agent 思考过程（可展开/收起） */}
-            {!isUser && thinkingSteps.length > 0 && (
-              <AIChatAgentSteps
-                steps={thinkingSteps}
-                isStreaming={false}
-                isExpanded={isExpanded}
-                onToggleExpand={onToggleExpand}
-              />
+            {/* Agent 思考过程（有工具调用时才显示，使用 Think 组件包裹） */}
+            {!isUser && showThinking && (
+              <Think
+                title="思考过程"
+                defaultExpanded={isExpanded}
+                className="mb-2"
+              >
+                <AIChatAgentSteps
+                  steps={thinkingSteps}
+                  isStreaming={false}
+                  isExpanded={true}
+                />
+              </Think>
             )}
 
             {/* 消息气泡 */}

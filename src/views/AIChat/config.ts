@@ -70,6 +70,102 @@ export interface AgentStepItem {
   timestamp: number;
 }
 
+/**
+ * 思考过程状态 - 用于 Think 组件
+ */
+export type ThinkStatus = "loading" | "success" | "error";
+
+/**
+ * 思维链节点状态 - 用于 ThoughtChain 组件
+ * 与 @ant-design/x 的 THOUGHT_CHAIN_ITEM_STATUS 保持一致
+ */
+export type ThoughtChainItemStatus = "loading" | "success" | "error" | "abort";
+
+/**
+ * 思维链节点 - 用于 ThoughtChain 组件
+ * 与 @ant-design/x 的 ThoughtChainItemType 保持一致
+ */
+export interface ThoughtChainItem {
+  /** 唯一标识 */
+  key?: string;
+  /** 节点状态 */
+  status?: ThoughtChainItemStatus;
+  /** 标题 */
+  title?: React.ReactNode;
+  /** 描述 */
+  description?: React.ReactNode;
+  /** 详细内容 */
+  content?: React.ReactNode;
+  /** 是否可折叠 */
+  collapsible?: boolean;
+  /** 图标 */
+  icon?: React.ReactNode;
+  /** 底部 */
+  footer?: React.ReactNode;
+  /** 闪烁 */
+  blink?: boolean;
+}
+
+/**
+ * 将 AgentStepItem 转换为 ThoughtChainItem
+ */
+export function convertToThoughtChainItems(
+  steps: AgentStepItem[]
+): ThoughtChainItem[] {
+  return steps.map((step, index) => {
+    const key = `step_${index}_${step.type}`;
+
+    // 根据步骤类型确定状态
+    let status: ThoughtChainItemStatus = "success";
+    if (step.content?.includes("失败") || step.content?.includes("错误")) {
+      status = "error";
+    }
+
+    // 根据步骤类型确定标题
+    let title = AGENT_STEP_LABELS[step.type] || step.type;
+    let description = "";
+    const content = step.content || "";
+
+    // 工具调用特殊处理
+    if (step.type === "tool_call" && step.toolCall) {
+      title = `${AGENT_STEP_LABELS[step.type]}: ${step.toolCall.name}`;
+      description = `参数: ${JSON.stringify(step.toolCall.arguments)}`;
+    }
+
+    return {
+      key,
+      status,
+      title,
+      description,
+      content,
+      collapsible: true,
+    };
+  });
+}
+
+/**
+ * 判断步骤是否包含工具调用
+ */
+export function hasToolCalls(steps: AgentStepItem[]): boolean {
+  return steps.some((step) => step.type === "tool_call");
+}
+
+/**
+ * 判断步骤是否包含错误
+ */
+export function hasErrors(steps: AgentStepItem[]): boolean {
+  return steps.some(
+    (step) => step.content?.includes("失败") || step.content?.includes("错误")
+  );
+}
+
+/**
+ * 过滤出思考步骤（排除 answer）
+ */
+export function filterThinkingSteps(steps: AgentStepItem[]): AgentStepItem[] {
+  return steps.filter((step) => step.type !== "answer");
+}
+
 // ==================== 工具函数 ====================
 
 /**

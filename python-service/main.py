@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 AI Agent Python Service
-WebSocket 桥接服务，连接 Electron WebSocket 服务器
+WebSocket 桥接服务 + HTTP 数据服务
+
+同时运行：
+1. WebSocket 服务 - 用于 Agent 流式响应和实时通信
+2. HTTP API 服务 - 用于数据操作（知识库、对话、记忆等）
 """
 # 在导入其他模块前禁用代理（解决 SOCKS 代理问题）
 from message_handler import MessageHandler
@@ -11,6 +15,7 @@ import logging
 import asyncio
 import sys
 import os
+import threading
 _proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY',
                'all_proxy', 'ALL_PROXY', 'socks_proxy', 'SOCKS_PROXY']
 for _var in _proxy_vars:
@@ -146,11 +151,6 @@ def init_skills_system():
     register_web_crawl_tools(global_tool_registry)
     logger.info("已注册网页采集工具")
 
-    # 8. 注册前端桥接工具
-    from agent.frontend_bridge_tool import register_frontend_bridge_tools
-    register_frontend_bridge_tools()
-    logger.info("已注册前端桥接工具")
-
 
 class AgentService:
     """AI 智能体服务"""
@@ -159,21 +159,44 @@ class AgentService:
         self.ws_client: Optional[WebSocketClient] = None
         self.message_handler: Optional[MessageHandler] = None
         self.running = False
+        self.http_thread: Optional[threading.Thread] = None
+        self.http_port: int = 8766
 
     async def _send_message(self, message: dict):
         """发送消息的回调函数"""
         if self.ws_client:
             await self.ws_client.send(message)
 
-    async def start(self, ws_host: str, ws_port: int):
+    def _start_http_server(self, port: int):
+        """在独立线程中启动 HTTP 服务"""
+        try:
+            from db_service import run_http_server
+            run_http_server(host="127.0.0.1", port=port)
+        except Exception as e:
+            logger.error(f"HTTP 服务启动失败: {e}")
+
+    async def start(self, ws_host: str, ws_port: int, http_port: int = 8766):
         """启动服务"""
         global _global_send_callback
-        logger.info(f"启动 AI 智能体服务，连接到 ws://{ws_host}:{ws_port}")
+        logger.info(f"启动 AI 智能体服务")
+        logger.info(f"  WebSocket: ws://{ws_host}:{ws_port}")
+        logger.info(f"  HTTP API: http://127.0.0.1:{http_port}")
 
-        # 初始化 Skills 系统
+        self.http_port = http_port
+
+        # 1. 启动 HTTP 数据服务（独立线程）
+        self.http_thread = threading.Thread(
+            target=self._start_http_server,
+            args=(http_port,),
+            daemon=True
+        )
+        self.http_thread.start()
+        logger.info("HTTP 数据服务已启动")
+
+        # 2. 初始化 Skills 系统
         init_skills_system()
 
-        # 先初始化 WebSocket 客户端
+        # 3. 先初始化 WebSocket 客户端
         self.ws_client = WebSocketClient(
             host=ws_host,
             port=ws_port,
@@ -182,15 +205,11 @@ class AgentService:
             on_disconnected=self.on_disconnected
         )
 
-        # 初始化消息处理器，传递发送消息的回调
+        # 4. 初始化消息处理器，传递发送消息的回调
         self.message_handler = MessageHandler(send_callback=self._send_message)
 
-        # 设置全局发送回调（供知识库创建工具使用）
+        # 5. 设置全局发送回调（供知识库创建工具使用）
         _global_send_callback = self._send_message
-
-        # 设置前端桥接工具的 WebSocket 回调
-        from agent.frontend_bridge_tool import set_ws_send_callback
-        set_ws_send_callback(self._send_message)
 
         self.running = True
 
@@ -218,21 +237,8 @@ class AgentService:
     async def handle_message(self, message: dict):
         """处理接收到的消息"""
         try:
-            # 处理前端桥接响应
             msg_type = message.get("type")
             logger.debug(f"[AgentService] 收到消息类型: {msg_type}")
-
-            if msg_type == "frontend_bridge_response":
-                logger.info(f"[AgentService] 处理 frontend_bridge_response")
-                from agent.frontend_bridge_tool import handle_bridge_response
-                handle_bridge_response(message)
-                return
-
-            if msg_type == "frontend_bridge_list_response":
-                logger.info(f"[AgentService] 处理 frontend_bridge_list_response")
-                from agent.frontend_bridge_tool import handle_bridge_response
-                handle_bridge_response(message)
-                return
 
             # 处理其他消息
             response = await self.message_handler.process(message)
@@ -255,11 +261,19 @@ async def main():
     # 从环境变量获取配置
     ws_host = os.environ.get("WS_HOST", "127.0.0.1")
     ws_port = int(os.environ.get("WS_PORT", 8765))
+    http_port = int(os.environ.get("HTTP_PORT", "8766"))
+
+    # 传递数据库路径给 db_service
+    db_path = os.environ.get("DB_PATH")
+    if db_path:
+        import db_service
+        db_service.DB_PATH = db_path
+        logger.info(f"使用数据库路径: {db_path}")
 
     service = AgentService()
 
     try:
-        await service.start(ws_host, ws_port)
+        await service.start(ws_host, ws_port, http_port)
     except KeyboardInterrupt:
         logger.info("收到中断信号")
     finally:

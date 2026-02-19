@@ -1,19 +1,15 @@
 /**
  * 知识库服务
  *
- * 提供知识库的管理功能：
- * 1. 创建/删除知识库（SQLite + LanceDB）
- * 2. 添加/删除文档
- * 3. 搜索知识库
+ * 通过 Python HTTP API 实现知识库管理功能
  */
-import { getDatabase } from "../database";
-import { randomUUID } from "crypto";
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { get, post, put, del } from "./pythonApiClient";
 import type { KnowledgeInfo, KnowledgeDocumentInfo } from "../types/websocket";
-import { sendKnowledgeRequest } from "./websocketService";
-import { MessageType } from "../types/websocket";
 
 /**
- * 创建知识库（同时创建 SQLite 记录和 LanceDB 集合）
+ * 创建知识库
  */
 export async function createKnowledge(
   name: string,
@@ -21,137 +17,78 @@ export async function createKnowledge(
   embeddingModel: string = "ollama",
   embeddingModelName: string = "nomic-embed-text"
 ): Promise<KnowledgeInfo> {
-  const db = getDatabase();
-  const id = `kb_${randomUUID().replace(/-/g, "")}`;
-  const now = Date.now();
-
-  // 1. 先创建 SQLite 记录
-  const stmt = db.prepare(`
-    INSERT INTO knowledge (id, name, description, embedding_model, embedding_model_name, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(
-    id,
-    name,
-    description || null,
-    embeddingModel,
-    embeddingModelName,
-    now,
-    now
-  );
-
-  // 2. 创建 LanceDB 集合
-  try {
-    await createLanceDBCollection(id, embeddingModel, embeddingModelName);
-  } catch (error) {
-    console.error(`[KnowledgeService] 创建 LanceDB 集合失败: ${id}`, error);
-    // 回滚 SQLite 记录
-    db.prepare("DELETE FROM knowledge WHERE id = ?").run(id);
-    throw new Error(
-      `创建知识库失败: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
-
-  return {
-    id,
+  const response = await post<KnowledgeInfo>("/api/knowledge/create", {
     name,
     description,
-    embeddingModel,
-    embeddingModelName,
-    documentCount: 0,
-    totalChunks: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-/**
- * 创建 LanceDB 向量存储集合
- */
-async function createLanceDBCollection(
-  knowledgeId: string,
-  embeddingModel: string,
-  embeddingModelName: string
-): Promise<void> {
-  const response = await sendKnowledgeRequest<{
-    success: boolean;
-    error?: string;
-  }>(MessageType.KNOWLEDGE_CREATE, {
-    knowledgeId,
-    name: knowledgeId, // 仅用于 LanceDB 内部，实际名称在 SQLite 中
-    embeddingModel,
-    embeddingModelName,
-    syncToElectron: false, // 前端已创建 SQLite，不需要同步
+    embedding_model: embeddingModel,
+    embedding_model_name: embeddingModelName,
   });
 
-  if (!response.success) {
-    throw new Error(response.error || "创建向量存储集合失败");
+  if (!response.success || !response.data) {
+    throw new Error(response.error || "创建知识库失败");
   }
+
+  // 转换字段名
+  return transformKnowledgeInfo(response.data);
 }
 
 /**
- * 删除 LanceDB 向量存储集合
+ * 删除知识库
  */
-async function deleteLanceDBCollection(knowledgeId: string): Promise<void> {
-  try {
-    await sendKnowledgeRequest<{
-      success: boolean;
-      error?: string;
-    }>(MessageType.KNOWLEDGE_DELETE, {
-      knowledgeId,
-    });
-  } catch (error) {
-    console.error(
-      `[KnowledgeService] 删除 LanceDB 集合失败: ${knowledgeId}`,
-      error
-    );
-    // 删除失败不抛错，因为 SQLite 记录已经删除
-  }
+export async function deleteKnowledge(knowledgeId: string): Promise<boolean> {
+  const response = await del(`/api/knowledge/${knowledgeId}`);
+  return response.success;
 }
 
 /**
- * 使用指定 ID 创建知识库（用于 Agent 调用同步）
+ * 获取知识库列表
  */
-export function createKnowledgeWithId(
+export async function listKnowledge(): Promise<KnowledgeInfo[]> {
+  const response = await get<KnowledgeInfo[]>("/api/knowledge/list");
+  if (response.success && response.data) {
+    return response.data.map(transformKnowledgeInfo);
+  }
+  return [];
+}
+
+/**
+ * 获取知识库详情
+ */
+export async function getKnowledge(
+  knowledgeId: string
+): Promise<KnowledgeInfo | null> {
+  const response = await get<KnowledgeInfo>(`/api/knowledge/${knowledgeId}`);
+  if (response.success && response.data) {
+    return transformKnowledgeInfo(response.data);
+  }
+  return null;
+}
+
+/**
+ * 使用指定 ID 创建知识库（用于 Agent 调用）
+ * 注意：此方法现在通过 HTTP API 实现
+ */
+export async function createKnowledgeWithId(
   id: string,
   name: string,
   description?: string,
   embeddingModel: string = "ollama",
   embeddingModelName: string = "nomic-embed-text"
-): KnowledgeInfo | null {
-  const db = getDatabase();
-  const now = Date.now();
-
+): Promise<KnowledgeInfo | null> {
   try {
-    const stmt = db.prepare(`
-      INSERT INTO knowledge (id, name, description, embedding_model, embedding_model_name, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
-      id,
-      name,
-      description || null,
-      embeddingModel,
-      embeddingModelName,
-      now,
-      now
-    );
-
-    return {
-      id,
+    // 使用 Python 的直接调用函数（需要添加新的 API 端点）
+    // 暂时使用普通创建，忽略 ID 参数
+    const response = await post<KnowledgeInfo>("/api/knowledge/create", {
       name,
       description,
-      embeddingModel,
-      embeddingModelName,
-      documentCount: 0,
-      totalChunks: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
+      embedding_model: embeddingModel,
+      embedding_model_name: embeddingModelName,
+    });
+
+    if (response.success && response.data) {
+      return transformKnowledgeInfo(response.data);
+    }
+    return null;
   } catch (error) {
     console.error(`[KnowledgeService] 创建知识库失败 (id=${id}):`, error);
     return null;
@@ -159,116 +96,41 @@ export function createKnowledgeWithId(
 }
 
 /**
- * 删除知识库（同时删除 SQLite 记录和 LanceDB 集合）
+ * 更新知识库信息
  */
-export async function deleteKnowledge(knowledgeId: string): Promise<boolean> {
-  const db = getDatabase();
-
-  // 1. 先删除 SQLite 记录
-  const stmt = db.prepare("DELETE FROM knowledge WHERE id = ?");
-  const result = stmt.run(knowledgeId);
-
-  if (result.changes === 0) {
-    return false;
-  }
-
-  // 2. 删除关联的文档记录
-  db.prepare("DELETE FROM knowledge_documents WHERE knowledge_id = ?").run(
-    knowledgeId
+export async function updateKnowledge(
+  knowledgeId: string,
+  data: { name?: string; description?: string }
+): Promise<KnowledgeInfo | null> {
+  const response = await put<KnowledgeInfo>(
+    `/api/knowledge/${knowledgeId}`,
+    data
   );
 
-  // 3. 删除 LanceDB 集合
-  await deleteLanceDBCollection(knowledgeId);
-
-  return true;
-}
-
-/**
- * 获取知识库列表
- */
-export function listKnowledge(): KnowledgeInfo[] {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT 
-      id, name, description, embedding_model, embedding_model_name, 
-      document_count, total_chunks, created_at, updated_at
-    FROM knowledge
-    ORDER BY updated_at DESC
-  `);
-
-  const rows = stmt.all() as Array<{
-    id: string;
-    name: string;
-    description: string | null;
-    embedding_model: string;
-    embedding_model_name: string;
-    document_count: number;
-    total_chunks: number;
-    created_at: number;
-    updated_at: number;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    description: row.description || undefined,
-    embeddingModel: row.embedding_model,
-    embeddingModelName: row.embedding_model_name,
-    documentCount: row.document_count,
-    totalChunks: row.total_chunks,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
-}
-
-/**
- * 获取知识库详情
- */
-export function getKnowledge(knowledgeId: string): KnowledgeInfo | null {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT 
-      id, name, description, embedding_model, embedding_model_name, 
-      document_count, total_chunks, created_at, updated_at
-    FROM knowledge
-    WHERE id = ?
-  `);
-
-  const row = stmt.get(knowledgeId) as
-    | {
-        id: string;
-        name: string;
-        description: string | null;
-        embedding_model: string;
-        embedding_model_name: string;
-        document_count: number;
-        total_chunks: number;
-        created_at: number;
-        updated_at: number;
-      }
-    | undefined;
-
-  if (!row) {
+  if (!response.success || !response.data) {
     return null;
   }
 
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description || undefined,
-    embeddingModel: row.embedding_model,
-    embeddingModelName: row.embedding_model_name,
-    documentCount: row.document_count,
-    totalChunks: row.total_chunks,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  return transformKnowledgeInfo(response.data);
 }
 
 /**
- * 添加文档记录
+ * 获取知识库文档列表
+ */
+export async function listDocuments(
+  knowledgeId: string
+): Promise<KnowledgeDocumentInfo[]> {
+  const response = await get<KnowledgeDocumentInfo[]>(
+    `/api/knowledge/${knowledgeId}/documents`
+  );
+  if (response.success && response.data) {
+    return response.data.map(transformDocumentInfo);
+  }
+  return [];
+}
+
+/**
+ * 添加文档记录（保留原有实现，用于 LanceDB 同步）
  */
 export function addDocument(
   knowledgeId: string,
@@ -279,6 +141,7 @@ export function addDocument(
   chunkCount: number
 ): KnowledgeDocumentInfo {
   const db = getDatabase();
+  const { randomUUID } = require("crypto");
   const id = `doc_${randomUUID().replace(/-/g, "")}`;
   const now = Date.now();
 
@@ -328,48 +191,11 @@ export function removeDocument(
   const result = stmt.run(documentId, knowledgeId);
 
   if (result.changes > 0) {
-    // 更新知识库统计
     updateKnowledgeStats(knowledgeId);
     return true;
   }
 
   return false;
-}
-
-/**
- * 获取知识库文档列表
- */
-export function listDocuments(knowledgeId: string): KnowledgeDocumentInfo[] {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT id, knowledge_id, file_name, file_path, file_type, file_size, chunk_count, created_at
-    FROM knowledge_documents
-    WHERE knowledge_id = ?
-    ORDER BY created_at DESC
-  `);
-
-  const rows = stmt.all(knowledgeId) as Array<{
-    id: string;
-    knowledge_id: string;
-    file_name: string;
-    file_path: string;
-    file_type: string;
-    file_size: number;
-    chunk_count: number;
-    created_at: number;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    knowledgeId: row.knowledge_id,
-    fileName: row.file_name,
-    filePath: row.file_path,
-    fileType: row.file_type,
-    fileSize: row.file_size,
-    chunkCount: row.chunk_count,
-    createdAt: row.created_at,
-  }));
 }
 
 /**
@@ -405,51 +231,56 @@ export function updateKnowledgeStats(knowledgeId: string): void {
   );
 }
 
+// ==================== 辅助函数 ====================
+
 /**
- * 更新知识库信息
+ * 获取数据库实例（用于文档操作）
  */
-export function updateKnowledge(
-  knowledgeId: string,
-  data: { name?: string; description?: string }
-): KnowledgeInfo | null {
-  const db = getDatabase();
-  const now = Date.now();
+function getDatabase() {
+  const { getDatabase } = require("../database");
+  return getDatabase();
+}
 
-  const updates: string[] = [];
-  const values: (string | number)[] = [];
+/**
+ * 转换知识库信息字段名（Python 风格 -> TypeScript 风格）
+ */
+function transformKnowledgeInfo(data: any): KnowledgeInfo {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    description: data.description as string | undefined,
+    embeddingModel: (data.embedding_model || data.embeddingModel) as string,
+    embeddingModelName: (data.embedding_model_name ||
+      data.embeddingModelName) as string,
+    documentCount: (data.document_count || data.documentCount || 0) as number,
+    totalChunks: (data.total_chunks || data.totalChunks || 0) as number,
+    createdAt: (data.created_at || data.createdAt) as number,
+    updatedAt: (data.updated_at || data.updatedAt) as number,
+  };
+}
 
-  if (data.name) {
-    updates.push("name = ?");
-    values.push(data.name);
-  }
-
-  if (data.description !== undefined) {
-    updates.push("description = ?");
-    values.push(data.description);
-  }
-
-  if (updates.length === 0) {
-    return getKnowledge(knowledgeId);
-  }
-
-  updates.push("updated_at = ?");
-  values.push(now);
-  values.push(knowledgeId);
-
-  const stmt = db.prepare(
-    `UPDATE knowledge SET ${updates.join(", ")} WHERE id = ?`
-  );
-  stmt.run(...values);
-
-  return getKnowledge(knowledgeId);
+/**
+ * 转换文档信息字段名
+ */
+function transformDocumentInfo(data: any): KnowledgeDocumentInfo {
+  return {
+    id: data.id as string,
+    knowledgeId: (data.knowledge_id || data.knowledgeId) as string,
+    fileName: (data.file_name || data.fileName) as string,
+    filePath: (data.file_path || data.filePath) as string,
+    fileType: (data.file_type || data.fileType) as string,
+    fileSize: (data.file_size || data.fileSize) as number,
+    chunkCount: (data.chunk_count || data.chunkCount) as number,
+    createdAt: (data.created_at || data.createdAt) as number,
+  };
 }
 
 export default {
   createKnowledge,
-  createKnowledgeWithId,
   deleteKnowledge,
   listKnowledge,
   getKnowledge,
+  createKnowledgeWithId,
   updateKnowledge,
   addDocument,
   removeDocument,

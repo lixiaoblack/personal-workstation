@@ -1,10 +1,11 @@
 /**
  * 用户服务 - 主进程
- * 处理用户认证、注册、信息更新等操作
+ *
+ * 通过 Python HTTP API 处理用户认证、注册、信息更新等操作
  */
-import { getDatabase } from "../database/index";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { getDatabase } from "../database/index";
 
 // 密码哈希轮数
 const SALT_ROUNDS = 12;

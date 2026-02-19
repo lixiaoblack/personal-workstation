@@ -21,15 +21,10 @@ import {
   type KnowledgeSyncCreateResponseMessage,
   type KnowledgeSyncDeleteMessage,
   type KnowledgeSyncDeleteResponseMessage,
-  type FrontendBridgeRequestMessage,
-  type FrontendBridgeResponseMessage,
-  type FrontendBridgeListMessage,
-  type FrontendBridgeListResponseMessage,
   createMessage,
 } from "../types/websocket";
 import { getEnabledModelConfigs } from "./modelConfigService";
 import * as knowledgeService from "./knowledgeService";
-import { executeBridgeMethod, getBridgeMethods } from "./bridgeRegistry";
 import type { OnlineModelConfig, OllamaModelConfig } from "../types/model";
 import type {
   OllamaStatus,
@@ -562,7 +557,7 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
           // 同步创建知识库 SQLite 记录
           const syncMsg = message as KnowledgeSyncCreateMessage;
           try {
-            const knowledge = knowledgeService.createKnowledgeWithId(
+            const knowledge = await knowledgeService.createKnowledgeWithId(
               syncMsg.knowledgeId,
               syncMsg.name,
               syncMsg.description || "",
@@ -651,29 +646,6 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
           } else {
             console.warn(`[WebSocket] 未找到对应的 Memory 请求: ${msgId}`);
           }
-        }
-      }
-      return;
-    }
-
-    // 处理来自 Python 的 Frontend Bridge 请求
-    if (
-      message.type === MessageType.FRONTEND_BRIDGE_REQUEST ||
-      message.type === MessageType.FRONTEND_BRIDGE_LIST
-    ) {
-      const clientInfo = clients.get(ws);
-      // 确保消息来自 Python 客户端
-      if (clientInfo?.clientType === "python_agent") {
-        console.log(`[WebSocket] 收到 Frontend Bridge 请求: ${message.type}`);
-
-        if (message.type === MessageType.FRONTEND_BRIDGE_REQUEST) {
-          // 执行桥接方法
-          const bridgeMsg = message as FrontendBridgeRequestMessage;
-          await handleFrontendBridgeRequest(ws, bridgeMsg);
-        } else {
-          // 返回可用方法列表
-          const listMsg = message as FrontendBridgeListMessage;
-          handleFrontendBridgeList(ws, listMsg);
         }
       }
       return;
@@ -1115,98 +1087,5 @@ export async function generateSummary(
       success: false,
       error: error instanceof Error ? error.message : "未知错误",
     };
-  }
-}
-
-// ==================== Frontend Bridge 前端桥接相关 ====================
-
-/**
- * 处理桥接方法调用请求
- */
-async function handleFrontendBridgeRequest(
-  ws: WebSocket,
-  message: FrontendBridgeRequestMessage
-): Promise<void> {
-  try {
-    const { service, method, params, requestId } = message;
-
-    console.log(`[WebSocket] 执行桥接方法: ${service}.${method}`, params);
-
-    // 执行方法
-    const result = await executeBridgeMethod(service, method, params);
-
-    // 发送响应
-    const response: FrontendBridgeResponseMessage = {
-      type: MessageType.FRONTEND_BRIDGE_RESPONSE,
-      id: message.id,
-      timestamp: Date.now(),
-      requestId,
-      success: result.success,
-      result: result.result,
-      error: result.error,
-    };
-
-    const responseData = JSON.stringify(response);
-    ws.send(responseData);
-    console.log(
-      `[WebSocket] 桥接方法执行完成: ${service}.${method}, requestId: ${requestId}`
-    );
-    console.log(
-      `[WebSocket] 发送响应: type=${response.type}, success=${response.success}`
-    );
-  } catch (error) {
-    console.error("[WebSocket] 桥接方法执行失败:", error);
-
-    const response: FrontendBridgeResponseMessage = {
-      type: MessageType.FRONTEND_BRIDGE_RESPONSE,
-      id: message.id,
-      timestamp: Date.now(),
-      requestId: message.requestId,
-      success: false,
-      error: error instanceof Error ? error.message : "未知错误",
-    };
-
-    ws.send(JSON.stringify(response));
-  }
-}
-
-/**
- * 处理获取可用方法列表请求
- */
-function handleFrontendBridgeList(
-  ws: WebSocket,
-  message: FrontendBridgeListMessage
-): void {
-  try {
-    const { service, requestId } = message;
-    const methods = getBridgeMethods(service);
-
-    const response: FrontendBridgeListResponseMessage = {
-      type: MessageType.FRONTEND_BRIDGE_LIST_RESPONSE,
-      id: message.id,
-      timestamp: Date.now(),
-      requestId,
-      success: true,
-      methods,
-      count: methods.length,
-    };
-
-    ws.send(JSON.stringify(response));
-    console.log(`[WebSocket] 返回可用方法列表: ${methods.length} 个`);
-  } catch (error) {
-    console.error("[WebSocket] 获取方法列表失败:", error);
-
-    const response: FrontendBridgeListResponseMessage = {
-      type: MessageType.FRONTEND_BRIDGE_LIST_RESPONSE,
-      id: message.id,
-      timestamp: Date.now(),
-      requestId: message.requestId,
-      success: false,
-      methods: [],
-      count: 0,
-      error: error instanceof Error ? error.message : "未知错误",
-    };
-
-    ws.send(JSON.stringify(response));
   }
 }

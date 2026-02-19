@@ -91,7 +91,7 @@ class KnowledgeRetrieverTool(BaseTool):
         top_k: int = 5
     ) -> str:
         """
-        执行知识库检索
+        执行知识库检索（同步版本）
 
         Args:
             query: 搜索查询
@@ -107,6 +107,16 @@ class KnowledgeRetrieverTool(BaseTool):
         actual_knowledge_id = knowledge_id or self._default_knowledge_id
 
         try:
+            # 检查是否在异步环境中
+            try:
+                loop = asyncio.get_running_loop()
+                # 在异步环境中，不能使用 asyncio.run()
+                # 返回错误信息，应该使用 _call_async
+                return "错误：在异步环境中请使用 _call_async 方法"
+            except RuntimeError:
+                # 没有运行中的事件循环，可以安全使用 asyncio.run()
+                pass
+
             if actual_knowledge_id:
                 # 指定了知识库，只搜索该知识库
                 results = asyncio.run(self._search_single_knowledge(
@@ -115,6 +125,49 @@ class KnowledgeRetrieverTool(BaseTool):
             else:
                 # 没有指定知识库，智能搜索所有知识库
                 results = asyncio.run(self._search_all_knowledge(query, top_k))
+
+            if not results:
+                return f"在知识库中未找到与 '{query}' 相关的内容。"
+
+            # 格式化结果
+            formatted = self._format_results(results)
+            return formatted
+
+        except Exception as e:
+            logger.error(f"知识库检索失败: {e}")
+            return f"检索失败: {str(e)}"
+
+    async def _call_async(
+        self,
+        query: str,
+        knowledge_id: Optional[str] = None,
+        top_k: int = 5
+    ) -> str:
+        """
+        执行知识库检索（异步版本）
+
+        在异步环境中调用，避免 asyncio.run() 的问题。
+
+        Args:
+            query: 搜索查询
+            knowledge_id: 知识库 ID（可选，不指定则搜索所有知识库）
+            top_k: 返回结果数量
+
+        Returns:
+            检索结果（格式化的文本）
+        """
+        # 使用传入的知识库 ID 或默认值
+        actual_knowledge_id = knowledge_id or self._default_knowledge_id
+
+        try:
+            if actual_knowledge_id:
+                # 指定了知识库，只搜索该知识库
+                results = await self._search_single_knowledge(
+                    actual_knowledge_id, query, top_k
+                )
+            else:
+                # 没有指定知识库，智能搜索所有知识库
+                results = await self._search_all_knowledge(query, top_k)
 
             if not results:
                 return f"在知识库中未找到与 '{query}' 相关的内容。"
@@ -303,7 +356,7 @@ class KnowledgeListTool(BaseTool):
     知识库列表工具
 
     列出所有可用的知识库，帮助用户了解有哪些知识库可以查询。
-    通过 FrontendBridge 调用前端 knowledgeService 获取完整的知识库信息。
+    直接调用 db_service 的函数获取知识库列表。
     """
 
     name = "knowledge_list"
@@ -314,8 +367,9 @@ class KnowledgeListTool(BaseTool):
     def _run(self) -> str:
         """获取知识库列表"""
         try:
-            import asyncio
-            knowledge_list = asyncio.run(self._list_via_bridge())
+            from db_service import direct_list_knowledge
+
+            knowledge_list = direct_list_knowledge()
 
             if not knowledge_list:
                 return "当前没有可用的知识库。请先创建知识库并上传文档。"
@@ -324,7 +378,7 @@ class KnowledgeListTool(BaseTool):
             for kb in knowledge_list:
                 name = kb.get('name', '未命名')
                 kb_id = kb.get('id', '未知')
-                doc_count = kb.get('documentCount', 0)
+                doc_count = kb.get('document_count', 0)
                 description = kb.get('description', '')
 
                 lines.append(f"- {name} (ID: {kb_id})")
@@ -337,103 +391,6 @@ class KnowledgeListTool(BaseTool):
         except Exception as e:
             logger.error(f"获取知识库列表失败: {e}")
             return f"获取失败: {str(e)}"
-
-    async def _list_via_bridge(self) -> List[Dict[str, Any]]:
-        """通过 FrontendBridge 获取知识库列表"""
-        import asyncio
-        import time
-        from agent.frontend_bridge_tool import (
-            _global_ws_send_callback,
-            _pending_bridge_requests
-        )
-
-        if not _global_ws_send_callback:
-            logger.warning("[KnowledgeListTool] WebSocket 未连接，使用本地缓存")
-            return await self._list_local()
-
-        # 生成请求 ID
-        request_id = f"kb_list_{int(time.time() * 1000)}"
-
-        # 创建 Future 等待响应 - 使用 get_running_loop 而不是 get_event_loop
-        loop = asyncio.get_running_loop()
-        future = loop.create_future()
-        _pending_bridge_requests[request_id] = future
-
-        # 构建请求消息
-        message = {
-            "type": "frontend_bridge_request",
-            "id": request_id,
-            "timestamp": int(time.time() * 1000),
-            "service": "knowledgeService",
-            "method": "listKnowledge",
-            "params": {},
-            "requestId": request_id,
-        }
-
-        try:
-            # 发送请求
-            await _global_ws_send_callback(message)
-            logger.info(f"[KnowledgeListTool] 发送 FrontendBridge 请求: {request_id}")
-
-            # 使用非阻塞轮询方式等待响应
-            # 这样可以让事件循环有机会处理其他任务
-            start_time = time.time()
-            timeout = 10.0
-            
-            while time.time() - start_time < timeout:
-                # 检查 future 是否已完成
-                if future.done():
-                    response = future.result()
-                    if response.get("success"):
-                        result = response.get("result", [])
-                        logger.info(f"[KnowledgeListTool] 获取到 {len(result)} 个知识库")
-                        return result
-                    else:
-                        logger.error(f"[KnowledgeListTool] 调用失败: {response.get('error')}")
-                        return await self._list_local()
-                
-                # 让事件循环处理其他任务（包括 WebSocket 消息）
-                await asyncio.sleep(0.05)  # 50ms
-            
-            # 超时
-            _pending_bridge_requests.pop(request_id, None)
-            logger.warning(f"[KnowledgeListTool] FrontendBridge 超时: {request_id}")
-            return await self._list_local()
-
-        except Exception as e:
-            _pending_bridge_requests.pop(request_id, None)
-            logger.error(f"[KnowledgeListTool] 异常: {e}")
-            return await self._list_local()
-
-    async def _list_local(self) -> List[Dict[str, Any]]:
-        """本地备份方法：从 LanceDB 获取知识库列表"""
-        import asyncio
-        from rag.vectorstore import get_vectorstore
-
-        # 使用 asyncio.to_thread 在后台线程运行阻塞的同步代码
-        def get_local_stats():
-            vectorstore = get_vectorstore()
-            stats = vectorstore.get_stats()
-            collections = stats.get("collections", [])
-
-            result = []
-            for col in collections:
-                kb_id = col.get("id", "")
-                metadata = KnowledgeRetrieverTool._knowledge_metadata.get(
-                    kb_id, {})
-                name = metadata.get("name") or f"知识库 {kb_id[-6:]}"
-
-                result.append({
-                    "id": kb_id,
-                    "name": name,
-                    "description": metadata.get("description", ""),
-                    "documentCount": col.get("document_count", 0),
-                })
-
-            return result
-
-        # 在线程池中运行阻塞代码，不阻塞事件循环
-        return await asyncio.to_thread(get_local_stats)
 
 
 class KnowledgeCreateSchema(ToolSchema):
@@ -461,7 +418,7 @@ class KnowledgeCreateTool(BaseTool):
     知识库创建工具
 
     创建一个新的知识库。
-    通过 FrontendBridge 调用前端 knowledgeService 统一创建 SQLite 记录和 LanceDB 集合。
+    直接调用 db_service 的函数创建知识库。
 
     使用场景：
     - 用户想要创建新的知识库来存储文档
@@ -485,101 +442,27 @@ class KnowledgeCreateTool(BaseTool):
         embedding_model_name: str = "nomic-embed-text"
     ) -> str:
         """创建知识库"""
-        import asyncio
-
         try:
-            result = asyncio.run(self._create_via_bridge(
+            from db_service import direct_create_knowledge
+
+            kb = direct_create_knowledge(
                 name=name,
                 description=description,
                 embedding_model=embedding_model,
                 embedding_model_name=embedding_model_name
-            ))
+            )
 
-            if result.get("success"):
-                kb = result.get("knowledge", {})
-                return (
-                    f"知识库创建成功！\n"
-                    f"名称: {kb.get('name')}\n"
-                    f"ID: {kb.get('id')}\n"
-                    f"嵌入模型: {kb.get('embeddingModelName')}\n"
-                    f"现在可以使用 web_crawl 工具添加内容。"
-                )
-            else:
-                return f"创建失败: {result.get('error', '未知错误')}"
+            return (
+                f"知识库创建成功！\n"
+                f"名称: {kb.get('name')}\n"
+                f"ID: {kb.get('id')}\n"
+                f"嵌入模型: {kb.get('embedding_model_name')}\n"
+                f"现在可以使用 web_crawl 工具添加内容。"
+            )
 
         except Exception as e:
             logger.error(f"[KnowledgeCreateTool] 创建失败: {e}")
             return f"创建失败: {str(e)}"
-
-    async def _create_via_bridge(
-        self,
-        name: str,
-        description: Optional[str],
-        embedding_model: str,
-        embedding_model_name: str
-    ) -> Dict[str, Any]:
-        """通过 FrontendBridge 创建知识库"""
-        import asyncio
-        import time
-        from agent.frontend_bridge_tool import (
-            _global_ws_send_callback,
-            _pending_bridge_requests
-        )
-
-        if not _global_ws_send_callback:
-            return {"success": False, "error": "WebSocket 未连接，无法创建知识库"}
-
-        # 生成请求 ID
-        request_id = f"kb_create_{int(time.time() * 1000)}"
-
-        # 创建 Future 等待响应
-        loop = asyncio.get_event_loop()
-        future = loop.create_future()
-        _pending_bridge_requests[request_id] = future
-
-        # 构建请求消息
-        message = {
-            "type": "frontend_bridge_request",
-            "id": request_id,
-            "timestamp": int(time.time() * 1000),
-            "service": "knowledgeService",
-            "method": "createKnowledge",
-            "params": {
-                "name": name,
-                "description": description,
-                "embeddingModel": embedding_model,
-                "embeddingModelName": embedding_model_name,
-            },
-            "requestId": request_id,
-        }
-
-        try:
-            # 发送请求
-            await _global_ws_send_callback(message)
-            logger.info(f"[KnowledgeCreateTool] 发送 FrontendBridge 请求: {name}")
-
-            # 等待响应（超时 15 秒）
-            response = await asyncio.wait_for(future, timeout=15.0)
-
-            if response.get("success"):
-                result = response.get("result", {})
-                logger.info(f"[KnowledgeCreateTool] 创建成功: {result.get('id')}")
-                return {
-                    "success": True,
-                    "knowledge": result,
-                }
-            else:
-                error = response.get("error", "未知错误")
-                logger.error(f"[KnowledgeCreateTool] 创建失败: {error}")
-                return {"success": False, "error": error}
-
-        except asyncio.TimeoutError:
-            _pending_bridge_requests.pop(request_id, None)
-            return {"success": False, "error": "请求超时，前端服务未响应"}
-        except Exception as e:
-            _pending_bridge_requests.pop(request_id, None)
-            logger.error(f"[KnowledgeCreateTool] 异常: {e}")
-            return {"success": False, "error": str(e)}
 
 
 def register_knowledge_tools():

@@ -45,6 +45,30 @@ logger = logging.getLogger(__name__)
 
 DEEP_AGENT_SYSTEM_PROMPT = """你是一个智能助手，具有强大的任务规划和执行能力。
 
+## ⚠️ 重要：工具调用判断原则
+
+在决定是否调用工具之前，请先判断：
+
+### 不需要调用工具的情况（直接回答）
+1. **日常问候**：如"你好"、"早上好"、"谢谢"等
+2. **常识问题**：如"1+1等于几"、"天空是什么颜色"
+3. **创意写作**：如"写一首诗"、"帮我写个故事"
+4. **翻译润色**：如"翻译这段话"、"帮我润色文章"
+5. **代码解释**：如"解释这段代码的作用"
+6. **简单计算**：如"计算100的平方根"
+7. **聊天闲谈**：与用户进行的普通对话
+
+### 需要调用工具的情况
+1. **知识库查询**：涉及已上传的文档、项目资料、技术文档
+2. **网络搜索**：需要获取最新信息、实时数据
+3. **系统操作**：创建、删除、修改数据
+4. **复杂分析**：需要多步骤推理或多数据源整合
+
+**判断流程**：
+1. 先分析用户问题属于哪种类型
+2. 如果是"不需要工具"的类型，直接回答，不要调用任何工具
+3. 如果是"需要工具"的类型，再选择合适的工具执行
+
 ## 核心能力
 
 ### 1. 任务规划 (Planning)
@@ -61,17 +85,16 @@ DEEP_AGENT_SYSTEM_PROMPT = """你是一个智能助手，具有强大的任务�
 
 ## 工作原则
 
-1. **先规划后执行**：收到复杂任务时，先用 write_todos 规划步骤
-2. **分解复杂问题**：将大问题分解为小问题逐个解决
-3. **利用工具**：善用各种工具提高效率
-4. **保持清晰**：在需要时使用文件系统工具存储中间结果
+1. **简单问题直接回答**：不需要工具的问题，直接给出清晰、友好的回答
+2. **复杂问题先规划**：收到复杂任务时，先规划步骤再执行
+3. **善用工具**：真正需要时才调用工具，避免过度使用
+4. **保持清晰**：给出最终答案时要完整、清晰
 
 ## 注意事项
 
-1. 每次只执行一个步骤
+1. 不要对所有问题都调用工具，简单问题直接回答效率更高
 2. 仔细分析工具返回的结果
-3. 如果工具调用失败，尝试其他方法
-4. 给出最终答案时要完整、清晰
+3. 如果工具调用失败，尝试其他方法或直接回答
 """
 
 
@@ -328,93 +351,27 @@ class DeepAgentWrapper:
         """
         try:
             from deepagents import create_deep_agent
+            from langchain_core.tools import StructuredTool
 
-            # 转换工具为可调用函数列表（Deep Agents 支持直接传递函数）
-            # 根据文档，create_deep_agent 接受 tools 参数，可以是函数列表
-            tool_functions = []
+            # 转换工具为 LangChain StructuredTool 列表
+            # 使用 StructuredTool 确保参数 schema 正确传递给 LLM
+            langchain_tools = []
             for tool in self.custom_tools:
-                # 将工具包装为异步函数，避免 asyncio.run() 阻塞事件循环
-                def create_tool_wrapper(t):
-                    tool_name = t.name  # 捕获工具名称
-
-                    async def async_tool_wrapper(**kwargs):
-                        logger.info(f"[DeepAgent] 异步调用工具: {tool_name}")
-                        import asyncio
-                        logger.debug(f"[DeepAgent] 当前事件循环: {asyncio.get_running_loop()}")
-
-                        # 如果工具有异步执行方法，使用异步方法
-                        # FrontendBridgeTool 使用 _call_async
-                        if hasattr(t, '_call_async'):
-                            logger.info(f"[DeepAgent] 使用 _call_async: {tool_name}")
-                            result = await t._call_async(**kwargs)
-                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
-                            return result
-                        # KnowledgeListTool 使用 _list_via_bridge
-                        elif hasattr(t, '_list_via_bridge'):
-                            logger.info(f"[DeepAgent] 使用 _list_via_bridge: {tool_name}")
-                            result = await t._list_via_bridge()
-                            # 格式化结果
-                            if not result:
-                                return "当前没有可用的知识库。请先创建知识库并上传文档。"
-                            lines = ["可用的知识库：\n"]
-                            for kb in result:
-                                name = kb.get('name', '未命名')
-                                kb_id = kb.get('id', '未知')
-                                doc_count = kb.get('documentCount', 0)
-                                desc = kb.get('description', '')
-                                lines.append(f"- {name} (ID: {kb_id})")
-                                lines.append(f"  文档数: {doc_count}")
-                                if desc:
-                                    lines.append(f"  描述: {desc}")
-                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
-                            return "\n".join(lines)
-                        # FrontendBridgeListTool 使用 _list_async
-                        elif hasattr(t, '_list_async'):
-                            logger.info(f"[DeepAgent] 使用 _list_async: {tool_name}")
-                            result = await t._list_async(kwargs.get('service'))
-                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
-                            return result
-                        # KnowledgeCreateTool 等使用 _create_via_bridge
-                        elif hasattr(t, '_create_via_bridge'):
-                            logger.info(f"[DeepAgent] 使用 _create_via_bridge: {tool_name}")
-                            result = await t._create_via_bridge(**kwargs)
-                            if result.get("success"):
-                                kb = result.get("knowledge", {})
-                                logger.info(f"[DeepAgent] 工具完成: {tool_name}")
-                                return (
-                                    f"知识库创建成功！\n"
-                                    f"名称: {kb.get('name')}\n"
-                                    f"ID: {kb.get('id')}\n"
-                                    f"嵌入模型: {kb.get('embeddingModelName')}\n"
-                                    f"现在可以使用 web_crawl 工具添加内容。"
-                                )
-                            logger.info(f"[DeepAgent] 工具完成(失败): {tool_name}")
-                            return f"创建失败: {result.get('error', '未知错误')}"
-                        else:
-                            # 同步工具直接运行
-                            logger.info(f"[DeepAgent] 使用同步 run: {tool_name}")
-                            result = t.run(**kwargs)
-                            logger.info(f"[DeepAgent] 工具完成: {tool_name}")
-                            return result
-
-                    # 设置函数属性
-                    async_tool_wrapper.__name__ = tool_name
-                    async_tool_wrapper.__doc__ = t.description
-
-                    # 返回异步版本（Deep Agents 支持异步工具）
-                    return async_tool_wrapper
-                tool_functions.append(create_tool_wrapper(tool))
+                # 将 BaseTool 转换为 LangChain StructuredTool
+                lc_tool = self._convert_to_langchain_tool(tool)
+                if lc_tool:
+                    langchain_tools.append(lc_tool)
 
             # 创建 ChatModel 实例（而非字符串），支持自定义 API 配置
             chat_model = self._create_chat_model()
 
             logger.info(
-                f"[DeepAgent] 创建 Agent，模型类型: {type(chat_model).__name__}, 工具数量: {len(tool_functions)}")
+                f"[DeepAgent] 创建 Agent，模型类型: {type(chat_model).__name__}, 工具数量: {len(langchain_tools)}")
 
             # 创建 Deep Agent
             agent = create_deep_agent(
                 model=chat_model,  # 传递 ChatModel 实例而非字符串
-                tools=tool_functions,
+                tools=langchain_tools,
                 system_prompt=self.system_prompt
             )
 
@@ -427,6 +384,95 @@ class DeepAgentWrapper:
         except Exception as e:
             logger.error(f"[DeepAgent] 创建 Agent 失败: {e}")
             return None
+
+    def _convert_to_langchain_tool(self, tool: "BaseTool"):
+        """
+        将 BaseTool 转换为 LangChain StructuredTool
+
+        确保参数 schema 正确传递给 LLM，让 LLM 知道如何调用工具。
+        """
+        from langchain_core.tools import StructuredTool
+        import asyncio
+
+        tool_name = tool.name
+        tool_description = tool.description
+        args_schema = tool.args_schema
+
+        # 创建异步包装函数
+        async def async_tool_wrapper(**kwargs):
+            logger.info(f"[DeepAgent] 异步调用工具: {tool_name}, 参数: {kwargs}")
+
+            try:
+                # 如果工具有异步执行方法，使用异步方法
+                # FrontendBridgeTool 使用 _call_async
+                if hasattr(tool, '_call_async'):
+                    logger.info(f"[DeepAgent] 使用 _call_async: {tool_name}")
+                    result = await tool._call_async(**kwargs)
+                    logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                    return result
+                # KnowledgeListTool 使用 _list_via_bridge
+                elif hasattr(tool, '_list_via_bridge'):
+                    logger.info(
+                        f"[DeepAgent] 使用 _list_via_bridge: {tool_name}")
+                    result = await tool._list_via_bridge()
+                    # 格式化结果
+                    if not result:
+                        return "当前没有可用的知识库。请先创建知识库并上传文档。"
+                    lines = ["可用的知识库：\n"]
+                    for kb in result:
+                        name = kb.get('name', '未命名')
+                        kb_id = kb.get('id', '未知')
+                        doc_count = kb.get('documentCount', 0)
+                        desc = kb.get('description', '')
+                        lines.append(f"- {name} (ID: {kb_id})")
+                        lines.append(f"  文档数: {doc_count}")
+                        if desc:
+                            lines.append(f"  描述: {desc}")
+                    logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                    return "\n".join(lines)
+                # FrontendBridgeListTool 使用 _list_async
+                elif hasattr(tool, '_list_async'):
+                    logger.info(f"[DeepAgent] 使用 _list_async: {tool_name}")
+                    result = await tool._list_async(kwargs.get('service'))
+                    logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                    return result
+                # KnowledgeCreateTool 等使用 _create_via_bridge
+                elif hasattr(tool, '_create_via_bridge'):
+                    logger.info(
+                        f"[DeepAgent] 使用 _create_via_bridge: {tool_name}")
+                    result = await tool._create_via_bridge(**kwargs)
+                    if result.get("success"):
+                        kb = result.get("knowledge", {})
+                        logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                        return (
+                            f"知识库创建成功！\n"
+                            f"名称: {kb.get('name')}\n"
+                            f"ID: {kb.get('id')}\n"
+                            f"嵌入模型: {kb.get('embeddingModelName')}\n"
+                            f"现在可以使用 web_crawl 工具添加内容。"
+                        )
+                    logger.info(f"[DeepAgent] 工具完成(失败): {tool_name}")
+                    return f"创建失败: {result.get('error', '未知错误')}"
+                else:
+                    # 同步工具直接运行
+                    logger.info(f"[DeepAgent] 使用同步 run: {tool_name}")
+                    result = tool.run(**kwargs)
+                    logger.info(f"[DeepAgent] 工具完成: {tool_name}")
+                    return result
+
+            except Exception as e:
+                error_msg = f"工具 {tool_name} 执行失败: {str(e)}"
+                logger.error(error_msg)
+                return error_msg
+
+        # 使用 StructuredTool.from_function 创建工具
+        # 这确保参数 schema 正确传递给 LLM
+        return StructuredTool.from_function(
+            coroutine=async_tool_wrapper,  # 异步函数
+            name=tool_name,
+            description=tool_description,
+            args_schema=args_schema,  # 传递参数 schema
+        )
 
     def _ensure_agent(self):
         """确保 Agent 已创建"""

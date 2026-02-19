@@ -1,11 +1,14 @@
 /**
  * 记忆服务
- * 管理对话摘要和用户长期记忆
+ *
+ * 通过 Python HTTP API 管理对话摘要和用户长期记忆
  */
 
-import { getDatabase } from "../database/index";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-// ========== 类型定义 ==========
+import { get, post, del } from "./pythonApiClient";
+
+// ==================== 类型定义 ====================
 
 export interface ConversationSummary {
   id: number;
@@ -35,370 +38,209 @@ export interface MemoryContext {
   contextPrompt: string;
 }
 
-// ========== 摘要管理 ==========
+// ==================== 摘要管理 ====================
 
 /**
  * 创建对话摘要
  */
-export function createSummary(
+export async function createSummary(
   conversationId: number,
   startMessageId: number,
   endMessageId: number,
   summary: string,
   keyTopics: string[],
   messageCount: number
-): ConversationSummary {
-  const db = getDatabase();
-  const now = Date.now();
-
-  const stmt = db.prepare(`
-    INSERT INTO conversation_summaries 
-    (conversation_id, start_message_id, end_message_id, summary, key_topics, message_count, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const result = stmt.run(
-    conversationId,
-    startMessageId,
-    endMessageId,
+): Promise<ConversationSummary> {
+  const response = await post("/api/summaries", {
+    conversation_id: conversationId,
+    start_message_id: startMessageId,
+    end_message_id: endMessageId,
     summary,
-    JSON.stringify(keyTopics),
-    messageCount,
-    now
-  );
+    key_topics: keyTopics,
+    message_count: messageCount,
+  });
 
-  return {
-    id: result.lastInsertRowid as number,
-    conversationId,
-    startMessageId,
-    endMessageId,
-    summary,
-    keyTopics,
-    messageCount,
-    createdAt: now,
-  };
+  if (response?.success && response.data) {
+    return transformSummary(response.data);
+  }
+
+  throw new Error(response?.error || "创建摘要失败");
 }
 
 /**
  * 获取对话的所有摘要
  */
-export function getSummariesByConversation(
+export async function getSummariesByConversation(
   conversationId: number
-): ConversationSummary[] {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT id, conversation_id, start_message_id, end_message_id, 
-           summary, key_topics, message_count, created_at
-    FROM conversation_summaries
-    WHERE conversation_id = ?
-    ORDER BY created_at DESC
-  `);
-
-  const rows = stmt.all(conversationId) as Array<{
-    id: number;
-    conversation_id: number;
-    start_message_id: number;
-    end_message_id: number;
-    summary: string;
-    key_topics: string;
-    message_count: number;
-    created_at: number;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    conversationId: row.conversation_id,
-    startMessageId: row.start_message_id,
-    endMessageId: row.end_message_id,
-    summary: row.summary,
-    keyTopics: JSON.parse(row.key_topics || "[]"),
-    messageCount: row.message_count,
-    createdAt: row.created_at,
-  }));
+): Promise<ConversationSummary[]> {
+  const response = await get<ConversationSummary[]>(
+    `/api/summaries?conversation_id=${conversationId}`
+  );
+  if (response?.success && response.data) {
+    return response.data.map(transformSummary);
+  }
+  return [];
 }
 
 /**
  * 获取最近的摘要（用于构建上下文）
  */
-export function getRecentSummaries(limit: number = 3): ConversationSummary[] {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT id, conversation_id, start_message_id, end_message_id, 
-           summary, key_topics, message_count, created_at
-    FROM conversation_summaries
-    ORDER BY created_at DESC
-    LIMIT ?
-  `);
-
-  const rows = stmt.all(limit) as Array<{
-    id: number;
-    conversation_id: number;
-    start_message_id: number;
-    end_message_id: number;
-    summary: string;
-    key_topics: string;
-    message_count: number;
-    created_at: number;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    conversationId: row.conversation_id,
-    startMessageId: row.start_message_id,
-    endMessageId: row.end_message_id,
-    summary: row.summary,
-    keyTopics: JSON.parse(row.key_topics || "[]"),
-    messageCount: row.message_count,
-    createdAt: row.created_at,
-  }));
+export async function getRecentSummaries(
+  limit: number = 3
+): Promise<ConversationSummary[]> {
+  const response = await get<ConversationSummary[]>(
+    `/api/summaries?limit=${limit}`
+  );
+  if (response?.success && response.data) {
+    return response.data.map(transformSummary);
+  }
+  return [];
 }
 
-// ========== 记忆管理 ==========
+// ==================== 记忆管理 ====================
 
 /**
  * 保存用户记忆
  */
-export function saveMemory(
+export async function saveMemory(
   memoryType: UserMemory["memoryType"],
   memoryKey: string,
   memoryValue: string,
   sourceConversationId?: number,
   confidence: number = 1.0
-): UserMemory {
-  const db = getDatabase();
-  const now = Date.now();
+): Promise<UserMemory> {
+  const response = await post("/api/memories", {
+    memory_type: memoryType,
+    memory_key: memoryKey,
+    memory_value: memoryValue,
+    source_conversation_id: sourceConversationId || null,
+    confidence,
+  });
 
-  // 检查是否已存在相同 type + key 的记忆
-  const existing = db
-    .prepare(
-      "SELECT id FROM user_memory WHERE memory_type = ? AND memory_key = ?"
-    )
-    .get(memoryType, memoryKey) as { id: number } | undefined;
-
-  if (existing) {
-    // 更新现有记忆
-    const stmt = db.prepare(`
-      UPDATE user_memory 
-      SET memory_value = ?, confidence = ?, updated_at = ?
-      WHERE id = ?
-    `);
-    stmt.run(memoryValue, confidence, now, existing.id);
-
-    return {
-      id: existing.id,
-      memoryType,
-      memoryKey,
-      memoryValue,
-      sourceConversationId: sourceConversationId || null,
-      confidence,
-      createdAt: now, // 简化处理
-      updatedAt: now,
-    };
-  } else {
-    // 创建新记忆
-    const stmt = db.prepare(`
-      INSERT INTO user_memory 
-      (memory_type, memory_key, memory_value, source_conversation_id, confidence, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(
-      memoryType,
-      memoryKey,
-      memoryValue,
-      sourceConversationId || null,
-      confidence,
-      now,
-      now
-    );
-
-    return {
-      id: result.lastInsertRowid as number,
-      memoryType,
-      memoryKey,
-      memoryValue,
-      sourceConversationId: sourceConversationId || null,
-      confidence,
-      createdAt: now,
-      updatedAt: now,
-    };
+  if (response?.success && response.data) {
+    return transformMemory(response.data);
   }
+
+  throw new Error(response?.error || "保存记忆失败");
 }
 
 /**
  * 批量保存记忆
  */
-export function saveMemories(
+export async function saveMemories(
   memories: Array<{
     type: UserMemory["memoryType"];
     key: string;
     value: string;
     sourceConversationId?: number;
   }>
-): void {
+): Promise<void> {
   for (const m of memories) {
-    saveMemory(m.type, m.key, m.value, m.sourceConversationId);
+    await saveMemory(m.type, m.key, m.value, m.sourceConversationId);
   }
 }
 
 /**
  * 获取所有用户记忆
  */
-export function getAllMemories(): UserMemory[] {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT id, memory_type, memory_key, memory_value, 
-           source_conversation_id, confidence, created_at, updated_at
-    FROM user_memory
-    ORDER BY updated_at DESC
-  `);
-
-  const rows = stmt.all() as Array<{
-    id: number;
-    memory_type: string;
-    memory_key: string;
-    memory_value: string;
-    source_conversation_id: number | null;
-    confidence: number;
-    created_at: number;
-    updated_at: number;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    memoryType: row.memory_type as UserMemory["memoryType"],
-    memoryKey: row.memory_key,
-    memoryValue: row.memory_value,
-    sourceConversationId: row.source_conversation_id,
-    confidence: row.confidence,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+export async function getAllMemories(): Promise<UserMemory[]> {
+  const response = await get<UserMemory[]>("/api/memories");
+  if (response?.success && response.data) {
+    return response.data.map(transformMemory);
+  }
+  return [];
 }
 
 /**
  * 按类型获取记忆
  */
-export function getMemoriesByType(
+export async function getMemoriesByType(
   memoryType: UserMemory["memoryType"]
-): UserMemory[] {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`
-    SELECT id, memory_type, memory_key, memory_value, 
-           source_conversation_id, confidence, created_at, updated_at
-    FROM user_memory
-    WHERE memory_type = ?
-    ORDER BY updated_at DESC
-  `);
-
-  const rows = stmt.all(memoryType) as Array<{
-    id: number;
-    memory_type: string;
-    memory_key: string;
-    memory_value: string;
-    source_conversation_id: number | null;
-    confidence: number;
-    created_at: number;
-    updated_at: number;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    memoryType: row.memory_type as UserMemory["memoryType"],
-    memoryKey: row.memory_key,
-    memoryValue: row.memory_value,
-    sourceConversationId: row.source_conversation_id,
-    confidence: row.confidence,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+): Promise<UserMemory[]> {
+  const response = await get<UserMemory[]>(
+    `/api/memories?memory_type=${memoryType}`
+  );
+  if (response?.success && response.data) {
+    return response.data.map(transformMemory);
+  }
+  return [];
 }
 
 /**
  * 删除记忆
  */
-export function deleteMemory(memoryId: number): boolean {
-  const db = getDatabase();
-  const result = db
-    .prepare("DELETE FROM user_memory WHERE id = ?")
-    .run(memoryId);
-  return result.changes > 0;
+export async function deleteMemory(memoryId: number): Promise<boolean> {
+  const response = await del(`/api/memories/${memoryId}`);
+  return response?.success === true;
 }
 
 /**
  * 清空所有记忆
  */
-export function clearAllMemories(): void {
-  const db = getDatabase();
-  db.exec("DELETE FROM user_memory");
+export async function clearAllMemories(): Promise<boolean> {
+  const response = await del("/api/memories");
+  return response?.success === true;
 }
 
-// ========== 上下文构建 ==========
+// ==================== 上下文构建 ====================
 
 /**
  * 构建记忆上下文
  */
-export function buildMemoryContext(): MemoryContext {
-  const memories = getAllMemories();
-  const summaries = getRecentSummaries(3);
-
-  const contextPrompt = buildContextPrompt(memories, summaries);
-
+export async function buildMemoryContext(): Promise<MemoryContext> {
+  const response = await get<{
+    memories: any[];
+    summaries: any[];
+    context_prompt: string;
+  }>("/api/memories/context");
+  if (response?.success && response.data) {
+    return {
+      memories: (response.data.memories || []).map(transformMemory),
+      summaries: (response.data.summaries || []).map(transformSummary),
+      contextPrompt: response.data.context_prompt || "",
+    };
+  }
   return {
-    memories,
-    summaries,
-    contextPrompt,
+    memories: [],
+    summaries: [],
+    contextPrompt: "",
+  };
+}
+
+// ==================== 转换函数 ====================
+
+/**
+ * 转换记忆对象
+ */
+function transformMemory(data: any): UserMemory {
+  return {
+    id: data.id,
+    memoryType: data.memory_type || data.memoryType,
+    memoryKey: data.memory_key || data.memoryKey,
+    memoryValue: data.memory_value || data.memoryValue,
+    sourceConversationId:
+      data.source_conversation_id ?? data.sourceConversationId ?? null,
+    confidence: data.confidence ?? 1.0,
+    createdAt: data.created_at || data.createdAt,
+    updatedAt: data.updated_at || data.updatedAt,
   };
 }
 
 /**
- * 构建上下文提示文本
+ * 转换摘要对象
  */
-function buildContextPrompt(
-  memories: UserMemory[],
-  summaries: ConversationSummary[]
-): string {
-  const parts: string[] = [];
-
-  // 按类型分组记忆
-  const memoriesByType: Record<string, UserMemory[]> = {};
-  for (const m of memories) {
-    if (!memoriesByType[m.memoryType]) {
-      memoriesByType[m.memoryType] = [];
-    }
-    memoriesByType[m.memoryType].push(m);
-  }
-
-  const typeLabels: Record<string, string> = {
-    preference: "用户偏好",
-    project: "项目信息",
-    task: "任务进度",
-    fact: "重要事实",
-    context: "上下文",
+function transformSummary(data: any): ConversationSummary {
+  return {
+    id: data.id,
+    conversationId: data.conversation_id || data.conversationId,
+    startMessageId: data.start_message_id || data.startMessageId,
+    endMessageId: data.end_message_id || data.endMessageId,
+    summary: data.summary,
+    keyTopics: data.key_topics || data.keyTopics || [],
+    messageCount: data.message_count || data.messageCount,
+    createdAt: data.created_at || data.createdAt,
   };
-
-  // 添加各类型记忆
-  for (const [type, mems] of Object.entries(memoriesByType)) {
-    const label = typeLabels[type] || type;
-    const items = mems.map((m) => `- ${m.memoryKey}: ${m.memoryValue}`);
-    if (items.length > 0) {
-      parts.push(`**${label}**\n${items.join("\n")}`);
-    }
-  }
-
-  // 添加历史摘要
-  if (summaries.length > 0) {
-    const summaryTexts = summaries.map((s) => `- ${s.summary}`);
-    parts.push(`**历史对话摘要**\n${summaryTexts.join("\n")}`);
-  }
-
-  return parts.join("\n\n");
 }
-
-// ========== 导出 ==========
 
 export default {
   createSummary,

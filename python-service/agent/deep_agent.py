@@ -641,8 +641,6 @@ class DeepAgentWrapper:
                         has_real_tool_call = True
                         logger.info(f"[DeepAgent] 检测到工具调用: {tool_call_info}")
 
-                    # 解析步骤类型
-                    step_type = self._parse_step_type(node_name, state_update)
                     content = self._extract_content(state_update)
 
                     # 快速通道逻辑：
@@ -661,6 +659,12 @@ class DeepAgentWrapper:
                         continue
 
                     # 有工具调用，发送详细的思考步骤
+                    # 根据是否有工具调用信息决定 step_type
+                    if tool_call_info:
+                        step_type = "tool_call"
+                    else:
+                        step_type = self._parse_step_type(node_name, state_update)
+
                     step_data = {
                         "node": node_name,
                         "step_type": step_type,

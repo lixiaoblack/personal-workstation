@@ -145,11 +145,14 @@ export function convertToThoughtChainItems(
 
 /**
  * 判断步骤是否包含真正的工具调用
- * 只有 step.type === "tool_call" 且 step.toolCall 有值才算真正的工具调用
+ * 条件：step.type === "tool_call" 且 step.toolCall 有值且 toolCall.name 存在
+ * 或者：step.toolCall 存在且 toolCall.name 存在（兼容旧格式）
  */
 export function hasToolCalls(steps: AgentStepItem[]): boolean {
   return steps.some(
-    (step) => step.type === "tool_call" && step.toolCall && step.toolCall.name
+    (step) =>
+      (step.type === "tool_call" && step.toolCall && step.toolCall.name) ||
+      (step.toolCall && step.toolCall.name)
   );
 }
 

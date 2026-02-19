@@ -94,6 +94,7 @@ const AIChatComponent: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   const agentStepsRef = useRef<AgentStepItem[]>([]);
+  const processedMessageIdsRef = useRef<Set<string>>(new Set()); // 已处理的消息 ID
 
   // ===== 数据加载 =====
 
@@ -254,6 +255,24 @@ const AIChatComponent: React.FC = () => {
 
   useEffect(() => {
     if (!lastMessage) return;
+
+    // 防止重复处理同一消息
+    const messageId = (lastMessage as { id?: string }).id;
+    if (messageId) {
+      if (processedMessageIdsRef.current.has(messageId)) {
+        return; // 已处理过，跳过
+      }
+      processedMessageIdsRef.current.add(messageId);
+
+      // 限制集合大小，防止内存泄漏
+      if (processedMessageIdsRef.current.size > 1000) {
+        const iterator = processedMessageIdsRef.current.values();
+        const first = iterator.next();
+        if (!first.done) {
+          processedMessageIdsRef.current.delete(first.value);
+        }
+      }
+    }
 
     // 流式开始
     if (lastMessage.type === MessageType.CHAT_STREAM_START) {

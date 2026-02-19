@@ -666,7 +666,7 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
         if (message.type === MessageType.FRONTEND_BRIDGE_REQUEST) {
           // 执行桥接方法
           const bridgeMsg = message as FrontendBridgeRequestMessage;
-          handleFrontendBridgeRequest(ws, bridgeMsg);
+          await handleFrontendBridgeRequest(ws, bridgeMsg);
         } else {
           // 返回可用方法列表
           const listMsg = message as FrontendBridgeListMessage;

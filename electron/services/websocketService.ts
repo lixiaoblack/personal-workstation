@@ -1146,8 +1146,10 @@ async function handleFrontendBridgeRequest(
       error: result.error,
     };
 
-    ws.send(JSON.stringify(response));
-    console.log(`[WebSocket] 桥接方法执行完成: ${service}.${method}`);
+    const responseData = JSON.stringify(response);
+    ws.send(responseData);
+    console.log(`[WebSocket] 桥接方法执行完成: ${service}.${method}, requestId: ${requestId}`);
+    console.log(`[WebSocket] 发送响应: type=${response.type}, success=${response.success}`);
   } catch (error) {
     console.error("[WebSocket] 桥接方法执行失败:", error);
 

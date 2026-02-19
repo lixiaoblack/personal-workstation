@@ -354,8 +354,8 @@ class KnowledgeListTool(BaseTool):
         # 生成请求 ID
         request_id = f"kb_list_{int(time.time() * 1000)}"
 
-        # 创建 Future 等待响应
-        loop = asyncio.get_event_loop()
+        # 创建 Future 等待响应 - 使用 get_running_loop 而不是 get_event_loop
+        loop = asyncio.get_running_loop()
         future = loop.create_future()
         _pending_bridge_requests[request_id] = future
 
@@ -373,7 +373,7 @@ class KnowledgeListTool(BaseTool):
         try:
             # 发送请求
             await _global_ws_send_callback(message)
-            logger.info("[KnowledgeListTool] 发送 FrontendBridge 请求")
+            logger.info(f"[KnowledgeListTool] 发送 FrontendBridge 请求: {request_id}")
 
             # 等待响应（超时 10 秒）
             response = await asyncio.wait_for(future, timeout=10.0)
@@ -389,7 +389,8 @@ class KnowledgeListTool(BaseTool):
 
         except asyncio.TimeoutError:
             _pending_bridge_requests.pop(request_id, None)
-            logger.warning("[KnowledgeListTool] FrontendBridge 超时，使用本地缓存")
+            logger.warning(f"[KnowledgeListTool] FrontendBridge 超时: {request_id}")
+            logger.debug(f"[KnowledgeListTool] 待处理请求: {list(_pending_bridge_requests.keys())}")
             return await self._list_local()
         except Exception as e:
             _pending_bridge_requests.pop(request_id, None)

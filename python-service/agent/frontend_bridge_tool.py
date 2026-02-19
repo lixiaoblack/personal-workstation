@@ -131,8 +131,8 @@ class FrontendBridgeTool(BaseTool):
         # 生成请求 ID
         request_id = f"bridge_{int(time.time() * 1000)}_{id(self)}"
 
-        # 创建 Future 等待响应
-        loop = asyncio.get_event_loop()
+        # 创建 Future 等待响应 - 使用 get_running_loop
+        loop = asyncio.get_running_loop()
         future = loop.create_future()
         _pending_bridge_requests[request_id] = future
 
@@ -150,7 +150,7 @@ class FrontendBridgeTool(BaseTool):
         try:
             # 发送请求
             await _global_ws_send_callback(message)
-            logger.info(f"[FrontendBridge] 发送请求: {service}.{method}")
+            logger.info(f"[FrontendBridge] 发送请求: {service}.{method}, requestId: {request_id}")
 
             # 等待响应（超时 30 秒）
             response = await asyncio.wait_for(future, timeout=30.0)
@@ -163,6 +163,7 @@ class FrontendBridgeTool(BaseTool):
 
         except asyncio.TimeoutError:
             _pending_bridge_requests.pop(request_id, None)
+            logger.warning(f"[FrontendBridge] 调用超时: {request_id}")
             return "调用超时: 前端服务未在 30 秒内响应"
         except Exception as e:
             _pending_bridge_requests.pop(request_id, None)
@@ -240,8 +241,8 @@ class FrontendBridgeListTool(BaseTool):
         # 生成请求 ID
         request_id = f"bridge_list_{int(time.time() * 1000)}"
 
-        # 创建 Future 等待响应
-        loop = asyncio.get_event_loop()
+        # 创建 Future 等待响应 - 使用 get_running_loop
+        loop = asyncio.get_running_loop()
         future = loop.create_future()
         _pending_bridge_requests[request_id] = future
 
@@ -256,6 +257,7 @@ class FrontendBridgeListTool(BaseTool):
         try:
             # 发送请求
             await _global_ws_send_callback(message)
+            logger.info(f"[FrontendBridgeList] 发送请求: {request_id}")
 
             # 等待响应
             response = await asyncio.wait_for(future, timeout=10.0)

@@ -48,7 +48,11 @@ export async function createKnowledge(
     console.error(`[KnowledgeService] 创建 LanceDB 集合失败: ${id}`, error);
     // 回滚 SQLite 记录
     db.prepare("DELETE FROM knowledge WHERE id = ?").run(id);
-    throw new Error(`创建知识库失败: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `创建知识库失败: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
 
   return {
@@ -100,7 +104,10 @@ async function deleteLanceDBCollection(knowledgeId: string): Promise<void> {
       knowledgeId,
     });
   } catch (error) {
-    console.error(`[KnowledgeService] 删除 LanceDB 集合失败: ${knowledgeId}`, error);
+    console.error(
+      `[KnowledgeService] 删除 LanceDB 集合失败: ${knowledgeId}`,
+      error
+    );
     // 删除失败不抛错，因为 SQLite 记录已经删除
   }
 }
@@ -166,7 +173,9 @@ export async function deleteKnowledge(knowledgeId: string): Promise<boolean> {
   }
 
   // 2. 删除关联的文档记录
-  db.prepare("DELETE FROM knowledge_documents WHERE knowledge_id = ?").run(knowledgeId);
+  db.prepare("DELETE FROM knowledge_documents WHERE knowledge_id = ?").run(
+    knowledgeId
+  );
 
   // 3. 删除 LanceDB 集合
   await deleteLanceDBCollection(knowledgeId);

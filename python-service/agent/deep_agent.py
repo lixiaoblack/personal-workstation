@@ -113,12 +113,14 @@ class MessageSender:
         """
         if self.send_callback:
             import time
+            # 过滤掉 None 或空内容，避免前端显示 "None"
+            safe_content = content if content and content != "None" else ""
             await self.send_callback({
                 "type": "agent_step",
                 "id": f"agent_step_{int(time.time() * 1000)}_{iteration}",
                 "conversationId": conversation_id,
                 "stepType": step_type,
-                "content": content,
+                "content": safe_content,
                 "toolCall": tool_call,
                 "iteration": iteration
             })
@@ -181,7 +183,8 @@ class DeepAgentWrapper:
                 # 获取默认模型（第一个已注册的模型）
                 if model_router._models:
                     first_model_id = list(model_router._models.keys())[0]
-                    self._model_config = model_router.get_config(first_model_id)
+                    self._model_config = model_router.get_config(
+                        first_model_id)
 
         return self._model_config or {}
 
@@ -203,7 +206,8 @@ class DeepAgentWrapper:
         model_id = ""
 
         if hasattr(config, 'provider'):
-            provider = config.provider.value if hasattr(config.provider, 'value') else str(config.provider)
+            provider = config.provider.value if hasattr(
+                config.provider, 'value') else str(config.provider)
             model_id = config.model_id
         else:
             # 兼容字典格式
@@ -251,7 +255,8 @@ class DeepAgentWrapper:
 
         # 提取配置
         if hasattr(config, 'provider'):
-            provider = config.provider.value if hasattr(config.provider, 'value') else str(config.provider)
+            provider = config.provider.value if hasattr(
+                config.provider, 'value') else str(config.provider)
             model_id = config.model_id
             api_key = config.api_key
             api_base_url = config.api_base_url
@@ -282,7 +287,8 @@ class DeepAgentWrapper:
             if api_base_url:
                 model_kwargs["base_url"] = api_base_url
 
-            logger.info(f"[DeepAgent] 创建 ChatModel, provider=openai (兼容), model={model_id}, base_url={api_base_url}")
+            logger.info(
+                f"[DeepAgent] 创建 ChatModel, provider=openai (兼容), model={model_id}, base_url={api_base_url}")
 
             return init_chat_model(
                 model_id,
@@ -305,7 +311,8 @@ class DeepAgentWrapper:
         }
         mapped_provider = provider_map.get(provider, provider)
 
-        logger.info(f"[DeepAgent] 创建 ChatModel, provider={mapped_provider}, model={model_id}")
+        logger.info(
+            f"[DeepAgent] 创建 ChatModel, provider={mapped_provider}, model={model_id}")
 
         return init_chat_model(
             model_id,
@@ -339,7 +346,8 @@ class DeepAgentWrapper:
             # 创建 ChatModel 实例（而非字符串），支持自定义 API 配置
             chat_model = self._create_chat_model()
 
-            logger.info(f"[DeepAgent] 创建 Agent，模型类型: {type(chat_model).__name__}, 工具数量: {len(tool_functions)}")
+            logger.info(
+                f"[DeepAgent] 创建 Agent，模型类型: {type(chat_model).__name__}, 工具数量: {len(tool_functions)}")
 
             # 创建 Deep Agent
             agent = create_deep_agent(
@@ -489,7 +497,8 @@ class DeepAgentWrapper:
                     items = event.items()
                 else:
                     # 单个 Command 对象，直接处理
-                    logger.debug(f"[DeepAgent] Event type: {type(event).__name__}")
+                    logger.debug(
+                        f"[DeepAgent] Event type: {type(event).__name__}")
                     step_data = {
                         "node": "agent",
                         "step_type": "thought",
@@ -502,7 +511,8 @@ class DeepAgentWrapper:
 
                 for node_name, state_update in items:
                     # 调试日志：打印原始事件数据
-                    logger.debug(f"[DeepAgent] Event: node={node_name}, update_type={type(state_update).__name__}")
+                    logger.debug(
+                        f"[DeepAgent] Event: node={node_name}, update_type={type(state_update).__name__}")
 
                     # 解析步骤类型
                     step_type = self._parse_step_type(node_name, state_update)
@@ -681,8 +691,10 @@ class DeepAgentWrapper:
             state_update: 状态更新（可能是 dict、list 或 LangGraph 的 Command 对象）
 
         Returns:
-            内容字符串
+            内容字符串（保证非 None）
         """
+        content = None
+
         # 处理 LangGraph 的 Command 对象（如 Overwrite）
         if hasattr(state_update, '__class__') and state_update.__class__.__name__ in ['Overwrite', 'Command']:
             # Overwrite 对象有 value 属性
@@ -692,11 +704,13 @@ class DeepAgentWrapper:
                     if isinstance(value, list) and value:
                         last_item = value[-1]
                         if hasattr(last_item, 'content'):
-                            return last_item.content
+                            content = last_item.content
                         elif isinstance(last_item, dict):
-                            return last_item.get("content", "")
+                            content = last_item.get("content")
                     elif hasattr(value, 'content'):
-                        return value.content
+                        content = value.content
+                if content:
+                    return str(content) if content is not None else ""
                 return f"[{state_update.__class__.__name__}]"
             except Exception as e:
                 logger.debug(f"[DeepAgent] 处理 Overwrite 对象失败: {e}")
@@ -710,22 +724,26 @@ class DeepAgentWrapper:
                 return self._extract_content(messages)  # 递归处理
 
             if messages:
-                last_msg = messages[-1] if isinstance(messages, list) else messages
+                last_msg = messages[-1] if isinstance(
+                    messages, list) else messages
                 if hasattr(last_msg, "content"):
-                    return last_msg.content
+                    content = last_msg.content
                 elif isinstance(last_msg, dict):
-                    return last_msg.get("content", "")
+                    content = last_msg.get("content")
 
         # 处理列表类型
         if isinstance(state_update, list):
             if state_update:
                 last_item = state_update[-1]
                 if hasattr(last_item, "content"):
-                    return last_item.content
+                    content = last_item.content
                 elif isinstance(last_item, dict):
-                    return last_item.get("content", "")
+                    content = last_item.get("content")
 
-        return str(state_update)
+        # 确保返回非 None 字符串
+        if content is None:
+            return ""
+        return str(content) if content else ""
 
     def _extract_steps(self, result: Dict) -> List[AgentStep]:
         """

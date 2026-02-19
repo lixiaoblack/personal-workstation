@@ -29,10 +29,7 @@ import {
 } from "../types/websocket";
 import { getEnabledModelConfigs } from "./modelConfigService";
 import * as knowledgeService from "./knowledgeService";
-import {
-  executeBridgeMethod,
-  getBridgeMethods,
-} from "./bridgeRegistry";
+import { executeBridgeMethod, getBridgeMethods } from "./bridgeRegistry";
 import type { OnlineModelConfig, OllamaModelConfig } from "../types/model";
 import type {
   OllamaStatus,
@@ -583,7 +580,9 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
               error: knowledge ? undefined : "创建知识库记录失败",
             };
             ws.send(JSON.stringify(response));
-            console.log(`[WebSocket] Knowledge Sync Create 成功: ${syncMsg.knowledgeId}`);
+            console.log(
+              `[WebSocket] Knowledge Sync Create 成功: ${syncMsg.knowledgeId}`
+            );
           } catch (error) {
             const response: KnowledgeSyncCreateResponseMessage = {
               type: MessageType.KNOWLEDGE_SYNC_CREATE_RESPONSE,
@@ -600,7 +599,9 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
           // 同步删除知识库 SQLite 记录
           const syncMsg = message as KnowledgeSyncDeleteMessage;
           try {
-            const success = await knowledgeService.deleteKnowledge(syncMsg.knowledgeId);
+            const success = await knowledgeService.deleteKnowledge(
+              syncMsg.knowledgeId
+            );
 
             const response: KnowledgeSyncDeleteResponseMessage = {
               type: MessageType.KNOWLEDGE_SYNC_DELETE_RESPONSE,
@@ -611,7 +612,9 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
               error: success ? undefined : "删除知识库记录失败",
             };
             ws.send(JSON.stringify(response));
-            console.log(`[WebSocket] Knowledge Sync Delete 成功: ${syncMsg.knowledgeId}`);
+            console.log(
+              `[WebSocket] Knowledge Sync Delete 成功: ${syncMsg.knowledgeId}`
+            );
           } catch (error) {
             const response: KnowledgeSyncDeleteResponseMessage = {
               type: MessageType.KNOWLEDGE_SYNC_DELETE_RESPONSE,

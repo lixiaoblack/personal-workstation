@@ -568,7 +568,7 @@ export interface KnowledgeListDocumentsResponseMessage extends BaseMessage {
 
 /**
  * 同步创建知识库请求（Python -> Electron）
- * 
+ *
  * Agent 调用时，Python 创建 LanceDB 后通知 Electron 创建 SQLite 记录
  */
 export interface KnowledgeSyncCreateMessage extends BaseMessage {

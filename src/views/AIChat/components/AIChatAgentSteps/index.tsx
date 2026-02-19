@@ -16,37 +16,49 @@ interface AIChatAgentStepsProps {
 /**
  * 单个步骤渲染
  */
-const StepItem: React.FC<{ step: AgentStepItem }> = memo(({ step }) => (
-  <div className="flex items-start gap-2 text-sm">
-    {/* 步骤图标 */}
-    <span className="shrink-0 text-base">{AGENT_STEP_ICONS[step.type]}</span>
+const StepItem: React.FC<{ step: AgentStepItem }> = memo(({ step }) => {
+  // 过滤掉 None、空内容或无意义的步骤
+  const isValidContent = step.content && step.content !== "None" && step.content.trim() !== "";
+  const isToolCall = step.type === "tool_call" && step.toolCall;
+  const isToolResult = step.type === "tool_result";
 
-    {/* 步骤内容 */}
-    <div className="flex flex-col gap-1 flex-1 min-w-0">
-      <span className="text-xs font-medium text-text-secondary">
-        {AGENT_STEP_LABELS[step.type]}
-      </span>
-      <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
-        {step.type === "tool_call" && step.toolCall ? (
-          <div className="flex flex-col gap-1">
-            <span className="text-primary font-medium">
-              {step.toolCall.name}
-            </span>
-            <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
-              {JSON.stringify(step.toolCall.arguments)}
+  // 如果不是工具调用/结果，且内容无效，则不渲染
+  if (!isToolCall && !isToolResult && !isValidContent) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-start gap-2 text-sm">
+      {/* 步骤图标 */}
+      <span className="shrink-0 text-base">{AGENT_STEP_ICONS[step.type]}</span>
+
+      {/* 步骤内容 */}
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <span className="text-xs font-medium text-text-secondary">
+          {AGENT_STEP_LABELS[step.type]}
+        </span>
+        <div className="text-text-primary text-sm whitespace-pre-wrap break-words">
+          {isToolCall ? (
+            <div className="flex flex-col gap-1">
+              <span className="text-primary font-medium">
+                {step.toolCall!.name}
+              </span>
+              <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary">
+                {JSON.stringify(step.toolCall!.arguments)}
+              </code>
+            </div>
+          ) : isToolResult ? (
+            <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-20 overflow-auto">
+              {step.content || ""}
             </code>
-          </div>
-        ) : step.type === "tool_result" ? (
-          <code className="text-xs bg-bg-tertiary px-2 py-1 rounded text-text-secondary block max-h-20 overflow-auto">
-            {step.content}
-          </code>
-        ) : (
-          step.content
-        )}
+          ) : (
+            step.content
+          )}
+        </div>
       </div>
     </div>
-  </div>
-));
+  );
+});
 
 StepItem.displayName = "StepItem";
 

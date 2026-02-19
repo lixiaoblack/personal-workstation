@@ -383,7 +383,8 @@ class KnowledgeListTool(BaseTool):
                 logger.info(f"[KnowledgeListTool] 获取到 {len(result)} 个知识库")
                 return result
             else:
-                logger.error(f"[KnowledgeListTool] 调用失败: {response.get('error')}")
+                logger.error(
+                    f"[KnowledgeListTool] 调用失败: {response.get('error')}")
                 return await self._list_local()
 
         except asyncio.TimeoutError:

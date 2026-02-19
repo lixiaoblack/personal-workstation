@@ -226,7 +226,8 @@ class MessageHandler:
         async def tool_executor(tool_name: str, tool_args: dict) -> str:
             """执行工具并返回结果"""
             try:
-                result = global_tool_registry.execute_tool(tool_name, tool_args)
+                result = global_tool_registry.execute_tool(
+                    tool_name, tool_args)
                 logger.info(f"[FunctionCalling] 工具 {tool_name} 执行成功")
                 return result
             except Exception as e:
@@ -522,6 +523,8 @@ class MessageHandler:
             # 注意：Deep Agent 内部通过 message_sender 发送 agent_step 消息
             # 这里只需要处理流式内容和结束消息
             full_content = ""
+            has_final_answer = False
+
             async for step in agent.astream(
                 input_text=content,
                 messages=messages if messages else None,
@@ -545,7 +548,8 @@ class MessageHandler:
 
                 # 如果是最终答案，发送结束消息
                 if step_type == "answer":
-                    full_content = step_content
+                    has_final_answer = True
+                    full_content = step_content if step_content else full_content
                     await self.send_callback({
                         "type": "chat_stream_end",
                         "id": f"{msg_id}_end",
@@ -553,6 +557,21 @@ class MessageHandler:
                         "conversationId": conversation_id,
                         "fullContent": full_content,
                     })
+
+                # 收集最终内容（用于后续发送结束消息）
+                if step_content and step_type in ["thought", "answer"]:
+                    full_content = step_content
+
+            # 如果流式循环结束但没有收到 answer 类型，手动发送结束消息
+            if not has_final_answer:
+                logger.info(f"[DeepAgent] 流式结束，发送结束消息，内容长度: {len(full_content)}")
+                await self.send_callback({
+                    "type": "chat_stream_end",
+                    "id": f"{msg_id}_end",
+                    "timestamp": int(time.time() * 1000),
+                    "conversationId": conversation_id,
+                    "fullContent": full_content,
+                })
 
             logger.info(f"[DeepAgent] 执行完成")
             return {"completed": True}  # 返回标记表示 Deep Agent 已完成执行

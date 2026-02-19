@@ -4,6 +4,28 @@
 
 ---
 
+## [0.5.6] - 2026-02-18
+
+### 新增 (Added)
+
+- 网页搜索工具
+  - WebSearchTool：搜索互联网获取实时信息
+  - NewsSearchTool：搜索最新新闻
+  - 使用 DuckDuckGo 搜索引擎（无需 API 密钥）
+
+- Function Calling 支持
+  - 普通聊天支持工具调用（useTools 参数）
+  - 工具可在 Agent 和普通 LLM 模式下使用
+  - 自动处理工具调用循环
+
+### 修改 (Changed)
+
+- model_router.py 新增 chat_with_tools 方法
+- message_handler.py 支持 useTools 参数
+- websocket.ts 类型定义添加 useTools 字段
+
+---
+
 ## [0.5.5] - 2026-02-18
 
 ### 修复 (Fixed)

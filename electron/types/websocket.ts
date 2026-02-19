@@ -812,6 +812,8 @@ export interface FrontendBridgeListMessage extends BaseMessage {
   type: MessageType.FRONTEND_BRIDGE_LIST;
   /** 可选：筛选指定服务 */
   service?: string;
+  /** 请求 ID（用于响应匹配） */
+  requestId: string;
 }
 
 /**
@@ -820,6 +822,8 @@ export interface FrontendBridgeListMessage extends BaseMessage {
 export interface FrontendBridgeListResponseMessage extends BaseMessage {
   type: MessageType.FRONTEND_BRIDGE_LIST_RESPONSE;
   success: boolean;
+  /** 请求 ID */
+  requestId: string;
   /** 可用方法列表 */
   methods: BridgeMethod[];
   /** 方法数量 */

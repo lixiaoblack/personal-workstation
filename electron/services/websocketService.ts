@@ -1169,12 +1169,14 @@ function handleFrontendBridgeList(
   message: FrontendBridgeListMessage
 ): void {
   try {
-    const methods = getBridgeMethods(message.service);
+    const { service, requestId } = message;
+    const methods = getBridgeMethods(service);
 
     const response: FrontendBridgeListResponseMessage = {
       type: MessageType.FRONTEND_BRIDGE_LIST_RESPONSE,
       id: message.id,
       timestamp: Date.now(),
+      requestId,
       success: true,
       methods,
       count: methods.length,
@@ -1189,6 +1191,7 @@ function handleFrontendBridgeList(
       type: MessageType.FRONTEND_BRIDGE_LIST_RESPONSE,
       id: message.id,
       timestamp: Date.now(),
+      requestId: message.requestId,
       success: false,
       methods: [],
       count: 0,

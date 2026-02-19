@@ -532,7 +532,7 @@ class MessageHandler:
                 if self.send_callback and step_type not in ["stream_chunk"]:
                     await self.send_callback({
                         "type": "agent_step",
-                        "id": f"{msg_id}_step_{step_type}",
+                        "id": f"{msg_id}_step_{step_type}_{int(time.time() * 1000)}",
                         "timestamp": int(time.time() * 1000),
                         "conversationId": conversation_id,
                         "stepType": step_type,

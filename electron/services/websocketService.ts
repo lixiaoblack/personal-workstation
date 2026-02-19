@@ -369,7 +369,7 @@ export function isPythonConnected(): boolean {
 /**
  * 处理客户端消息
  */
-function handleClientMessage(ws: WebSocket, data: Buffer): void {
+async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
   const info = clients.get(ws);
   if (info) {
     info.lastActivity = Date.now();
@@ -600,7 +600,7 @@ function handleClientMessage(ws: WebSocket, data: Buffer): void {
           // 同步删除知识库 SQLite 记录
           const syncMsg = message as KnowledgeSyncDeleteMessage;
           try {
-            const success = knowledgeService.deleteKnowledge(syncMsg.knowledgeId);
+            const success = await knowledgeService.deleteKnowledge(syncMsg.knowledgeId);
 
             const response: KnowledgeSyncDeleteResponseMessage = {
               type: MessageType.KNOWLEDGE_SYNC_DELETE_RESPONSE,

@@ -471,7 +471,7 @@ function registerIpcHandlers() {
         );
       }
 
-      const success = knowledgeService.deleteKnowledge(knowledgeId);
+      const success = await knowledgeService.deleteKnowledge(knowledgeId);
       return { success };
     } catch (error) {
       return { success: false, error: String(error) };

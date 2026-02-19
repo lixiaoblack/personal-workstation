@@ -272,11 +272,15 @@ const AIChatComponent: React.FC = () => {
     // 流式开始
     if (lastMessage.type === MessageType.CHAT_STREAM_START) {
       const streamStart = lastMessage as ChatStreamStartMessage;
+      // 重置所有流式状态，确保是全新的
       setStreamState({
         status: "streaming",
         content: "",
         conversationId: streamStart.conversationId,
       });
+      // 清空之前的 Agent 步骤
+      setAgentSteps([]);
+      agentStepsRef.current = [];
       return;
     }
 
@@ -295,15 +299,27 @@ const AIChatComponent: React.FC = () => {
       const streamEnd = lastMessage as ChatStreamEndMessage;
       const fullContent = streamEnd.fullContent;
 
-      // 保存 AI 消息到数据库（附带 Agent 步骤）
-      const cid = streamState.conversationId;
+      // 先保存 agentSteps，然后重置状态
+      const savedAgentSteps = [...agentStepsRef.current];
+      const cid = streamEnd.conversationId || streamState.conversationId;
+
+      // 立即重置所有流式状态，防止新消息显示旧内容
+      setStreamState({
+        status: "done",
+        content: "",
+        conversationId: null,
+      });
+      setAgentSteps([]);
+      agentStepsRef.current = [];
+      loadingRef.current = false;
+
+      // 保存 AI 消息到数据库（附带保存的 Agent 步骤）
       if (cid && fullContent) {
         (async () => {
           try {
-            const currentAgentSteps = agentStepsRef.current;
             const metadata =
-              currentAgentSteps.length > 0
-                ? { agentSteps: currentAgentSteps }
+              savedAgentSteps.length > 0
+                ? { agentSteps: savedAgentSteps }
                 : undefined;
 
             await window.electronAPI.addMessage({
@@ -324,13 +340,6 @@ const AIChatComponent: React.FC = () => {
           }
         })();
       }
-
-      setStreamState({
-        status: "done",
-        content: "",
-        conversationId: null,
-      });
-      loadingRef.current = false;
       return;
     }
 

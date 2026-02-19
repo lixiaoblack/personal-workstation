@@ -519,6 +519,8 @@ class MessageHandler:
             logger.info(f"[DeepAgent] 开始执行，工具数量: {len(tools)}")
 
             # 流式执行
+            # 注意：Deep Agent 内部通过 message_sender 发送 agent_step 消息
+            # 这里只需要处理流式内容和结束消息
             full_content = ""
             async for step in agent.astream(
                 input_text=content,
@@ -527,18 +529,6 @@ class MessageHandler:
             ):
                 step_type = step.get("step_type", "")
                 step_content = step.get("content", "")
-
-                # 发送 Agent 步骤消息
-                if self.send_callback and step_type not in ["stream_chunk"]:
-                    await self.send_callback({
-                        "type": "agent_step",
-                        "id": f"{msg_id}_step_{step_type}_{int(time.time() * 1000)}",
-                        "timestamp": int(time.time() * 1000),
-                        "conversationId": conversation_id,
-                        "stepType": step_type,
-                        "content": step_content,
-                        "iteration": step.get("iteration", 0),
-                    })
 
                 # 如果是流式内容，发送流式消息
                 if step_type == "stream_chunk":

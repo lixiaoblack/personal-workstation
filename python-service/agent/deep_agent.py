@@ -112,8 +112,10 @@ class MessageSender:
             iteration: 迭代次数
         """
         if self.send_callback:
+            import time
             await self.send_callback({
                 "type": "agent_step",
+                "id": f"agent_step_{int(time.time() * 1000)}_{iteration}",
                 "conversationId": conversation_id,
                 "stepType": step_type,
                 "content": content,

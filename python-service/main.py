@@ -220,12 +220,16 @@ class AgentService:
         try:
             # 处理前端桥接响应
             msg_type = message.get("type")
+            logger.debug(f"[AgentService] 收到消息类型: {msg_type}")
+
             if msg_type == "frontend_bridge_response":
+                logger.info(f"[AgentService] 处理 frontend_bridge_response")
                 from agent.frontend_bridge_tool import handle_bridge_response
                 handle_bridge_response(message)
                 return
 
             if msg_type == "frontend_bridge_list_response":
+                logger.info(f"[AgentService] 处理 frontend_bridge_list_response")
                 from agent.frontend_bridge_tool import handle_bridge_response
                 handle_bridge_response(message)
                 return

@@ -348,7 +348,11 @@ def handle_bridge_response(message: Dict[str, Any]):
     request_id = message.get("requestId")
     if not request_id:
         logger.warning("[FrontendBridge] 响应缺少 requestId")
+        logger.debug(f"[FrontendBridge] 响应内容: {message}")
         return
+
+    logger.info(f"[FrontendBridge] 收到响应，requestId: {request_id}")
+    logger.debug(f"[FrontendBridge] 待处理请求: {list(_pending_bridge_requests.keys())}")
 
     future = _pending_bridge_requests.pop(request_id, None)
     if future and not future.done():
@@ -356,6 +360,8 @@ def handle_bridge_response(message: Dict[str, Any]):
         logger.info(f"[FrontendBridge] 响应已处理: {request_id}")
     else:
         logger.warning(f"[FrontendBridge] 未找到对应的请求: {request_id}")
+        if future:
+            logger.debug(f"[FrontendBridge] Future 状态: done={future.done()}")
 
 
 def register_frontend_bridge_tools():

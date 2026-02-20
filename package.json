@@ -8,13 +8,14 @@
   "scripts": {
     "dev": "vite",
     "build:python": "node scripts/build-python.js",
-    "build:native": "electron-rebuild -f -w bcrypt,better-sqlite3",
-    "build": "pnpm run build:python && pnpm run build:native && vite build && electron-builder",
-    "build:skip-python": "pnpm run build:native && vite build && electron-builder",
-    "build:quick": "vite build && electron-builder",
+    "rebuild:native": "electron-rebuild -f -w bcrypt,better-sqlite3",
+    "prebuild:native": "node scripts/before-pack.js",
+    "build": "pnpm run build:python && pnpm run rebuild:native && pnpm run prebuild:native && vite build && electron-builder",
+    "build:skip-python": "pnpm run rebuild:native && pnpm run prebuild:native && vite build && electron-builder",
+    "build:quick": "pnpm run prebuild:native && vite build && electron-builder",
     "preview": "vite preview",
     "lint": "eslint .",
-    "postinstall": "electron-rebuild -f -w bcrypt,better-sqlite3"
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.0",
@@ -68,13 +69,7 @@
     "directories": {
       "output": "dist"
     },
-    "asar": true,
-    "asarUnpack": [
-      "**/node_modules/bcrypt/**/*",
-      "**/node_modules/better-sqlite3/**/*",
-      "**/.pnpm/bcrypt*/**/*",
-      "**/.pnpm/better-sqlite3*/**/*"
-    ],
+    "asar": false,
     "extraResources": [
       {
         "from": "dist/python-service",
@@ -82,29 +77,16 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "node_modules/.pnpm/bcrypt@6.0.0",
-        "to": "node_modules/.pnpm/bcrypt@6.0.0",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules/.pnpm/better-sqlite3@12.6.2",
-        "to": "node_modules/.pnpm/better-sqlite3@12.6.2",
-        "filter": [
-          "**/*"
-        ]
       }
     ],
-    "npmRebuild": true,
-    "nodeGypRebuild": true,
-    "afterPack": "./scripts/after-pack.js",
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.productivity"
     },

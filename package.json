@@ -1,8 +1,8 @@
 {
   "name": "personal-workstation",
   "private": true,
-  "version": "0.5.20",
-  "description": "Personal Workstation - Electron Desktop Application",
+  "version": "0.5.21",
+  "description": "个人工作站 - Electron 桌面应用",
   "author": "lixiaoblack",
   "main": "./dist-electron/main.js",
   "scripts": {
@@ -65,7 +65,7 @@
   },
   "build": {
     "appId": "com.personal.workstation",
-    "productName": "Personal Workstation",
+    "productName": "个人工作站",
     "directories": {
       "output": "release"
     },
@@ -98,13 +98,15 @@
           ]
         }
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "resources/icon.icns"
     },
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "icon": "resources/icon.png"
     },
     "nsis": {
       "oneClick": false,

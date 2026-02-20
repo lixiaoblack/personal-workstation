@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Python 服务打包脚本
 
@@ -19,7 +20,14 @@ import platform
 import shutil
 import subprocess
 import sys
+import io
+
 from pathlib import Path
+
+# Fix Windows console encoding for Chinese characters
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 
 def get_platform():

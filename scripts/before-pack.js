@@ -11,8 +11,11 @@ const path = require("path");
 const NODE_MODULES = path.join(__dirname, "..", "node_modules");
 const PNPM_DIR = path.join(NODE_MODULES, ".pnpm");
 
-// 需要处理的模块
-const NATIVE_MODULES = ["bcrypt", "better-sqlite3"];
+// 需要处理的模块及其依赖
+const NATIVE_MODULES = [
+  { name: "bcrypt", deps: ["node-addon-api", "node-gyp-build"] },
+  { name: "better-sqlite3", deps: [] },
+];
 
 /**
  * 递归复制目录（跳过指向自身的符号链接）
@@ -68,9 +71,69 @@ function copyDir(src, dest, visited = new Set()) {
 }
 
 /**
+ * 处理单个依赖模块（复制到指定目录）
+ */
+function processDependency(depName, destNodeModules) {
+  console.log(`    处理依赖: ${depName}`);
+
+  // 查找 pnpm 中的依赖
+  const pnpmEntries = fs.readdirSync(PNPM_DIR);
+  const depDir = pnpmEntries.find((e) => e.startsWith(`${depName}@`));
+
+  if (!depDir) {
+    // 可能在项目根 node_modules 中
+    const rootDep = path.join(NODE_MODULES, depName);
+    if (fs.existsSync(rootDep)) {
+      const destDep = path.join(destNodeModules, depName);
+      if (!fs.existsSync(destDep)) {
+        console.log(`      从根目录复制: ${rootDep}`);
+        copyDir(rootDep, destDep);
+      }
+    } else {
+      console.log(`      [跳过] 未找到依赖: ${depName}`);
+    }
+    return;
+  }
+
+  const pnpmDepPath = path.join(PNPM_DIR, depDir, "node_modules", depName);
+
+  // 解析实际路径
+  let realDepPath = pnpmDepPath;
+  try {
+    while (fs.existsSync(realDepPath) && fs.lstatSync(realDepPath).isSymbolicLink()) {
+      realDepPath = fs.realpathSync(realDepPath);
+    }
+  } catch (err) {
+    console.log(`      [跳过] 解析路径失败: ${err.message}`);
+    return;
+  }
+
+  if (!fs.existsSync(realDepPath)) {
+    console.log(`      [跳过] 实际路径不存在: ${realDepPath}`);
+    return;
+  }
+
+  const destDep = path.join(destNodeModules, depName);
+
+  // 如果目标已存在且是符号链接，先删除
+  if (fs.existsSync(destDep) && fs.lstatSync(destDep).isSymbolicLink()) {
+    fs.unlinkSync(destDep);
+  }
+
+  // 复制依赖
+  if (!fs.existsSync(destDep)) {
+    console.log(`      复制到: ${destDep}`);
+    copyDir(realDepPath, destDep);
+  }
+}
+
+/**
  * 处理单个模块
  */
-function processModule(moduleName) {
+function processModule(moduleConfig) {
+  const moduleName = moduleConfig.name;
+  const deps = moduleConfig.deps || [];
+
   console.log(`\n处理模块: ${moduleName}`);
 
   const moduleLink = path.join(NODE_MODULES, moduleName);
@@ -118,6 +181,21 @@ function processModule(moduleName) {
     console.log(`  复制完成`);
   }
 
+  // 处理依赖
+  if (deps.length > 0) {
+    console.log(`  处理依赖...`);
+    const moduleNodeModules = path.join(moduleLink, "node_modules");
+
+    // 确保 node_modules 目录存在
+    if (!fs.existsSync(moduleNodeModules)) {
+      fs.mkdirSync(moduleNodeModules, { recursive: true });
+    }
+
+    for (const dep of deps) {
+      processDependency(dep, moduleNodeModules);
+    }
+  }
+
   // 处理 .pnpm 内部的符号链接
   if (fs.existsSync(pnpmModulePath) && fs.lstatSync(pnpmModulePath).isSymbolicLink()) {
     console.log(`  处理 .pnpm 内部符号链接...`);
@@ -141,11 +219,11 @@ function main() {
     return;
   }
 
-  for (const moduleName of NATIVE_MODULES) {
+  for (const moduleConfig of NATIVE_MODULES) {
     try {
-      processModule(moduleName);
+      processModule(moduleConfig);
     } catch (err) {
-      console.error(`处理 ${moduleName} 失败:`, err.message);
+      console.error(`处理 ${moduleConfig.name} 失败:`, err.message);
     }
   }
 

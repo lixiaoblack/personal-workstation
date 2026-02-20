@@ -1,7 +1,7 @@
 {
   "name": "personal-workstation",
   "private": true,
-  "version": "0.5.19",
+  "version": "0.5.20",
   "description": "Personal Workstation - Electron Desktop Application",
   "author": "lixiaoblack",
   "main": "./dist-electron/main.js",

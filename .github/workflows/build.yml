@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-mac:
     runs-on: macos-latest
@@ -19,15 +22,12 @@ jobs:
           node-version: '20'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
+        run: npm install -g pnpm@9
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install Python dependencies
         run: |
@@ -36,7 +36,7 @@ jobs:
           pip install -r python-service/requirements.txt
 
       - name: Install Node dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build application
         run: pnpm run build
@@ -63,15 +63,12 @@ jobs:
           node-version: '20'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
+        run: npm install -g pnpm@9
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install Python dependencies
         run: |
@@ -80,7 +77,7 @@ jobs:
           pip install -r python-service/requirements.txt
 
       - name: Install Node dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build application
         run: pnpm run build
@@ -99,6 +96,8 @@ jobs:
     needs: [build-mac, build-win]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
     steps:
       - name: Download Mac artifacts
         uses: actions/download-artifact@v4

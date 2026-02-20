@@ -10,6 +10,9 @@
     "build:python": "node scripts/build-python.js",
     "build": "vite build && pnpm run build:python && electron-builder",
     "build:skip-python": "vite build && electron-builder",
+    "build:win": "vite build && pnpm run build:python && electron-builder --win",
+    "build:mac": "vite build && pnpm run build:python && electron-builder --mac",
+    "build:all": "vite build && pnpm run build:python && electron-builder --mac --win",
     "preview": "vite preview",
     "lint": "eslint ."
   },

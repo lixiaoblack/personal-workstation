@@ -44,8 +44,7 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "dist",
-    // 不清空 dist 目录，保护 python-service 等已存在的文件
-    emptyOutDir: false,
+    emptyOutDir: true,
   },
   server: {
     port: 5173,

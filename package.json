@@ -8,16 +8,10 @@
   "scripts": {
     "dev": "vite",
     "build:python": "node scripts/build-python.js",
-    "rebuild:native": "electron-rebuild -f -w bcrypt,better-sqlite3",
-    "fix:symlinks": "node scripts/before-pack.js",
-    "clean:dist": "node scripts/clean-dist.js",
-    "build": "pnpm run build:python && pnpm run rebuild:native && pnpm run fix:symlinks && pnpm run clean:dist && vite build && electron-builder",
-    "build:skip-python": "pnpm run rebuild:native && pnpm run fix:symlinks && pnpm run clean:dist && vite build && electron-builder",
-    "build:quick": "pnpm run fix:symlinks && pnpm run clean:dist && vite build && electron-builder",
-    "build:electron-only": "pnpm run clean:dist && vite build && electron-builder",
+    "build": "pnpm run build:python && vite build && electron-builder",
+    "build:skip-python": "vite build && electron-builder",
     "preview": "vite preview",
-    "lint": "eslint .",
-    "postinstall": "electron-builder install-app-deps"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.0",
@@ -69,9 +63,19 @@
     "appId": "com.personal.workstation",
     "productName": "Personal Workstation",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
-    "asar": false,
+    "files": [
+      "dist/index.html",
+      "dist/assets/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/bcrypt/**/*",
+      "**/node_modules/better-sqlite3/**/*"
+    ],
     "extraResources": [
       {
         "from": "dist/python-service",

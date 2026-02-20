@@ -2,7 +2,7 @@
  * 路由配置文件
  * 管理应用的所有路由
  */
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createHashRouter, Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 
 // 布局组件
@@ -179,7 +179,7 @@ export const routes: RouteObject[] = [
   notFoundRoute,
 ];
 
-// 创建路由实例
-const router = createBrowserRouter(routes);
+// 创建路由实例（使用 HashRouter 兼容 Electron file:// 协议）
+const router = createHashRouter(routes);
 
 export default router;

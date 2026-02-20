@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build:python": "node scripts/build-python.js",
-    "build": "pnpm run build:python && vite build && electron-builder",
+    "build": "vite build && pnpm run build:python && electron-builder",
     "build:skip-python": "vite build && electron-builder",
     "preview": "vite preview",
     "lint": "eslint ."

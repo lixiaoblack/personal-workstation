@@ -62,6 +62,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -74,10 +77,10 @@ jobs:
           pip install -r python-service/requirements.txt
 
       - name: Install Node dependencies
-        run: npm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build application
-        run: npm run build
+        run: pnpm run build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

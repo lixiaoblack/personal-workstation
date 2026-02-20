@@ -8,8 +8,9 @@
   "scripts": {
     "dev": "vite",
     "build:python": "node scripts/build-python.js",
-    "build": "pnpm run build:python && vite build && electron-builder",
-    "build:skip-python": "vite build && electron-builder",
+    "build:native": "electron-rebuild -f -w bcrypt,better-sqlite3",
+    "build": "pnpm run build:python && pnpm run build:native && vite build && electron-builder",
+    "build:skip-python": "pnpm run build:native && vite build && electron-builder",
     "preview": "vite preview",
     "lint": "eslint ."
   },
@@ -65,6 +66,11 @@
     "directories": {
       "output": "dist"
     },
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/bcrypt/**/*",
+      "**/node_modules/better-sqlite3/**/*"
+    ],
     "extraResources": [
       {
         "from": "dist/python-service",
@@ -74,6 +80,7 @@
         ]
       }
     ],
+    "afterPack": "./scripts/after-pack.js",
     "mac": {
       "target": [
         "dmg",

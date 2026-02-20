@@ -48,7 +48,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
 
     // 打字机效果 - 快速模式（只对 AI 消息生效）
     const [enableTypewriter, setEnableTypewriter] = useState(!isUser);
-    
+
     const { displayText, isTyping, skip } = useTypewriter(
       isUser ? "" : message.content,
       {

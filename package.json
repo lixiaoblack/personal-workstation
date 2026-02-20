@@ -14,7 +14,8 @@
     "build:mac": "vite build && node scripts/build-python.js && electron-builder --mac",
     "build:all": "vite build && node scripts/build-python.js && electron-builder --mac --win",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.0",

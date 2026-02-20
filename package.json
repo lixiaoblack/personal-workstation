@@ -11,8 +11,10 @@
     "build:native": "electron-rebuild -f -w bcrypt,better-sqlite3",
     "build": "pnpm run build:python && pnpm run build:native && vite build && electron-builder",
     "build:skip-python": "pnpm run build:native && vite build && electron-builder",
+    "build:quick": "vite build && electron-builder",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "postinstall": "electron-rebuild -f -w bcrypt,better-sqlite3"
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.0",
@@ -69,7 +71,9 @@
     "asar": true,
     "asarUnpack": [
       "**/node_modules/bcrypt/**/*",
-      "**/node_modules/better-sqlite3/**/*"
+      "**/node_modules/better-sqlite3/**/*",
+      "**/.pnpm/bcrypt*/**/*",
+      "**/.pnpm/better-sqlite3*/**/*"
     ],
     "extraResources": [
       {
@@ -78,8 +82,24 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "node_modules/.pnpm/bcrypt@6.0.0",
+        "to": "node_modules/.pnpm/bcrypt@6.0.0",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/.pnpm/better-sqlite3@12.6.2",
+        "to": "node_modules/.pnpm/better-sqlite3@12.6.2",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
+    "npmRebuild": true,
+    "nodeGypRebuild": true,
     "afterPack": "./scripts/after-pack.js",
     "mac": {
       "target": [

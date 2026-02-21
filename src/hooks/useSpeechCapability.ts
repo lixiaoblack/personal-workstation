@@ -32,26 +32,34 @@ const checkSpeechSupport = (): boolean => {
 };
 
 /**
- * 检测麦克风权限状态
+ * 使用 Electron API 获取麦克风权限状态
  */
-const checkMicrophonePermission = async (): Promise<boolean | null> => {
-  // 尝试使用 Permissions API 查询权限状态
-  if (navigator.permissions && navigator.permissions.query) {
+const getElectronMicrophoneStatus = async (): Promise<string> => {
+  if (window.electronAPI?.getMicrophoneAccessStatus) {
     try {
-      const result = await navigator.permissions.query({ name: "microphone" as PermissionName });
-      if (result.state === "granted") {
-        return true;
-      } else if (result.state === "denied") {
-        return false;
-      }
-      // prompt 状态返回 null，表示需要请求权限
-      return null;
-    } catch {
-      // Permissions API 不支持 microphone 查询，返回 null
-      return null;
+      return await window.electronAPI.getMicrophoneAccessStatus();
+    } catch (error) {
+      console.error("[SpeechCapability] 获取 Electron 麦克风权限状态失败:", error);
+      return "unknown";
     }
   }
-  return null;
+  return "unknown";
+};
+
+/**
+ * 使用 Electron API 请求麦克风权限
+ */
+const askElectronMicrophoneAccess = async (): Promise<boolean> => {
+  if (window.electronAPI?.askMicrophoneAccess) {
+    try {
+      console.log("[SpeechCapability] 通过 Electron API 请求麦克风权限");
+      return await window.electronAPI.askMicrophoneAccess();
+    } catch (error) {
+      console.error("[SpeechCapability] Electron API 请求麦克风权限失败:", error);
+      return false;
+    }
+  }
+  return false;
 };
 
 /**
@@ -68,10 +76,21 @@ export const useSpeechCapability = (): SpeechCapability => {
   useEffect(() => {
     const supported = checkSpeechSupport();
     setIsSupported(supported);
+    console.log("[SpeechCapability] Web Speech API 支持:", supported);
 
     if (supported) {
-      // 检测麦克风权限
-      checkMicrophonePermission().then(setHasPermission);
+      // 检测麦克风权限（优先使用 Electron API）
+      getElectronMicrophoneStatus().then((status) => {
+        console.log("[SpeechCapability] Electron 麦克风权限状态:", status);
+        if (status === "granted") {
+          setHasPermission(true);
+        } else if (status === "denied" || status === "restricted") {
+          setHasPermission(false);
+        } else {
+          // not-determined 或 unknown，尝试通过浏览器 API 检测
+          checkBrowserMicrophonePermission().then(setHasPermission);
+        }
+      });
     }
   }, []);
 
@@ -86,9 +105,20 @@ export const useSpeechCapability = (): SpeechCapability => {
 
     setIsRequestingPermission(true);
     setError(null);
+    console.log("[SpeechCapability] 开始请求麦克风权限...");
 
     try {
-      // 通过 getUserMedia 请求麦克风权限
+      // 首先尝试使用 Electron API（macOS）
+      const electronGranted = await askElectronMicrophoneAccess();
+      console.log("[SpeechCapability] Electron API 权限结果:", electronGranted);
+      
+      if (electronGranted) {
+        setHasPermission(true);
+        setIsRequestingPermission(false);
+        return true;
+      }
+
+      // 如果 Electron API 不可用或失败，尝试浏览器 API
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       // 权限获取成功，立即释放媒体流
@@ -96,6 +126,7 @@ export const useSpeechCapability = (): SpeechCapability => {
       
       setHasPermission(true);
       setIsRequestingPermission(false);
+      console.log("[SpeechCapability] 浏览器 API 权限获取成功");
       return true;
     } catch (err) {
       setIsRequestingPermission(false);
@@ -114,6 +145,7 @@ export const useSpeechCapability = (): SpeechCapability => {
         setError("获取麦克风权限失败");
       }
       
+      console.error("[SpeechCapability] 权限请求失败:", err);
       return false;
     }
   }, [isSupported]);
@@ -125,6 +157,29 @@ export const useSpeechCapability = (): SpeechCapability => {
     requestPermission,
     error,
   };
+};
+
+/**
+ * 检测浏览器麦克风权限状态
+ */
+const checkBrowserMicrophonePermission = async (): Promise<boolean | null> => {
+  // 尝试使用 Permissions API 查询权限状态
+  if (navigator.permissions && navigator.permissions.query) {
+    try {
+      const result = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      if (result.state === "granted") {
+        return true;
+      } else if (result.state === "denied") {
+        return false;
+      }
+      // prompt 状态返回 null，表示需要请求权限
+      return null;
+    } catch {
+      // Permissions API 不支持 microphone 查询，返回 null
+      return null;
+    }
+  }
+  return null;
 };
 
 export default useSpeechCapability;

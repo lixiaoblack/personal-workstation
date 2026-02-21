@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, systemPreferences } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -167,6 +167,38 @@ function registerIpcHandlers() {
 
   ipcMain.handle("storage:clearCache", async () => {
     return storageService.clearCache();
+  });
+
+  // 媒体权限管理（macOS）
+  ipcMain.handle("media:askMicrophoneAccess", async () => {
+    // macOS 需要请求媒体权限
+    if (process.platform === "darwin") {
+      try {
+        const granted = await systemPreferences.askForMediaAccess("microphone");
+        console.log("[Main] 麦克风权限请求结果:", granted);
+        return granted;
+      } catch (error) {
+        console.error("[Main] 请求麦克风权限失败:", error);
+        return false;
+      }
+    }
+    // Windows 和其他平台默认返回 true
+    return true;
+  });
+
+  ipcMain.handle("media:getMicrophoneAccessStatus", async () => {
+    // macOS 可以检查权限状态
+    if (process.platform === "darwin") {
+      try {
+        const status = systemPreferences.getMediaAccessStatus("microphone");
+        console.log("[Main] 麦克风权限状态:", status);
+        return status; // 'granted', 'denied', 'restricted', 'not-determined'
+      } catch (error) {
+        console.error("[Main] 获取麦克风权限状态失败:", error);
+        return "unknown";
+      }
+    }
+    return "granted";
   });
 
   // 头像管理

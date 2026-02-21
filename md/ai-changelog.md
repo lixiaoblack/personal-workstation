@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.27 | 2026-02-21 | macOS 麦克风权限请求机制 |
 | 0.5.26 | 2026-02-21 | 语音输入能力检测与降级策略 |
 | 0.5.25 | 2026-02-21 | Sender 组件迁移 |
 | 0.5.24 | 2026-02-19 | 知识库服务 FrontendBridge 化改造 |
@@ -46,6 +47,27 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.27
+
+- **macOS 麦克风权限请求机制**
+  - Electron 主进程添加媒体权限 API
+    - `media:askMicrophoneAccess` - 请求麦克风权限
+    - `media:getMicrophoneAccessStatus` - 获取权限状态
+  - 创建 build/entitlements.mac.plist
+    - 配置 com.apple.security.device.audio-input 权限
+  - package.json 添加 macOS 打包配置
+    - hardenedRuntime: true
+    - entitlements / entitlementsInherit
+    - extendInfo 添加 NSMicrophoneUsageDescription
+  - preload.ts 暴露权限 API 到渲染进程
+  - useSpeechCapability Hook 使用 Electron API
+    - getElectronMicrophoneStatus() 获取权限状态
+    - askElectronMicrophoneAccess() 请求权限
+  - AIChatInput 使用受控模式语音识别
+    - 手动创建 SpeechRecognition 实例
+    - 受控模式 allowSpeech: { recording, onRecordingChange }
+    - 录音前检查并请求权限
 
 ### 新增 (Added) - v0.5.26
 

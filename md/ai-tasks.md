@@ -8,9 +8,9 @@
 
 | 状态 | 数量 |
 |------|------|
-| 进行中 | 0 |
+| 进行中 | 1 |
 | 已完成 | 41 |
-| 待处理 | 10 |
+| 待处理 | 9 |
 
 ---
 
@@ -360,7 +360,12 @@
 
 ### 进行中
 
-暂无
+- [ ] AI-040: 语音输入 - UI 状态与交互 | 开始时间: 2026-02-21 20:00
+  - 配置 Sender allowSpeech 属性（已使用受控模式）
+  - 录音状态动画（波形/脉冲效果）
+  - 语音识别结果实时显示
+  - 识别失败/超时错误处理
+  - macOS 权限请求机制（通过 Electron API）
 
 ### 已完成
 
@@ -378,14 +383,23 @@
 
 #### 7.2 语音输入功能（macOS/Windows）
 
-- [x] AI-039: 语音输入 - 能力检测与降级策略 | 完成时间: 2026-02-21
+- [x] AI-039: 语音输入 - 能力检测与降级策略 | 完成时间: 2026-02-21 20:00
   - 检测系统是否支持 Web Speech API（Chromium 内核）
-  - 检测麦克风权限状态
+  - 检测麦克风权限状态（支持 Electron API）
+  - macOS 权限请求机制（systemPreferences.askForMediaAccess）
   - 不支持时 UI 隐藏语音按钮
   - 平台支持：macOS、Windows
+  - 新增文件：build/entitlements.mac.plist
+  - 更新文件：
+    - electron/main.ts（添加媒体权限 IPC）
+    - electron/preload.ts（暴露权限 API）
+    - src/hooks/useSpeechCapability.ts（使用 Electron API）
+    - src/types/electron.ts（添加类型定义）
+    - src/views/AIChat/components/AIChatInput/index.tsx（受控模式语音识别）
+    - package.json（添加 macOS entitlements 配置）
 
 - [ ] AI-040: 语音输入 - UI 状态与交互 | 创建时间: 2026-02-20
-  - 配置 Sender allowSpeech 属性
+  - ~配置 Sender allowSpeech 属性~ （已在 AI-039 中实现受控模式）
   - 录音状态动画（波形/脉冲效果）
   - 语音识别结果实时显示
   - 识别失败/超时错误处理

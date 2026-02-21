@@ -168,6 +168,10 @@ export interface ElectronAPI {
   // 头像管理
   selectAvatar: () => Promise<AvatarSelectResult>;
 
+  // 媒体权限管理（macOS）
+  askMicrophoneAccess: () => Promise<boolean>;
+  getMicrophoneAccessStatus: () => Promise<string>;
+
   // WebSocket 服务
   getWsInfo: () => Promise<WsServerInfo>;
 

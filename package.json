@@ -99,7 +99,14 @@
         }
       ],
       "category": "public.app-category.productivity",
-      "icon": "resources/icon.icns"
+      "icon": "resources/icon.icns",
+      "hardenedRuntime": true,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "This app needs access to the microphone for voice input",
+        "NSCameraUsageDescription": "This app needs access to the camera"
+      }
     },
     "win": {
       "target": [

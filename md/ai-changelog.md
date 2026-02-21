@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.25 | 2026-02-21 | Sender 组件迁移 |
 | 0.5.24 | 2026-02-19 | 知识库服务 FrontendBridge 化改造 |
 | 0.5.23 | 2026-02-17 | 多轮对话状态管理（摘要生成+记忆系统） |
 | 0.5.22 | 2026-02-17 | 知识库智能匹配与全库搜索 |
@@ -44,6 +45,20 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.25
+
+- **Sender 组件迁移**
+  - 使用 Ant Design X Sender 组件替换原有 textarea
+  - 组件重构要点：
+    - 使用 Sender 组件的 value/onChange/onSubmit 属性
+    - loading 状态支持流式加载中显示
+    - submitType="enter" 保持 Enter 发送快捷键
+    - autoSize 自适应高度（minRows: 3, maxRows: 8）
+    - header 属性承载工具栏（附件、图片、快捷模板、知识库选择、Agent 模式开关）
+    - footer 属性承载底部提示信息
+  - 新增 onCancel 可选属性支持取消流式响应
+  - 保持现有功能：发送消息、历史记录、快捷键、知识库选择、Agent 模式切换
 
 ### 新增 (Added) - v0.5.24
 

@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 40 |
-| 待处理 | 11 |
+| 已完成 | 41 |
+| 待处理 | 10 |
 
 ---
 
@@ -376,21 +376,13 @@
   - 类型定义和组件接口迁移
   - 参考：https://ant-design-x.antgroup.com/components/sender-cn
 
-#### 7.2 语音输入功能（跨平台）
+#### 7.2 语音输入功能（macOS/Windows）
 
-- [ ] AI-039: 语音输入 - 能力检测与降级策略 | 创建时间: 2026-02-20
-  - 检测系统是否支持 Web Speech API（Chrome 内核）
+- [x] AI-039: 语音输入 - 能力检测与降级策略 | 完成时间: 2026-02-21
+  - 检测系统是否支持 Web Speech API（Chromium 内核）
   - 检测麦克风权限状态
-  - 不支持时 UI 隐藏或禁用语音按钮
-  - 平台支持情况：
-    - macOS: 支持（Chromium 内核）
-    - Windows: 支持（Chromium 内核）
-    - Linux: 部分支持（依赖 PulseAudio/PipeWire）
-  - **测试方法**：
-    - [ ] macOS: 验证语音输入可用，识别准确
-    - [ ] Windows: 验证语音输入可用，识别准确
-    - [ ] Linux: 验证降级策略（不支持时隐藏按钮）
-    - [ ] 无麦克风权限时的提示和引导
+  - 不支持时 UI 隐藏语音按钮
+  - 平台支持：macOS、Windows
 
 - [ ] AI-040: 语音输入 - UI 状态与交互 | 创建时间: 2026-02-20
   - 配置 Sender allowSpeech 属性

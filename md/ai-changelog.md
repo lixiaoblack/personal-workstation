@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.26 | 2026-02-21 | 语音输入能力检测与降级策略 |
 | 0.5.25 | 2026-02-21 | Sender 组件迁移 |
 | 0.5.24 | 2026-02-19 | 知识库服务 FrontendBridge 化改造 |
 | 0.5.23 | 2026-02-17 | 多轮对话状态管理（摘要生成+记忆系统） |
@@ -45,6 +46,20 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.26
+
+- **语音输入能力检测与降级策略**
+  - 创建 useSpeechCapability Hook
+    - 检测 Web Speech API 是否可用
+    - 检测麦克风权限状态
+    - requestPermission() 方法请求麦克风权限
+    - 错误处理：权限拒绝、设备未找到等
+  - AIChatInput 组件集成
+    - 使用 allowSpeech 属性配置语音输入
+    - 受控模式：自定义 onRecordingChange 处理权限检查
+    - 降级策略：不支持语音时隐藏语音按钮
+  - 平台支持：macOS、Windows（Electron Chromium 内核）
 
 ### 新增 (Added) - v0.5.25
 

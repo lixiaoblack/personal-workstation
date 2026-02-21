@@ -1,14 +1,15 @@
 /**
  * AIChatInput - 输入区域组件
  * 使用 Ant Design X Sender 组件
- * 包含工具栏、输入框、发送按钮、知识库选择器
+ * 包含工具栏、输入框、发送按钮、知识库选择器、语音输入
  */
-import React, { memo, useCallback } from "react";
-import { Select, Switch, Tooltip } from "antd";
+import React, { memo, useCallback, useState } from "react";
+import { Select, Switch, Tooltip, message } from "antd";
 import { Sender } from "@ant-design/x";
 import type { ModelConfig, KnowledgeInfo } from "@/types/electron";
 import { ConnectionState } from "@/types/electron";
 import type { StreamState } from "../../config";
+import { useSpeechCapability } from "@/hooks/useSpeechCapability";
 
 interface AIChatInputProps {
   inputValue: string;
@@ -54,6 +55,44 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     // 是否禁用输入
     const isDisabled =
       connectionState !== ConnectionState.CONNECTED || isLoading;
+
+    // 语音能力检测
+    const speechCapability = useSpeechCapability();
+    const [isRecording, setIsRecording] = useState(false);
+
+    // 处理语音录制状态变化
+    const handleRecordingChange = useCallback(
+      async (recording: boolean) => {
+        if (recording) {
+          // 开始录音前检查权限
+          if (speechCapability.hasPermission === false) {
+            // 权限被拒绝，提示用户
+            message.warning("麦克风权限被拒绝，请在系统设置中允许访问");
+            return;
+          }
+          if (speechCapability.hasPermission === null) {
+            // 需要请求权限
+            const granted = await speechCapability.requestPermission();
+            if (!granted) {
+              message.warning("需要麦克风权限才能使用语音输入");
+              return;
+            }
+          }
+        }
+        setIsRecording(recording);
+      },
+      [speechCapability]
+    );
+
+    // 计算 allowSpeech 配置
+    // 不支持语音时返回 false，隐藏语音按钮
+    // 支持时返回受控配置，处理权限检查
+    const allowSpeech = speechCapability.isSupported
+      ? {
+          recording: isRecording,
+          onRecordingChange: handleRecordingChange,
+        }
+      : false;
 
     // 处理提交
     const handleSubmit = useCallback(() => {
@@ -204,6 +243,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
             autoSize={{ minRows: 3, maxRows: 8 }}
             header={header}
             footer={footer}
+            allowSpeech={allowSpeech}
             className="bg-bg-secondary border border-border rounded-2xl shadow-xl focus-within:border-primary/50 transition-all"
             classNames={{
               input: "text-text-primary placeholder:text-text-tertiary",

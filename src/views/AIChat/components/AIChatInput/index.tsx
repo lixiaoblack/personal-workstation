@@ -84,7 +84,11 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
         hasPermission: speechCapability.hasPermission,
         error: speechCapability.error,
       });
-    }, [speechCapability.isSupported, speechCapability.hasPermission, speechCapability.error]);
+    }, [
+      speechCapability.isSupported,
+      speechCapability.hasPermission,
+      speechCapability.error,
+    ]);
 
     // 初始化 SpeechRecognition
     useEffect(() => {
@@ -92,7 +96,8 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const win = window as any;
-      const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+      const SpeechRecognition =
+        win.SpeechRecognition || win.webkitSpeechRecognition;
 
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -110,7 +115,11 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error("[AIChatInput] 语音识别错误:", event.error, event.message);
+          console.error(
+            "[AIChatInput] 语音识别错误:",
+            event.error,
+            event.message
+          );
           setIsRecording(false);
           if (event.error === "not-allowed") {
             message.error("麦克风权限被拒绝，请在系统设置中允许访问麦克风");
@@ -141,43 +150,46 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     }, [speechCapability.isSupported, onInputChange]);
 
     // 处理录音状态变化
-    const handleRecordingChange = useCallback(async (recording: boolean) => {
-      console.log("[AIChatInput] 录音状态变化:", recording);
+    const handleRecordingChange = useCallback(
+      async (recording: boolean) => {
+        console.log("[AIChatInput] 录音状态变化:", recording);
 
-      if (recording) {
-        // 开始录音前先请求权限
-        if (speechCapability.hasPermission === false) {
-          const granted = await speechCapability.requestPermission();
-          if (!granted) {
-            message.error("无法获取麦克风权限");
-            return;
+        if (recording) {
+          // 开始录音前先请求权限
+          if (speechCapability.hasPermission === false) {
+            const granted = await speechCapability.requestPermission();
+            if (!granted) {
+              message.error("无法获取麦克风权限");
+              return;
+            }
           }
-        }
 
-        // 开始语音识别
-        if (recognitionRef.current) {
-          try {
-            console.log("[AIChatInput] 开始语音识别...");
-            recognitionRef.current.start();
-            setIsRecording(true);
-          } catch (err) {
-            console.error("[AIChatInput] 启动语音识别失败:", err);
-            message.error("启动语音识别失败");
+          // 开始语音识别
+          if (recognitionRef.current) {
+            try {
+              console.log("[AIChatInput] 开始语音识别...");
+              recognitionRef.current.start();
+              setIsRecording(true);
+            } catch (err) {
+              console.error("[AIChatInput] 启动语音识别失败:", err);
+              message.error("启动语音识别失败");
+            }
           }
-        }
-      } else {
-        // 停止语音识别
-        if (recognitionRef.current) {
-          try {
-            console.log("[AIChatInput] 停止语音识别...");
-            recognitionRef.current.stop();
-          } catch {
-            // 忽略停止错误
+        } else {
+          // 停止语音识别
+          if (recognitionRef.current) {
+            try {
+              console.log("[AIChatInput] 停止语音识别...");
+              recognitionRef.current.stop();
+            } catch {
+              // 忽略停止错误
+            }
           }
+          setIsRecording(false);
         }
-        setIsRecording(false);
-      }
-    }, [speechCapability]);
+      },
+      [speechCapability]
+    );
 
     // 处理提交
     const handleSubmit = useCallback(() => {

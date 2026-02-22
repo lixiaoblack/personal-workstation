@@ -748,7 +748,12 @@ function registerIpcHandlers() {
             };
           } catch (dbError) {
             console.error("[Main] 保存文档到本地数据库失败:", dbError);
-            // 仍然返回 Python 端的结果
+            // 数据库保存失败，但 Python 端已成功，返回警告信息
+            return {
+              success: true,
+              document: result.document,
+              warning: `文档已处理，但本地记录保存失败: ${dbError instanceof Error ? dbError.message : String(dbError)}`,
+            };
           }
         }
 

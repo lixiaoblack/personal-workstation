@@ -302,6 +302,7 @@ export interface ElectronAPI {
     success: boolean;
     document?: KnowledgeDocumentInfo;
     error?: string;
+    warning?: string;
   }>;
   removeKnowledgeDocument: (
     knowledgeId: string,

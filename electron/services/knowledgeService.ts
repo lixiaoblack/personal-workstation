@@ -3,9 +3,10 @@
  *
  * 通过 Python HTTP API 实现知识库管理功能
  */
-/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { get, post, put, del } from "./pythonApiClient";
+import { getDatabase } from "../database/index";
+import { randomUUID } from "crypto";
 import type { KnowledgeInfo, KnowledgeDocumentInfo } from "../types/websocket";
 
 /**
@@ -141,7 +142,6 @@ export function addDocument(
   chunkCount: number
 ): KnowledgeDocumentInfo {
   const db = getDatabase();
-  const { randomUUID } = require("crypto");
   const id = `doc_${randomUUID().replace(/-/g, "")}`;
   const now = Date.now();
 
@@ -232,14 +232,6 @@ export function updateKnowledgeStats(knowledgeId: string): void {
 }
 
 // ==================== 辅助函数 ====================
-
-/**
- * 获取数据库实例（用于文档操作）
- */
-function getDatabase() {
-  const { getDatabase } = require("../database");
-  return getDatabase();
-}
 
 /**
  * 转换知识库信息字段名（Python 风格 -> TypeScript 风格）

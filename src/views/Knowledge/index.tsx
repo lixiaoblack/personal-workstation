@@ -213,7 +213,12 @@ const KnowledgePage: React.FC = () => {
       setUploadProgress(100);
 
       if (uploadResult.success) {
-        message.success("文档上传成功");
+        // 如果有警告信息，显示警告但仍算成功
+        if (uploadResult.warning) {
+          message.warning(uploadResult.warning);
+        } else {
+          message.success("文档上传成功");
+        }
         loadDocuments(selectedKnowledge.id);
         loadKnowledgeList();
       } else {
@@ -263,7 +268,12 @@ const KnowledgePage: React.FC = () => {
       setUploadProgress(100);
 
       if (uploadResult.success) {
-        message.success("文档上传成功");
+        // 如果有警告信息，显示警告但仍算成功
+        if (uploadResult.warning) {
+          message.warning(uploadResult.warning);
+        } else {
+          message.success("文档上传成功");
+        }
         loadDocuments(selectedKnowledge.id);
         loadKnowledgeList();
       } else {

@@ -17,6 +17,7 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.31 | 2026-02-22 | 修复打包后 database 模块找不到问题 |
 | 0.5.30 | 2026-02-22 | 知识库拖拽上传支持 |
 | 0.5.29 | 2026-02-22 | 知识库页面组件化重构、全局文件预览组件 |
 | 0.5.28 | 2026-02-22 | 知识库存储路径字段 |
@@ -50,6 +51,18 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 修复 (Fixed) - v0.5.31
+
+- **打包后 database 模块找不到问题**
+  - 修复 knowledgeService.ts 中混用 ES module import 和 CommonJS require 的问题
+  - 将 `require("../database")` 改为 ES module 的 `import { getDatabase }` 
+  - 将 `require("crypto")` 改为 `import { randomUUID } from "crypto"`
+
+- **前端错误处理优化**
+  - 添加 `warning` 字段支持：数据库保存失败但 Python 处理成功时返回警告
+  - 前端上传成功时检查 warning 字段，显示警告消息
+  - 类型定义更新：`addKnowledgeDocument` 返回值添加 `warning?` 字段
 
 ### 新增 (Added) - v0.5.30
 

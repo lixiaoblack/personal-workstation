@@ -4,7 +4,11 @@
  */
 import React from "react";
 import { Button, Empty, Spin, Popconfirm } from "antd";
-import { PlusOutlined, DeleteOutlined, DatabaseOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  DatabaseOutlined,
+} from "@ant-design/icons";
 import type { KnowledgeInfo } from "@/types/electron";
 
 interface KnowledgeSidebarProps {

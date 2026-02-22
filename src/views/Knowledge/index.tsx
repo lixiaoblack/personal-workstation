@@ -28,13 +28,16 @@ const DEFAULT_TOP_K = KNOWLEDGE_CONFIG.defaultTopK;
 const KnowledgePage: React.FC = () => {
   // 状态
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeInfo[]>([]);
-  const [selectedKnowledge, setSelectedKnowledge] = useState<KnowledgeInfo | null>(null);
+  const [selectedKnowledge, setSelectedKnowledge] =
+    useState<KnowledgeInfo | null>(null);
   const [documents, setDocuments] = useState<DocumentDisplayInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [docsLoading, setDocsLoading] = useState(false);
 
   // 嵌入模型配置
-  const [embeddingModels, setEmbeddingModels] = useState<ModelConfigListItem[]>([]);
+  const [embeddingModels, setEmbeddingModels] = useState<ModelConfigListItem[]>(
+    []
+  );
   const [embeddingModelsLoading, setEmbeddingModelsLoading] = useState(false);
 
   // 创建知识库弹窗
@@ -57,8 +60,6 @@ const KnowledgePage: React.FC = () => {
     path: string;
     name: string;
     type: string;
-    knowledgeId?: string;
-    fileId?: string;
   } | null>(null);
 
   // 加载嵌入模型配置
@@ -99,7 +100,9 @@ const KnowledgePage: React.FC = () => {
   const loadDocuments = useCallback(async (knowledgeId: string) => {
     setDocsLoading(true);
     try {
-      const result = await window.electronAPI.listKnowledgeDocuments(knowledgeId);
+      const result = await window.electronAPI.listKnowledgeDocuments(
+        knowledgeId
+      );
       if (result.success) {
         // 默认已处理的文档状态为 ready
         setDocuments(
@@ -345,8 +348,6 @@ const KnowledgePage: React.FC = () => {
       path: document.filePath,
       name: document.fileName,
       type: document.fileType,
-      knowledgeId: document.knowledgeId,
-      fileId: document.id,
     });
     setPreviewVisible(true);
   };
@@ -430,8 +431,6 @@ const KnowledgePage: React.FC = () => {
           filePath={previewFile.path}
           fileName={previewFile.name}
           fileType={previewFile.type}
-          knowledgeId={previewFile.knowledgeId}
-          fileId={previewFile.fileId}
           onClose={handleClosePreview}
         />
       )}

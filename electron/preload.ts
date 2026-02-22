@@ -373,9 +373,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("knowledge:getStorageInfo", knowledgeId),
   getAllKnowledgeStorageInfo: (): Promise<KnowledgeAllStorageInfoResult> =>
     ipcRenderer.invoke("knowledge:getAllStorageInfo"),
-  readKnowledgeFileContent: (
-    knowledgeId: string,
-    fileId: string,
+
+  // 文件内容读取（用于文件预览）
+  readFileContent: (
+    filePath: string,
     maxSize?: number
   ): Promise<{
     success: boolean;
@@ -383,8 +384,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     mimeType?: string;
     error?: string;
     truncated?: boolean;
-  }> =>
-    ipcRenderer.invoke("knowledge:readFileContent", knowledgeId, fileId, maxSize),
+  }> => ipcRenderer.invoke("file:readContent", filePath, maxSize),
 
   // Memory 记忆管理
   getMemoryContext: (): Promise<
@@ -625,11 +625,12 @@ export interface ElectronAPI {
   ) => Promise<KnowledgeFileResult>;
   getKnowledgeStorageInfo: (
     knowledgeId: string
-  ) => Promise<KnowledgeStorageInfoResult>,
-  getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>,
-  readKnowledgeFileContent: (
-    knowledgeId: string,
-    fileId: string,
+  ) => Promise<KnowledgeStorageInfoResult>;
+  getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
+
+  // 文件内容读取（用于文件预览）
+  readFileContent: (
+    filePath: string,
     maxSize?: number
   ) => Promise<{
     success: boolean;
@@ -638,7 +639,7 @@ export interface ElectronAPI {
     error?: string;
     truncated?: boolean;
   }>;
-  
+
   // Memory 记忆管理
   getMemoryContext: () => Promise<
     Omit<MemoryGetContextResponseMessage, "type" | "id" | "timestamp">

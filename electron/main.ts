@@ -696,16 +696,12 @@ function registerIpcHandlers() {
     }
   });
 
-  // 读取知识库文件内容（用于文件预览）
+  // 读取文件内容（用于文件预览）
   ipcMain.handle(
-    "knowledge:readFileContent",
-    async (_event, knowledgeId: string, fileId: string, maxSize?: number) => {
+    "file:readContent",
+    async (_event, filePath: string, maxSize?: number) => {
       try {
-        const result = fileService.readKnowledgeFileContent(
-          knowledgeId,
-          fileId,
-          maxSize
-        );
+        const result = fileService.readFileContent(filePath, maxSize);
         return result;
       } catch (error) {
         return { success: false, error: String(error) };
@@ -769,7 +765,9 @@ function registerIpcHandlers() {
             return {
               success: true,
               document: result.document,
-              warning: `文档已处理，但本地记录保存失败: ${dbError instanceof Error ? dbError.message : String(dbError)}`,
+              warning: `文档已处理，但本地记录保存失败: ${
+                dbError instanceof Error ? dbError.message : String(dbError)
+              }`,
             };
           }
         }

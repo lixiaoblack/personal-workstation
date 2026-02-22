@@ -4,7 +4,13 @@
  */
 import React from "react";
 import { Table, Button, Popconfirm, Empty, Spin, Tag } from "antd";
-import { DeleteOutlined, FilePdfOutlined, FileTextOutlined, CodeOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  FilePdfOutlined,
+  FileTextOutlined,
+  CodeOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
 import type { KnowledgeDocumentInfo } from "@/types/electron";
 import { formatFileSize } from "../../config";
 
@@ -165,9 +171,7 @@ const KnowledgeDocumentList: React.FC<KnowledgeDocumentListProps> = ({
 
   return (
     <div>
-      <p className="text-sm font-semibold text-text-secondary mb-4">
-        文档列表
-      </p>
+      <p className="text-sm font-semibold text-text-secondary mb-4">文档列表</p>
       <Spin spinning={loading}>
         {documents.length === 0 ? (
           <Empty description="暂无文档，拖拽文件上传" />

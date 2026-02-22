@@ -146,10 +146,6 @@ interface WFilePreviewProps {
   filePath: string;
   fileName: string;
   fileType: string;
-  /** 知识库 ID，用于读取文件内容 */
-  knowledgeId?: string;
-  /** 文件 ID，用于读取文件内容 */
-  fileId?: string;
   onClose: () => void;
   width?: number | string;
 }
@@ -159,8 +155,6 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   filePath,
   fileName,
   fileType,
-  knowledgeId,
-  fileId,
   onClose,
   width = 900,
 }) => {
@@ -189,21 +183,17 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
       return;
     }
 
-    // 必须有 knowledgeId 和 fileId 才能读取文件内容
-    if (!knowledgeId || !fileId) {
-      setError("缺少文件标识，无法读取内容");
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setTruncated(false);
 
+    console.log("[WFilePreview] Reading file:", filePath);
+
     // 通过 Electron API 读取文件内容
     window.electronAPI
-      .readKnowledgeFileContent(knowledgeId, fileId)
+      .readFileContent(filePath)
       .then((result) => {
+        console.log("[WFilePreview] Read result:", result);
         if (result.success && result.content) {
           setContent(result.content);
           setTruncated(result.truncated || false);
@@ -212,12 +202,13 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         }
       })
       .catch((err) => {
+        console.error("[WFilePreview] Read error:", err);
         setError(err.message || "读取文件失败");
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [visible, filePath, category, knowledgeId, fileId]);
+  }, [visible, filePath, category]);
 
   // 渲染预览内容
   const renderPreview = () => {

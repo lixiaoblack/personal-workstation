@@ -354,9 +354,10 @@ export interface ElectronAPI {
     knowledgeId: string
   ) => Promise<KnowledgeStorageInfoResult>;
   getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
-  readKnowledgeFileContent: (
-    knowledgeId: string,
-    fileId: string,
+
+  // 文件内容读取（用于文件预览）
+  readFileContent: (
+    filePath: string,
     maxSize?: number
   ) => Promise<{
     success: boolean;

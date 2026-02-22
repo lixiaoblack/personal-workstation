@@ -2,7 +2,16 @@
  * 创建知识库弹窗组件
  */
 import React from "react";
-import { Modal, Form, Input, Select, Space, Button, Typography, Tag } from "antd";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  Space,
+  Button,
+  Typography,
+  Tag,
+} from "antd";
 import { SettingOutlined } from "@ant-design/icons";
 import type { ModelConfigListItem } from "@/types/electron";
 

@@ -705,8 +705,23 @@ export function getKnowledgeFileInfo(
 ): FileMetadata | null {
   try {
     const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+    console.log("[FileService] getKnowledgeFileInfo - knowledgeDir:", knowledgeDir);
+    console.log("[FileService] getKnowledgeFileInfo - fileId:", fileId);
+    
+    if (!fs.existsSync(knowledgeDir)) {
+      console.log("[FileService] getKnowledgeFileInfo - knowledgeDir does not exist");
+      return null;
+    }
+    
     const files = fs.readdirSync(knowledgeDir);
+    console.log("[FileService] getKnowledgeFileInfo - files in dir:", files);
+    
+    // 文件名格式为 file_xxx.ext，需要匹配 fileId 前缀
+    // fileId 可能是 "doc_xxx" 或 "file_xxx"
+    // 实际存储的文件名是 file_xxx.ext
     const targetFile = files.find((f) => f.startsWith(fileId));
+    
+    console.log("[FileService] getKnowledgeFileInfo - targetFile:", targetFile);
 
     if (!targetFile) {
       return null;
@@ -725,22 +740,21 @@ export function getKnowledgeFileInfo(
       path: filePath,
       createdAt: stat.birthtime.toISOString(),
     };
-  } catch {
+  } catch (error) {
+    console.error("[FileService] getKnowledgeFileInfo error:", error);
     return null;
   }
 }
 
 /**
- * 读取知识库文件内容
+ * 根据文件路径读取文件内容
  * 用于文件预览功能
- * @param knowledgeId 知识库 ID
- * @param fileId 文件 ID
- * @param maxSize 最大读取大小（默认 50MB），超过此大小的文件将被截断
+ * @param filePath 完整文件路径
+ * @param maxSize 最大读取大小（默认 1MB），超过此大小的文件将被截断
  */
-export function readKnowledgeFileContent(
-  knowledgeId: string,
-  fileId: string,
-  maxSize: number = 50 * 1024 * 1024
+export function readFileContent(
+  filePath: string,
+  maxSize: number = 1024 * 1024
 ): {
   success: boolean;
   content?: string;
@@ -749,19 +763,16 @@ export function readKnowledgeFileContent(
   truncated?: boolean;
 } {
   try {
-    const fileInfo = getKnowledgeFileInfo(knowledgeId, fileId);
-
-    if (!fileInfo) {
+    console.log("[FileService] readFileContent - filePath:", filePath);
+    
+    if (!fs.existsSync(filePath)) {
+      console.log("[FileService] readFileContent - file does not exist");
       return { success: false, error: "文件不存在" };
     }
 
-    const filePath = fileInfo.path;
-
-    if (!fs.existsSync(filePath)) {
-      return { success: false, error: "文件路径不存在" };
-    }
-
     const stat = fs.statSync(filePath);
+    const mimeType = getMimeType(filePath);
+    console.log("[FileService] readFileContent - fileSize:", stat.size, "mimeType:", mimeType);
 
     // 检查文件大小
     const truncated = stat.size > maxSize;
@@ -773,8 +784,6 @@ export function readKnowledgeFileContent(
     fs.readSync(fd, buffer, 0, readSize, 0);
     fs.closeSync(fd);
 
-    // 判断文件类型并决定如何解码
-    const mimeType = fileInfo.mimeType;
     let content: string;
 
     // 文本类型文件直接转换为字符串
@@ -814,6 +823,7 @@ export function readKnowledgeFileContent(
       content = buffer.toString("base64");
     }
 
+    console.log("[FileService] readFileContent - success, truncated:", truncated);
     return {
       success: true,
       content,
@@ -822,6 +832,7 @@ export function readKnowledgeFileContent(
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[FileService] readFileContent error:", errorMsg);
     return { success: false, error: errorMsg };
   }
 }
@@ -987,7 +998,7 @@ export default {
   deleteKnowledgeFiles,
   getFileInfo,
   getKnowledgeFileInfo,
-  readKnowledgeFileContent,
+  readFileContent,
   getKnowledgeStorageInfo,
   getAllKnowledgeStorageInfo,
   cleanupOldFiles,

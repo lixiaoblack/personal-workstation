@@ -176,7 +176,7 @@ async def list_knowledge():
     with get_db() as conn:
         cursor = conn.execute("""
             SELECT id, name, description, embedding_model, embedding_model_name,
-                   document_count, total_chunks, created_at, updated_at
+                   document_count, total_chunks, storage_path, created_at, updated_at
             FROM knowledge ORDER BY updated_at DESC
         """)
         rows = cursor.fetchall()
@@ -192,7 +192,7 @@ async def get_knowledge(knowledge_id: str):
     with get_db() as conn:
         cursor = conn.execute("""
             SELECT id, name, description, embedding_model, embedding_model_name,
-                   document_count, total_chunks, created_at, updated_at
+                   document_count, total_chunks, storage_path, created_at, updated_at
             FROM knowledge WHERE id = ?
         """, (knowledge_id,))
         row = cursor.fetchone()
@@ -208,15 +208,17 @@ async def create_knowledge(data: KnowledgeCreate):
 
     knowledge_id = f"kb_{uuid.uuid4().hex}"
     now = int(time.time() * 1000)
+    # 存储路径：~/.personal-workstation/knowledge-files/{knowledge_id}/
+    storage_path = f"knowledge-files/{knowledge_id}"
 
     with get_db() as conn:
         try:
             conn.execute("""
                 INSERT INTO knowledge 
-                (id, name, description, embedding_model, embedding_model_name, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (id, name, description, embedding_model, embedding_model_name, storage_path, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (knowledge_id, data.name, data.description,
-                  data.embedding_model, data.embedding_model_name, now, now))
+                  data.embedding_model, data.embedding_model_name, storage_path, now, now))
             conn.commit()
 
             return {
@@ -229,6 +231,7 @@ async def create_knowledge(data: KnowledgeCreate):
                     "embedding_model_name": data.embedding_model_name,
                     "document_count": 0,
                     "total_chunks": 0,
+                    "storage_path": storage_path,
                     "created_at": now,
                     "updated_at": now
                 }
@@ -831,7 +834,7 @@ def direct_list_knowledge() -> List[Dict[str, Any]]:
     with get_db() as conn:
         cursor = conn.execute("""
             SELECT id, name, description, embedding_model, embedding_model_name,
-                   document_count, total_chunks, created_at, updated_at
+                   document_count, total_chunks, storage_path, created_at, updated_at
             FROM knowledge ORDER BY updated_at DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
@@ -842,7 +845,7 @@ def direct_get_knowledge(knowledge_id: str) -> Optional[Dict[str, Any]]:
     with get_db() as conn:
         cursor = conn.execute("""
             SELECT id, name, description, embedding_model, embedding_model_name,
-                   document_count, total_chunks, created_at, updated_at
+                   document_count, total_chunks, storage_path, created_at, updated_at
             FROM knowledge WHERE id = ?
         """, (knowledge_id,))
         row = cursor.fetchone()
@@ -860,14 +863,16 @@ def direct_create_knowledge(
 
     knowledge_id = f"kb_{uuid.uuid4().hex}"
     now = int(time.time() * 1000)
+    # 存储路径：~/.personal-workstation/knowledge-files/{knowledge_id}/
+    storage_path = f"knowledge-files/{knowledge_id}"
 
     with get_db() as conn:
         conn.execute("""
             INSERT INTO knowledge 
-            (id, name, description, embedding_model, embedding_model_name, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (id, name, description, embedding_model, embedding_model_name, storage_path, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (knowledge_id, name, description,
-              embedding_model, embedding_model_name, now, now))
+              embedding_model, embedding_model_name, storage_path, now, now))
         conn.commit()
 
         return {
@@ -878,6 +883,7 @@ def direct_create_knowledge(
             "embedding_model_name": embedding_model_name,
             "document_count": 0,
             "total_chunks": 0,
+            "storage_path": storage_path,
             "created_at": now,
             "updated_at": now
         }

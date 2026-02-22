@@ -32,6 +32,15 @@ import type {
   OllamaModel,
   OllamaStatus,
   OllamaTestResult,
+  // 文件相关类型
+  FileMetadata,
+  FileSelectResult,
+  KnowledgeStorageInfo,
+  KnowledgeAllStorageInfo,
+  KnowledgeFileResult,
+  KnowledgeFilesResult,
+  KnowledgeStorageInfoResult,
+  KnowledgeAllStorageInfoResult,
 } from "./types";
 import type { SkillInfo } from "./types/websocket";
 import type {
@@ -136,6 +145,15 @@ export type {
   UpdateConversationInput,
   Message,
   CreateMessageInput,
+  // 文件相关类型
+  FileMetadata,
+  FileSelectResult,
+  KnowledgeStorageInfo,
+  KnowledgeAllStorageInfo,
+  KnowledgeFileResult,
+  KnowledgeFilesResult,
+  KnowledgeStorageInfoResult,
+  KnowledgeAllStorageInfoResult,
 };
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -321,6 +339,40 @@ contextBridge.exposeInMainWorld("electronAPI", {
     canceled: boolean;
     filePaths: string[];
   }> => ipcRenderer.invoke("knowledge:selectFiles"),
+
+  // Knowledge Files 知识库文件操作
+  selectAndSaveKnowledgeFiles: (
+    knowledgeId: string
+  ): Promise<KnowledgeFilesResult> =>
+    ipcRenderer.invoke("knowledge:selectAndSaveFiles", knowledgeId),
+  saveFileToKnowledge: (
+    knowledgeId: string,
+    filePath: string
+  ): Promise<KnowledgeFileResult> =>
+    ipcRenderer.invoke("knowledge:saveFile", knowledgeId, filePath),
+  saveFilesToKnowledge: (
+    knowledgeId: string,
+    filePaths: string[]
+  ): Promise<KnowledgeFilesResult> =>
+    ipcRenderer.invoke("knowledge:saveFiles", knowledgeId, filePaths),
+  pasteFileToKnowledge: (knowledgeId: string): Promise<KnowledgeFileResult> =>
+    ipcRenderer.invoke("knowledge:pasteFile", knowledgeId),
+  deleteKnowledgeFile: (
+    knowledgeId: string,
+    fileId: string
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke("knowledge:deleteFile", knowledgeId, fileId),
+  getKnowledgeFileInfo: (
+    knowledgeId: string,
+    fileId: string
+  ): Promise<KnowledgeFileResult> =>
+    ipcRenderer.invoke("knowledge:getFileInfo", knowledgeId, fileId),
+  getKnowledgeStorageInfo: (
+    knowledgeId: string
+  ): Promise<KnowledgeStorageInfoResult> =>
+    ipcRenderer.invoke("knowledge:getStorageInfo", knowledgeId),
+  getAllKnowledgeStorageInfo: (): Promise<KnowledgeAllStorageInfoResult> =>
+    ipcRenderer.invoke("knowledge:getAllStorageInfo"),
 
   // Memory 记忆管理
   getMemoryContext: (): Promise<
@@ -537,6 +589,32 @@ export interface ElectronAPI {
     canceled: boolean;
     filePaths: string[];
   }>;
+
+  // Knowledge Files 知识库文件操作
+  selectAndSaveKnowledgeFiles: (
+    knowledgeId: string
+  ) => Promise<KnowledgeFilesResult>;
+  saveFileToKnowledge: (
+    knowledgeId: string,
+    filePath: string
+  ) => Promise<KnowledgeFileResult>;
+  saveFilesToKnowledge: (
+    knowledgeId: string,
+    filePaths: string[]
+  ) => Promise<KnowledgeFilesResult>;
+  pasteFileToKnowledge: (knowledgeId: string) => Promise<KnowledgeFileResult>;
+  deleteKnowledgeFile: (
+    knowledgeId: string,
+    fileId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  getKnowledgeFileInfo: (
+    knowledgeId: string,
+    fileId: string
+  ) => Promise<KnowledgeFileResult>;
+  getKnowledgeStorageInfo: (
+    knowledgeId: string
+  ) => Promise<KnowledgeStorageInfoResult>;
+  getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
 
   // Memory 记忆管理
   getMemoryContext: () => Promise<

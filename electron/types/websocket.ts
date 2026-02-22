@@ -382,6 +382,7 @@ export interface KnowledgeInfo {
   embeddingModelName: string;
   documentCount: number;
   totalChunks: number;
+  storagePath?: string;
   createdAt: number;
   updatedAt: number;
 }

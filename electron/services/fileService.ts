@@ -7,14 +7,18 @@
  * - 文件落盘存储到 userData 目录
  * - 文件元数据管理
  * - 文件删除和清理
+ * - 知识库文件按 ID 隔离存储
  */
-import { dialog, app } from "electron";
+import { dialog, app, clipboard } from "electron";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
-// 文件存储目录名称
+// 通用文件存储目录名称（已废弃，保留兼容）
 const FILES_DIR_NAME = "uploaded-files";
+
+// 知识库文件存储目录名称
+const KNOWLEDGE_FILES_DIR_NAME = "knowledge-files";
 
 // 允许的文件类型
 const ALLOWED_FILE_TYPES = [
@@ -74,7 +78,7 @@ export interface FileSelectResult {
 }
 
 /**
- * 获取文件存储目录路径
+ * 获取文件存储目录路径（通用目录）
  */
 export function getFilesDirectory(): string {
   const userDataPath = app.getPath("userData");
@@ -86,6 +90,31 @@ export function getFilesDirectory(): string {
   }
 
   return filesDir;
+}
+
+/**
+ * 获取知识库文件存储目录路径
+ * @param knowledgeId 知识库 ID，如果不传则返回根目录
+ */
+export function getKnowledgeFilesDirectory(knowledgeId?: string): string {
+  const userDataPath = app.getPath("userData");
+  const baseDir = path.join(userDataPath, KNOWLEDGE_FILES_DIR_NAME);
+
+  // 确保根目录存在
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
+  }
+
+  // 如果指定了知识库 ID，返回该知识库的目录
+  if (knowledgeId) {
+    const knowledgeDir = path.join(baseDir, knowledgeId);
+    if (!fs.existsSync(knowledgeDir)) {
+      fs.mkdirSync(knowledgeDir, { recursive: true });
+    }
+    return knowledgeDir;
+  }
+
+  return baseDir;
 }
 
 /**
@@ -366,11 +395,379 @@ function getImageDimensions(
 /**
  * 从剪贴板粘贴文件
  * 支持图片粘贴
+ * @param knowledgeId 可选的知识库 ID，用于存储到知识库目录
  */
-export async function pasteFileFromClipboard(): Promise<FileMetadata | null> {
-  // 这个功能需要使用 Electron 的 clipboard API
-  // 目前返回 null，后续可以扩展
-  return null;
+export async function pasteFileFromClipboard(
+  knowledgeId?: string
+): Promise<FileMetadata | null> {
+  try {
+    // 检查剪贴板是否有图片
+    const image = clipboard.readImage();
+    if (!image.isEmpty()) {
+      // 生成文件 ID 和名称
+      const id = generateFileId();
+      const originalName = `clipboard-image-${Date.now()}.png`;
+      const storedName = `${id}.png`;
+
+      // 确定存储目录
+      const targetDir = knowledgeId
+        ? getKnowledgeFilesDirectory(knowledgeId)
+        : getFilesDirectory();
+      const storedPath = path.join(targetDir, storedName);
+
+      // 保存图片
+      const buffer = image.toPNG();
+      fs.writeFileSync(storedPath, buffer);
+
+      // 获取图片尺寸
+      let width = 0;
+      let height = 0;
+      try {
+        const dimensions = await getImageDimensions(storedPath);
+        width = dimensions.width;
+        height = dimensions.height;
+      } catch {
+        // 忽略错误
+      }
+
+      const metadata: FileMetadata = {
+        id,
+        originalName,
+        storedName,
+        mimeType: "image/png",
+        size: buffer.length,
+        path: storedPath,
+        createdAt: new Date().toISOString(),
+        width,
+        height,
+      };
+
+      return metadata;
+    }
+
+    // 检查剪贴板是否有文本（可能是文件路径）
+    const text = clipboard.readText();
+    if (text && fs.existsSync(text) && fs.statSync(text).isFile()) {
+      // 作为文件处理
+      return saveFileToKnowledge(knowledgeId || "", text);
+    }
+
+    return null;
+  } catch (error) {
+    console.error("粘贴文件失败:", error);
+    return null;
+  }
+}
+
+/**
+ * 保存文件到知识库目录
+ * @param knowledgeId 知识库 ID
+ * @param sourceFilePath 源文件路径
+ */
+export async function saveFileToKnowledge(
+  knowledgeId: string,
+  sourceFilePath: string
+): Promise<FileMetadata> {
+  if (!knowledgeId) {
+    throw new Error("知识库 ID 不能为空");
+  }
+
+  if (!fs.existsSync(sourceFilePath)) {
+    throw new Error(`源文件不存在: ${sourceFilePath}`);
+  }
+
+  const stat = fs.statSync(sourceFilePath);
+
+  // 检查文件大小
+  if (stat.size > MAX_FILE_SIZE) {
+    throw new Error(`文件大小超过 50MB 限制`);
+  }
+
+  const mimeType = getMimeType(sourceFilePath);
+
+  // 检查文件类型
+  if (!isFileTypeAllowed(mimeType)) {
+    throw new Error(`不支持的文件类型: ${mimeType}`);
+  }
+
+  // 生成文件 ID 和存储名称
+  const id = generateFileId();
+  const originalName = path.basename(sourceFilePath);
+  const storedName = generateStoredName(originalName, id);
+
+  // 获取知识库目录
+  const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+  const storedPath = path.join(knowledgeDir, storedName);
+
+  // 复制文件到知识库目录
+  fs.copyFileSync(sourceFilePath, storedPath);
+
+  const metadata: FileMetadata = {
+    id,
+    originalName,
+    storedName,
+    mimeType,
+    size: stat.size,
+    path: storedPath,
+    createdAt: new Date().toISOString(),
+  };
+
+  // 如果是图片，获取尺寸信息
+  if (mimeType.startsWith("image/")) {
+    try {
+      const dimensions = await getImageDimensions(storedPath);
+      metadata.width = dimensions.width;
+      metadata.height = dimensions.height;
+    } catch {
+      // 忽略获取图片尺寸的错误
+    }
+  }
+
+  return metadata;
+}
+
+/**
+ * 批量保存文件到知识库目录
+ * @param knowledgeId 知识库 ID
+ * @param sourceFilePaths 源文件路径列表
+ */
+export async function saveFilesToKnowledge(
+  knowledgeId: string,
+  sourceFilePaths: string[]
+): Promise<{ files: FileMetadata[]; errors: string[] }> {
+  const files: FileMetadata[] = [];
+  const errors: string[] = [];
+
+  for (const filePath of sourceFilePaths) {
+    try {
+      const metadata = await saveFileToKnowledge(knowledgeId, filePath);
+      files.push(metadata);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      errors.push(`${path.basename(filePath)}: ${errorMsg}`);
+    }
+  }
+
+  return { files, errors };
+}
+
+/**
+ * 删除知识库的所有文件
+ * @param knowledgeId 知识库 ID
+ */
+export function deleteKnowledgeFiles(knowledgeId: string): {
+  success: boolean;
+  error?: string;
+} {
+  try {
+    const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+
+    if (fs.existsSync(knowledgeDir)) {
+      // 递归删除目录及其内容
+      fs.rmSync(knowledgeDir, { recursive: true, force: true });
+    }
+
+    return { success: true };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * 获取知识库存储信息
+ * @param knowledgeId 知识库 ID
+ */
+export function getKnowledgeStorageInfo(knowledgeId: string): {
+  totalSize: number;
+  fileCount: number;
+  path: string;
+} {
+  try {
+    const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+
+    if (!fs.existsSync(knowledgeDir)) {
+      return { totalSize: 0, fileCount: 0, path: knowledgeDir };
+    }
+
+    const files = fs.readdirSync(knowledgeDir);
+    let totalSize = 0;
+
+    for (const file of files) {
+      const filePath = path.join(knowledgeDir, file);
+      const stat = fs.statSync(filePath);
+      if (stat.isFile()) {
+        totalSize += stat.size;
+      }
+    }
+
+    return {
+      totalSize,
+      fileCount: files.length,
+      path: knowledgeDir,
+    };
+  } catch {
+    return { totalSize: 0, fileCount: 0, path: "" };
+  }
+}
+
+/**
+ * 选择文件并保存到知识库
+ * @param knowledgeId 知识库 ID
+ * @param options 选择选项
+ */
+export async function selectFilesForKnowledge(
+  knowledgeId: string,
+  options?: {
+    multiple?: boolean;
+    filters?: Electron.FileFilter[];
+  }
+): Promise<FileSelectResult> {
+  try {
+    const result = await selectFiles(options);
+
+    if (result.canceled || result.files.length === 0) {
+      return result;
+    }
+
+    // 将文件移动到知识库目录
+    const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+    const movedFiles: FileMetadata[] = [];
+    const errors: string[] = [];
+
+    for (const file of result.files) {
+      try {
+        const newStoredName = file.storedName;
+        const newPath = path.join(knowledgeDir, newStoredName);
+
+        // 移动文件
+        fs.renameSync(file.path, newPath);
+
+        movedFiles.push({
+          ...file,
+          path: newPath,
+        });
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        errors.push(`${file.originalName}: ${errorMsg}`);
+      }
+    }
+
+    return {
+      canceled: false,
+      files: movedFiles,
+      error: errors.length > 0 ? errors.join("\n") : undefined,
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return {
+      canceled: false,
+      files: [],
+      error: errorMsg,
+    };
+  }
+}
+
+/**
+ * 删除知识库中的单个文件
+ * @param knowledgeId 知识库 ID
+ * @param fileId 文件 ID
+ */
+export function deleteKnowledgeFile(
+  knowledgeId: string,
+  fileId: string
+): { success: boolean; error?: string } {
+  try {
+    const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+    const files = fs.readdirSync(knowledgeDir);
+    const targetFile = files.find((f) => f.startsWith(fileId));
+
+    if (targetFile) {
+      const filePath = path.join(knowledgeDir, targetFile);
+      fs.unlinkSync(filePath);
+    }
+
+    return { success: true };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * 获取知识库中的文件信息
+ * @param knowledgeId 知识库 ID
+ * @param fileId 文件 ID
+ */
+export function getKnowledgeFileInfo(
+  knowledgeId: string,
+  fileId: string
+): FileMetadata | null {
+  try {
+    const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
+    const files = fs.readdirSync(knowledgeDir);
+    const targetFile = files.find((f) => f.startsWith(fileId));
+
+    if (!targetFile) {
+      return null;
+    }
+
+    const filePath = path.join(knowledgeDir, targetFile);
+    const stat = fs.statSync(filePath);
+
+    // 从文件名解析原始文件名（需要从元数据存储中获取，这里简化处理）
+    return {
+      id: fileId,
+      originalName: targetFile,
+      storedName: targetFile,
+      mimeType: getMimeType(filePath),
+      size: stat.size,
+      path: filePath,
+      createdAt: stat.birthtime.toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 获取所有知识库的总存储信息
+ */
+export function getAllKnowledgeStorageInfo(): {
+  totalSize: number;
+  knowledgeCount: number;
+  fileCount: number;
+  path: string;
+} {
+  try {
+    const baseDir = getKnowledgeFilesDirectory();
+
+    if (!fs.existsSync(baseDir)) {
+      return { totalSize: 0, knowledgeCount: 0, fileCount: 0, path: baseDir };
+    }
+
+    const knowledgeDirs = fs
+      .readdirSync(baseDir, { withFileTypes: true })
+      .filter((dirent) => dirent.isDirectory());
+
+    let totalSize = 0;
+    let totalFileCount = 0;
+
+    for (const dir of knowledgeDirs) {
+      const info = getKnowledgeStorageInfo(dir.name);
+      totalSize += info.totalSize;
+      totalFileCount += info.fileCount;
+    }
+
+    return {
+      totalSize,
+      knowledgeCount: knowledgeDirs.length,
+      fileCount: totalFileCount,
+      path: baseDir,
+    };
+  } catch {
+    return { totalSize: 0, knowledgeCount: 0, fileCount: 0, path: "" };
+  }
 }
 
 /**
@@ -480,3 +877,22 @@ export function getStorageSize(): { totalSize: number; fileCount: number } {
     return { totalSize: 0, fileCount: 0 };
   }
 }
+
+export default {
+  getFilesDirectory,
+  getKnowledgeFilesDirectory,
+  selectFiles,
+  selectFilesForKnowledge,
+  pasteFileFromClipboard,
+  saveFileToKnowledge,
+  saveFilesToKnowledge,
+  deleteFile,
+  deleteKnowledgeFile,
+  deleteKnowledgeFiles,
+  getFileInfo,
+  getKnowledgeFileInfo,
+  getKnowledgeStorageInfo,
+  getAllKnowledgeStorageInfo,
+  cleanupOldFiles,
+  getStorageSize,
+};

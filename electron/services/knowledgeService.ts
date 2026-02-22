@@ -254,6 +254,7 @@ function transformKnowledgeInfo(data: any): KnowledgeInfo {
       data.embeddingModelName) as string,
     documentCount: (data.document_count || data.documentCount || 0) as number,
     totalChunks: (data.total_chunks || data.totalChunks || 0) as number,
+    storagePath: (data.storage_path || data.storagePath) as string | undefined,
     createdAt: (data.created_at || data.createdAt) as number,
     updatedAt: (data.updated_at || data.updatedAt) as number,
   };

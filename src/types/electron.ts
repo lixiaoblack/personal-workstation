@@ -78,6 +78,15 @@ export type {
   MemoryListResponseMessage,
   MemoryDeleteResponseMessage,
   MemoryGenerateSummaryResponseMessage,
+  // 文件相关类型
+  FileMetadata,
+  FileSelectResult,
+  KnowledgeStorageInfo,
+  KnowledgeAllStorageInfo,
+  KnowledgeFileResult,
+  KnowledgeFilesResult,
+  KnowledgeStorageInfoResult,
+  KnowledgeAllStorageInfoResult,
 } from "../../electron/types";
 
 // 枚举需要重新导出（因为需要作为值使用）
@@ -129,6 +138,11 @@ import type {
   MemoryListResponseMessage,
   MemoryDeleteResponseMessage,
   MemoryGenerateSummaryResponseMessage,
+  // 文件相关类型
+  KnowledgeFileResult,
+  KnowledgeFilesResult,
+  KnowledgeStorageInfoResult,
+  KnowledgeAllStorageInfoResult,
 } from "../../electron/types";
 
 // WebSocket 服务器信息
@@ -313,6 +327,32 @@ export interface ElectronAPI {
     canceled: boolean;
     filePaths: string[];
   }>;
+
+  // Knowledge Files 知识库文件操作 API
+  selectAndSaveKnowledgeFiles: (
+    knowledgeId: string
+  ) => Promise<KnowledgeFilesResult>;
+  saveFileToKnowledge: (
+    knowledgeId: string,
+    filePath: string
+  ) => Promise<KnowledgeFileResult>;
+  saveFilesToKnowledge: (
+    knowledgeId: string,
+    filePaths: string[]
+  ) => Promise<KnowledgeFilesResult>;
+  pasteFileToKnowledge: (knowledgeId: string) => Promise<KnowledgeFileResult>;
+  deleteKnowledgeFile: (
+    knowledgeId: string,
+    fileId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  getKnowledgeFileInfo: (
+    knowledgeId: string,
+    fileId: string
+  ) => Promise<KnowledgeFileResult>;
+  getKnowledgeStorageInfo: (
+    knowledgeId: string
+  ) => Promise<KnowledgeStorageInfoResult>;
+  getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
 
   // Memory 记忆管理
   getMemoryContext: () => Promise<

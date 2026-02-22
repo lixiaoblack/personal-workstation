@@ -13,6 +13,7 @@ import * as modelConfigService from "./services/modelConfigService";
 import * as conversationService from "./services/conversationService";
 import * as knowledgeService from "./services/knowledgeService";
 import * as memoryService from "./services/memoryService";
+import * as fileService from "./services/fileService";
 import { dialog } from "electron";
 import { MessageType } from "./types/websocket";
 import type {
@@ -503,6 +504,15 @@ function registerIpcHandlers() {
         );
       }
 
+      // 删除知识库文件目录
+      const deleteFilesResult = fileService.deleteKnowledgeFiles(knowledgeId);
+      if (!deleteFilesResult.success) {
+        console.error(
+          "[Main] 删除知识库文件目录失败:",
+          deleteFilesResult.error
+        );
+      }
+
       const success = await knowledgeService.deleteKnowledge(knowledgeId);
       return { success };
     } catch (error) {
@@ -567,6 +577,123 @@ function registerIpcHandlers() {
       ],
     });
     return result;
+  });
+
+  // ==================== Knowledge Files 知识库文件相关 ====================
+
+  // 选择文件并保存到知识库
+  ipcMain.handle(
+    "knowledge:selectAndSaveFiles",
+    async (_event, knowledgeId: string) => {
+      try {
+        const result = await fileService.selectFilesForKnowledge(knowledgeId);
+        return {
+          success: !result.canceled && result.files.length > 0,
+          files: result.files,
+          error: result.error,
+        };
+      } catch (error) {
+        return { success: false, files: [], error: String(error) };
+      }
+    }
+  );
+
+  // 保存文件到知识库
+  ipcMain.handle(
+    "knowledge:saveFile",
+    async (_event, knowledgeId: string, filePath: string) => {
+      try {
+        const metadata = await fileService.saveFileToKnowledge(
+          knowledgeId,
+          filePath
+        );
+        return { success: true, file: metadata };
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
+  // 批量保存文件到知识库
+  ipcMain.handle(
+    "knowledge:saveFiles",
+    async (_event, knowledgeId: string, filePaths: string[]) => {
+      try {
+        const result = await fileService.saveFilesToKnowledge(
+          knowledgeId,
+          filePaths
+        );
+        return {
+          success: result.files.length > 0,
+          files: result.files,
+          errors: result.errors,
+        };
+      } catch (error) {
+        return { success: false, files: [], errors: [String(error)] };
+      }
+    }
+  );
+
+  // 从剪贴板粘贴文件到知识库
+  ipcMain.handle("knowledge:pasteFile", async (_event, knowledgeId: string) => {
+    try {
+      const metadata = await fileService.pasteFileFromClipboard(knowledgeId);
+      if (metadata) {
+        return { success: true, file: metadata };
+      }
+      return { success: false, error: "剪贴板中没有可粘贴的文件" };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // 删除知识库中的单个文件
+  ipcMain.handle(
+    "knowledge:deleteFile",
+    async (_event, knowledgeId: string, fileId: string) => {
+      try {
+        const result = fileService.deleteKnowledgeFile(knowledgeId, fileId);
+        return result;
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
+  // 获取知识库文件信息
+  ipcMain.handle(
+    "knowledge:getFileInfo",
+    async (_event, knowledgeId: string, fileId: string) => {
+      try {
+        const metadata = fileService.getKnowledgeFileInfo(knowledgeId, fileId);
+        return { success: !!metadata, file: metadata };
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
+  // 获取知识库存储信息
+  ipcMain.handle(
+    "knowledge:getStorageInfo",
+    async (_event, knowledgeId: string) => {
+      try {
+        const info = fileService.getKnowledgeStorageInfo(knowledgeId);
+        return { success: true, ...info };
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
+  // 获取所有知识库存储信息
+  ipcMain.handle("knowledge:getAllStorageInfo", async () => {
+    try {
+      const info = fileService.getAllKnowledgeStorageInfo();
+      return { success: true, ...info };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
   });
 
   // 添加文档到知识库

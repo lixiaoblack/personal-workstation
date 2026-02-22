@@ -228,10 +228,27 @@ function runMigrations(database: Database.Database): void {
       embedding_model_name TEXT DEFAULT 'nomic-embed-text',
       document_count INTEGER DEFAULT 0,
       total_chunks INTEGER DEFAULT 0,
+      storage_path TEXT,
       created_at INTEGER,
       updated_at INTEGER
     );
   `);
+
+  // 数据迁移：为 knowledge 表添加 storage_path 列（如果不存在）
+  try {
+    const knowledgeColumns = database
+      .prepare("PRAGMA table_info(knowledge)")
+      .all() as Array<{ name: string }>;
+    const hasStoragePath = knowledgeColumns.some(
+      (col) => col.name === "storage_path"
+    );
+    if (!hasStoragePath) {
+      database.exec(`ALTER TABLE knowledge ADD COLUMN storage_path TEXT`);
+      console.log("[Database] 已添加 knowledge.storage_path 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 storage_path 列失败:", error);
+  }
 
   // 知识库文档表
   database.exec(`

@@ -17,6 +17,9 @@
 
 | 版本 | 发布日期 | 主要变更 |
 |------|----------|----------|
+| 0.5.30 | 2026-02-22 | 知识库拖拽上传支持 |
+| 0.5.29 | 2026-02-22 | 知识库页面组件化重构、全局文件预览组件 |
+| 0.5.28 | 2026-02-22 | 知识库存储路径字段 |
 | 0.5.27 | 2026-02-21 | macOS 麦克风权限请求机制 |
 | 0.5.26 | 2026-02-21 | 语音输入能力检测与降级策略 |
 | 0.5.25 | 2026-02-21 | Sender 组件迁移 |
@@ -47,6 +50,52 @@
 ## [Unreleased] - 开发中
 
 ### 新增 (Added)
+
+### 新增 (Added) - v0.5.30
+
+- **知识库拖拽上传支持**
+  - KnowledgeUpload 组件支持拖拽文件上传
+  - 利用 Electron 特有能力：通过 file.path 获取拖拽文件的本地路径
+  - 点击触发原生文件选择对话框，拖拽直接获取文件路径
+  - 添加 onDropFile 回调处理拖拽文件
+  - handleDropFile 函数：保存文件到知识库目录后向量化
+
+### 新增 (Added) - v0.5.29
+
+- **知识库页面组件化重构**
+  - 拆分 KnowledgeSidebar 侧边栏组件
+  - 拆分 KnowledgeHeader 头部组件
+  - 拆分 KnowledgeDocumentList 文档列表组件
+  - 拆分 KnowledgeUpload 上传组件
+  - 拆分 KnowledgeSearchResult 搜索结果组件
+  - 拆分 CreateKnowledgeModal 创建知识库弹窗
+  - 主页面从 770 行精简到 312 行
+
+- **全局文件预览组件 WFilePreview**
+  - 支持 Markdown 预览（使用 MarkdownRenderer）
+  - 支持 JSON 预览（格式化显示）
+  - 支持 PDF 预览（iframe 嵌入）
+  - 支持图片预览（file:// 协议）
+  - 支持代码文件预览（语法高亮）
+  - 支持纯文本文件预览
+  - 集成到知识库文档列表，支持点击预览
+
+- **知识库上传接口升级**
+  - 使用新的 selectAndSaveKnowledgeFiles 接口
+  - 文件自动保存到知识库专属目录
+  - 支持更多文件类型：Word、图片等
+
+### 新增 (Added) - v0.5.28
+
+- **知识库存储路径字段**
+  - 数据库迁移：为 knowledge 表添加 storage_path 字段
+  - Python db_service.py 更新：
+    - 创建知识库时自动生成 storage_path（knowledge-files/{knowledge_id}）
+    - 列表/详情/直接调用 API 均返回 storage_path 字段
+  - Electron 类型定义：
+    - KnowledgeInfo 接口添加 storagePath 字段
+    - transformKnowledgeInfo 转换函数支持字段映射
+  - 用途：为后续文件管理功能提供存储位置信息
 
 ### 新增 (Added) - v0.5.27
 

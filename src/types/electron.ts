@@ -354,6 +354,17 @@ export interface ElectronAPI {
     knowledgeId: string
   ) => Promise<KnowledgeStorageInfoResult>;
   getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
+  readKnowledgeFileContent: (
+    knowledgeId: string,
+    fileId: string,
+    maxSize?: number
+  ) => Promise<{
+    success: boolean;
+    content?: string;
+    mimeType?: string;
+    error?: string;
+    truncated?: boolean;
+  }>;
 
   // Memory 记忆管理
   getMemoryContext: () => Promise<

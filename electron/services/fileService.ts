@@ -731,6 +731,96 @@ export function getKnowledgeFileInfo(
 }
 
 /**
+ * 读取知识库文件内容
+ * 用于文件预览功能
+ * @param knowledgeId 知识库 ID
+ * @param fileId 文件 ID
+ * @param maxSize 最大读取大小（默认 1MB），超过此大小的文件将被截断
+ */
+export function readKnowledgeFileContent(
+  knowledgeId: string,
+  fileId: string,
+  maxSize: number = 1024 * 1024
+): { success: boolean; content?: string; mimeType?: string; error?: string; truncated?: boolean } {
+  try {
+    const fileInfo = getKnowledgeFileInfo(knowledgeId, fileId);
+    
+    if (!fileInfo) {
+      return { success: false, error: "文件不存在" };
+    }
+
+    const filePath = fileInfo.path;
+    
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: "文件路径不存在" };
+    }
+
+    const stat = fs.statSync(filePath);
+    
+    // 检查文件大小
+    const truncated = stat.size > maxSize;
+    const readSize = truncated ? maxSize : stat.size;
+    
+    // 读取文件内容
+    const buffer = Buffer.alloc(readSize);
+    const fd = fs.openSync(filePath, "r");
+    fs.readSync(fd, buffer, 0, readSize, 0);
+    fs.closeSync(fd);
+    
+    // 判断文件类型并决定如何解码
+    const mimeType = fileInfo.mimeType;
+    let content: string;
+    
+    // 文本类型文件直接转换为字符串
+    if (
+      mimeType.startsWith("text/") ||
+      mimeType === "application/json" ||
+      mimeType === "application/xml" ||
+      mimeType === "application/x-yaml" ||
+      mimeType === "application/x-toml"
+    ) {
+      content = buffer.toString("utf-8");
+    }
+    // Markdown 文件
+    else if (mimeType === "text/markdown") {
+      content = buffer.toString("utf-8");
+    }
+    // 其他文本类型代码文件
+    else if (
+      [
+        "text/javascript",
+        "text/typescript",
+        "text/python",
+        "text/java",
+        "text/c",
+        "text/cpp",
+        "text/css",
+        "text/html",
+        "text/x-scss",
+        "text/x-sass",
+        "text/x-less",
+      ].includes(mimeType)
+    ) {
+      content = buffer.toString("utf-8");
+    }
+    // 二进制文件（图片、PDF 等）返回 Base64
+    else {
+      content = buffer.toString("base64");
+    }
+    
+    return {
+      success: true,
+      content,
+      mimeType,
+      truncated,
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
  * 获取所有知识库的总存储信息
  */
 export function getAllKnowledgeStorageInfo(): {
@@ -891,6 +981,7 @@ export default {
   deleteKnowledgeFiles,
   getFileInfo,
   getKnowledgeFileInfo,
+  readKnowledgeFileContent,
   getKnowledgeStorageInfo,
   getAllKnowledgeStorageInfo,
   cleanupOldFiles,

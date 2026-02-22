@@ -111,6 +111,10 @@ interface WFilePreviewProps {
   filePath: string;
   fileName: string;
   fileType: string;
+  /** 知识库 ID，用于读取文件内容 */
+  knowledgeId?: string;
+  /** 文件 ID，用于读取文件内容 */
+  fileId?: string;
   onClose: () => void;
   width?: number | string;
 }
@@ -120,48 +124,56 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   filePath,
   fileName,
   fileType,
+  knowledgeId,
+  fileId,
   onClose,
   width = 900,
 }) => {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  
+  const [truncated, setTruncated] = useState(false);
+
   const category = useMemo(() => getFileCategory(fileType), [fileType]);
-  
+
   // 读取文件内容
   useEffect(() => {
     if (!visible || !filePath) return;
-    
-    // 图片和 PDF 不需要读取内容
+
+    // 图片和 PDF 不需要读取内容，直接使用 file:// 协议
     if (category === "image" || category === "pdf") {
       setContent("");
       setLoading(false);
       return;
     }
-    
+
     // 不支持的类型
     if (category === "unsupported") {
       setContent("");
       setLoading(false);
       return;
     }
-    
+
+    // 必须有 knowledgeId 和 fileId 才能读取文件内容
+    if (!knowledgeId || !fileId) {
+      setError("缺少文件标识，无法读取内容");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    
+    setTruncated(false);
+
     // 通过 Electron API 读取文件内容
-    window.electronAPI.getKnowledgeFileInfo?.(
-      filePath.split("/").slice(-2, -1)[0] || "",
-      filePath.split("/").pop()?.split("_")[0] || ""
-    )
+    window.electronAPI
+      .readKnowledgeFileContent(knowledgeId, fileId)
       .then((result) => {
-        if (result.success && result.file) {
-          // 这里需要实际的文件读取逻辑
-          // 暂时使用占位内容
-          setContent(`文件路径: ${filePath}\n\n文件预览功能需要通过 Electron 主进程读取文件内容。`);
+        if (result.success && result.content) {
+          setContent(result.content);
+          setTruncated(result.truncated || false);
         } else {
-          setError("无法读取文件内容");
+          setError(result.error || "无法读取文件内容");
         }
       })
       .catch((err) => {
@@ -170,7 +182,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
       .finally(() => {
         setLoading(false);
       });
-  }, [visible, filePath, category]);
+  }, [visible, filePath, category, knowledgeId, fileId]);
   
   // 渲染预览内容
   const renderPreview = () => {
@@ -220,6 +232,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         // Markdown 预览
         return (
           <div className="p-4 bg-bg-tertiary rounded-lg max-h-[70vh] overflow-auto">
+            {truncated && (
+              <div className="mb-2 text-warning text-sm">
+                文件较大，仅显示前 1MB 内容
+              </div>
+            )}
             <MarkdownRenderer content={content} />
           </div>
         );
@@ -252,6 +269,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         const language = getCodeLanguage(fileType);
         return (
           <div className="max-h-[70vh] overflow-auto rounded">
+            {truncated && (
+              <div className="p-2 text-warning text-sm bg-bg-tertiary">
+                文件较大，仅显示前 1MB 内容
+              </div>
+            )}
             <CodeHighlighter lang={language}>
               {content}
             </CodeHighlighter>
@@ -263,6 +285,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         // 纯文本预览
         return (
           <div className="p-4 bg-bg-tertiary rounded-lg max-h-[70vh] overflow-auto">
+            {truncated && (
+              <div className="mb-2 text-warning text-sm">
+                文件较大，仅显示前 1MB 内容
+              </div>
+            )}
             <Paragraph className="whitespace-pre-wrap font-mono text-sm text-text-secondary">
               {content}
             </Paragraph>

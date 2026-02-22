@@ -57,6 +57,8 @@ const KnowledgePage: React.FC = () => {
     path: string;
     name: string;
     type: string;
+    knowledgeId?: string;
+    fileId?: string;
   } | null>(null);
 
   // 加载嵌入模型配置
@@ -343,6 +345,8 @@ const KnowledgePage: React.FC = () => {
       path: document.filePath,
       name: document.fileName,
       type: document.fileType,
+      knowledgeId: document.knowledgeId,
+      fileId: document.id,
     });
     setPreviewVisible(true);
   };
@@ -426,6 +430,8 @@ const KnowledgePage: React.FC = () => {
           filePath={previewFile.path}
           fileName={previewFile.name}
           fileType={previewFile.type}
+          knowledgeId={previewFile.knowledgeId}
+          fileId={previewFile.fileId}
           onClose={handleClosePreview}
         />
       )}

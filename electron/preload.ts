@@ -373,6 +373,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("knowledge:getStorageInfo", knowledgeId),
   getAllKnowledgeStorageInfo: (): Promise<KnowledgeAllStorageInfoResult> =>
     ipcRenderer.invoke("knowledge:getAllStorageInfo"),
+  readKnowledgeFileContent: (
+    knowledgeId: string,
+    fileId: string,
+    maxSize?: number
+  ): Promise<{
+    success: boolean;
+    content?: string;
+    mimeType?: string;
+    error?: string;
+    truncated?: boolean;
+  }> =>
+    ipcRenderer.invoke("knowledge:readFileContent", knowledgeId, fileId, maxSize),
 
   // Memory 记忆管理
   getMemoryContext: (): Promise<
@@ -613,9 +625,20 @@ export interface ElectronAPI {
   ) => Promise<KnowledgeFileResult>;
   getKnowledgeStorageInfo: (
     knowledgeId: string
-  ) => Promise<KnowledgeStorageInfoResult>;
-  getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
-
+  ) => Promise<KnowledgeStorageInfoResult>,
+  getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>,
+  readKnowledgeFileContent: (
+    knowledgeId: string,
+    fileId: string,
+    maxSize?: number
+  ) => Promise<{
+    success: boolean;
+    content?: string;
+    mimeType?: string;
+    error?: string;
+    truncated?: boolean;
+  }>;
+  
   // Memory 记忆管理
   getMemoryContext: () => Promise<
     Omit<MemoryGetContextResponseMessage, "type" | "id" | "timestamp">

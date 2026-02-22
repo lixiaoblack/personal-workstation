@@ -696,6 +696,23 @@ function registerIpcHandlers() {
     }
   });
 
+  // 读取知识库文件内容（用于文件预览）
+  ipcMain.handle(
+    "knowledge:readFileContent",
+    async (_event, knowledgeId: string, fileId: string, maxSize?: number) => {
+      try {
+        const result = fileService.readKnowledgeFileContent(
+          knowledgeId,
+          fileId,
+          maxSize
+        );
+        return result;
+      } catch (error) {
+        return { success: false, error: String(error) };
+      }
+    }
+  );
+
   // 添加文档到知识库
   ipcMain.handle(
     "knowledge:addDocument",

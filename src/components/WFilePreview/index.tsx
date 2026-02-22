@@ -35,23 +35,58 @@ import { CodeHighlighter } from "@ant-design/x";
 const { Text, Paragraph } = Typography;
 
 // 文件类型分类
-type FileCategory = "markdown" | "json" | "pdf" | "image" | "text" | "code" | "unsupported";
+type FileCategory =
+  | "markdown"
+  | "json"
+  | "pdf"
+  | "image"
+  | "text"
+  | "code"
+  | "unsupported";
 
 // 获取文件分类
 const getFileCategory = (fileType: string): FileCategory => {
   const ext = fileType.toLowerCase().replace(".", "");
-  
+
   if (["md", "markdown"].includes(ext)) return "markdown";
   if (["json"].includes(ext)) return "json";
   if (["pdf"].includes(ext)) return "pdf";
-  if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"].includes(ext)) return "image";
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"].includes(ext))
+    return "image";
   if (["txt", "log", "csv"].includes(ext)) return "text";
-  if ([
-    "js", "jsx", "ts", "tsx", "py", "java", "c", "cpp", "h", "cs", "go", "rs",
-    "css", "scss", "sass", "less", "html", "xml", "yaml", "yml", "toml",
-    "sh", "bash", "zsh", "sql", "md", "json"
-  ].includes(ext)) return "code";
-  
+  if (
+    [
+      "js",
+      "jsx",
+      "ts",
+      "tsx",
+      "py",
+      "java",
+      "c",
+      "cpp",
+      "h",
+      "cs",
+      "go",
+      "rs",
+      "css",
+      "scss",
+      "sass",
+      "less",
+      "html",
+      "xml",
+      "yaml",
+      "yml",
+      "toml",
+      "sh",
+      "bash",
+      "zsh",
+      "sql",
+      "md",
+      "json",
+    ].includes(ext)
+  )
+    return "code";
+
   return "unsupported";
 };
 
@@ -183,7 +218,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         setLoading(false);
       });
   }, [visible, filePath, category, knowledgeId, fileId]);
-  
+
   // 渲染预览内容
   const renderPreview = () => {
     if (loading) {
@@ -193,16 +228,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         </div>
       );
     }
-    
+
     if (error) {
-      return (
-        <Empty
-          description={error}
-          className="py-20"
-        />
-      );
+      return <Empty description={error} className="py-20" />;
     }
-    
+
     switch (category) {
       case "image":
         // 图片预览 - 使用 file:// 协议
@@ -215,7 +245,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
             />
           </div>
         );
-      
+
       case "pdf":
         // PDF 预览 - 使用 iframe 或 embed
         return (
@@ -227,20 +257,20 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
             />
           </div>
         );
-      
+
       case "markdown":
         // Markdown 预览
         return (
           <div className="p-4 bg-bg-tertiary rounded-lg max-h-[70vh] overflow-auto">
             {truncated && (
               <div className="mb-2 text-warning text-sm">
-                文件较大，仅显示前 1MB 内容
+                文件较大，仅显示前 50MB 内容
               </div>
             )}
             <MarkdownRenderer content={content} />
           </div>
         );
-      
+
       case "json":
         // JSON 预览 - 格式化显示
         try {
@@ -248,9 +278,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
           const formatted = JSON.stringify(jsonContent, null, 2);
           return (
             <div className="max-h-[70vh] overflow-auto rounded">
-              <CodeHighlighter lang="json">
-                {formatted}
-              </CodeHighlighter>
+              <CodeHighlighter lang="json">{formatted}</CodeHighlighter>
             </div>
           );
         } catch {
@@ -263,7 +291,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
             </div>
           );
         }
-      
+
       case "code": {
         // 代码预览
         const language = getCodeLanguage(fileType);
@@ -271,23 +299,21 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
           <div className="max-h-[70vh] overflow-auto rounded">
             {truncated && (
               <div className="p-2 text-warning text-sm bg-bg-tertiary">
-                文件较大，仅显示前 1MB 内容
+                文件较大，仅显示前 50MB 内容
               </div>
             )}
-            <CodeHighlighter lang={language}>
-              {content}
-            </CodeHighlighter>
+            <CodeHighlighter lang={language}>{content}</CodeHighlighter>
           </div>
         );
       }
-      
+
       case "text":
         // 纯文本预览
         return (
           <div className="p-4 bg-bg-tertiary rounded-lg max-h-[70vh] overflow-auto">
             {truncated && (
               <div className="mb-2 text-warning text-sm">
-                文件较大，仅显示前 1MB 内容
+                文件较大，仅显示前 50MB 内容
               </div>
             )}
             <Paragraph className="whitespace-pre-wrap font-mono text-sm text-text-secondary">
@@ -295,7 +321,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
             </Paragraph>
           </div>
         );
-      
+
       default:
         return (
           <Empty
@@ -306,7 +332,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         );
     }
   };
-  
+
   // 模态框标题
   const modalTitle = (
     <div className="flex items-center gap-2">
@@ -314,7 +340,7 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
       <span>{fileName}</span>
     </div>
   );
-  
+
   return (
     <Modal
       title={modalTitle}

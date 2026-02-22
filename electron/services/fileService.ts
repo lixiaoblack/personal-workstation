@@ -735,42 +735,48 @@ export function getKnowledgeFileInfo(
  * 用于文件预览功能
  * @param knowledgeId 知识库 ID
  * @param fileId 文件 ID
- * @param maxSize 最大读取大小（默认 1MB），超过此大小的文件将被截断
+ * @param maxSize 最大读取大小（默认 50MB），超过此大小的文件将被截断
  */
 export function readKnowledgeFileContent(
   knowledgeId: string,
   fileId: string,
-  maxSize: number = 1024 * 1024
-): { success: boolean; content?: string; mimeType?: string; error?: string; truncated?: boolean } {
+  maxSize: number = 50 * 1024 * 1024
+): {
+  success: boolean;
+  content?: string;
+  mimeType?: string;
+  error?: string;
+  truncated?: boolean;
+} {
   try {
     const fileInfo = getKnowledgeFileInfo(knowledgeId, fileId);
-    
+
     if (!fileInfo) {
       return { success: false, error: "文件不存在" };
     }
 
     const filePath = fileInfo.path;
-    
+
     if (!fs.existsSync(filePath)) {
       return { success: false, error: "文件路径不存在" };
     }
 
     const stat = fs.statSync(filePath);
-    
+
     // 检查文件大小
     const truncated = stat.size > maxSize;
     const readSize = truncated ? maxSize : stat.size;
-    
+
     // 读取文件内容
     const buffer = Buffer.alloc(readSize);
     const fd = fs.openSync(filePath, "r");
     fs.readSync(fd, buffer, 0, readSize, 0);
     fs.closeSync(fd);
-    
+
     // 判断文件类型并决定如何解码
     const mimeType = fileInfo.mimeType;
     let content: string;
-    
+
     // 文本类型文件直接转换为字符串
     if (
       mimeType.startsWith("text/") ||
@@ -807,7 +813,7 @@ export function readKnowledgeFileContent(
     else {
       content = buffer.toString("base64");
     }
-    
+
     return {
       success: true,
       content,

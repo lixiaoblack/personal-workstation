@@ -8,7 +8,13 @@
 
 ### 新增 (Added)
 
-- OCR API 端点
++- 项目开发规范完善
+  - Python 开发规范（目录结构、代码规范、API 开发）
+  - Electron-Python 通信规范（双通道架构、消息协议）
+  - Agent 工具开发规范
+  - Skills 技能开发规范
+
++- OCR API 端点
   - `/api/ocr/status` - 获取 OCR 服务状态
   - `/api/ocr/recognize` - Base64 图片 OCR 识别
   - `/api/ocr/recognize-file` - 文件路径 OCR 识别

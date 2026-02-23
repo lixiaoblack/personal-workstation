@@ -705,22 +705,27 @@ export function getKnowledgeFileInfo(
 ): FileMetadata | null {
   try {
     const knowledgeDir = getKnowledgeFilesDirectory(knowledgeId);
-    console.log("[FileService] getKnowledgeFileInfo - knowledgeDir:", knowledgeDir);
+    console.log(
+      "[FileService] getKnowledgeFileInfo - knowledgeDir:",
+      knowledgeDir
+    );
     console.log("[FileService] getKnowledgeFileInfo - fileId:", fileId);
-    
+
     if (!fs.existsSync(knowledgeDir)) {
-      console.log("[FileService] getKnowledgeFileInfo - knowledgeDir does not exist");
+      console.log(
+        "[FileService] getKnowledgeFileInfo - knowledgeDir does not exist"
+      );
       return null;
     }
-    
+
     const files = fs.readdirSync(knowledgeDir);
     console.log("[FileService] getKnowledgeFileInfo - files in dir:", files);
-    
+
     // 文件名格式为 file_xxx.ext，需要匹配 fileId 前缀
     // fileId 可能是 "doc_xxx" 或 "file_xxx"
     // 实际存储的文件名是 file_xxx.ext
     const targetFile = files.find((f) => f.startsWith(fileId));
-    
+
     console.log("[FileService] getKnowledgeFileInfo - targetFile:", targetFile);
 
     if (!targetFile) {
@@ -764,7 +769,7 @@ export function readFileContent(
 } {
   try {
     console.log("[FileService] readFileContent - filePath:", filePath);
-    
+
     if (!fs.existsSync(filePath)) {
       console.log("[FileService] readFileContent - file does not exist");
       return { success: false, error: "文件不存在" };
@@ -772,7 +777,12 @@ export function readFileContent(
 
     const stat = fs.statSync(filePath);
     const mimeType = getMimeType(filePath);
-    console.log("[FileService] readFileContent - fileSize:", stat.size, "mimeType:", mimeType);
+    console.log(
+      "[FileService] readFileContent - fileSize:",
+      stat.size,
+      "mimeType:",
+      mimeType
+    );
 
     // 检查文件大小
     const truncated = stat.size > maxSize;
@@ -823,7 +833,10 @@ export function readFileContent(
       content = buffer.toString("base64");
     }
 
-    console.log("[FileService] readFileContent - success, truncated:", truncated);
+    console.log(
+      "[FileService] readFileContent - success, truncated:",
+      truncated
+    );
     return {
       success: true,
       content,

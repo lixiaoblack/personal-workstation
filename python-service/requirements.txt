@@ -35,3 +35,8 @@ pydantic>=2.0.0      # 数据验证
 
 # ==================== 网页搜索工具 ====================
 duckduckgo-search>=6.0.0  # DuckDuckGo 搜索（无需 API 密钥）
+
+# ==================== OCR 识别 ====================
+paddlepaddle>=2.5.0       # PaddleOCR 依赖
+paddleocr>=2.7.0          # OCR 引擎（中文识别优秀）
+Pillow>=10.0.0            # 图片处理

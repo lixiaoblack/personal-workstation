@@ -71,6 +71,13 @@ class DocumentProcessor:
         ".json": "json",
         ".html": "html",
         ".htm": "html",
+        # 图片格式 - 使用 OCR 提取文字
+        ".png": "image",
+        ".jpg": "image",
+        ".jpeg": "image",
+        ".bmp": "image",
+        ".webp": "image",
+        ".gif": "image",
     }
 
     def __init__(self, encoding: str = "utf-8"):
@@ -289,6 +296,41 @@ class DocumentProcessor:
         except Exception as e:
             logger.error(f"HTML 解析失败: {file_path}, 错误: {e}")
             return []
+
+    def _process_image(self, file_path: str) -> List[str]:
+        """
+        处理图片文件 - 使用 OCR 提取文字
+
+        支持 PNG、JPG、JPEG、BMP、WEBP、GIF 格式
+        使用 PaddleOCR 进行文字识别
+        """
+        try:
+            # 延迟导入 OCR 服务
+            from ocr_service import OcrService
+
+            logger.info(f"正在使用 OCR 识别图片: {file_path}")
+
+            # 获取 OCR 服务实例
+            ocr_service = OcrService.get_instance()
+
+            # 执行 OCR 识别
+            result = ocr_service.recognize_image(file_path)
+
+            if result.success and result.text:
+                logger.info(f"OCR 识别成功，提取文字长度: {len(result.text)}")
+                return [result.text]
+            else:
+                error_msg = result.error or "未能识别出文字"
+                logger.warning(f"OCR 识别失败: {error_msg}")
+                # 返回提示信息而非空列表，让用户知道处理了但没有识别出文字
+                return [f"[图片: {Path(file_path).name}]\nOCR 识别结果: {error_msg}"]
+
+        except ImportError as e:
+            logger.warning(f"OCR 服务未安装，跳过图片处理: {e}")
+            return [f"[图片: {Path(file_path).name}]\n提示: OCR 服务未安装，无法提取图片中的文字"]
+        except Exception as e:
+            logger.error(f"图片 OCR 处理失败: {file_path}, 错误: {e}")
+            return [f"[图片: {Path(file_path).name}]\nOCR 处理错误: {str(e)}"]
 
     def process_directory(
         self,

@@ -419,6 +419,43 @@ export interface ElectronAPI {
   ) => Promise<
     Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
   >;
+
+  // OCR 识别相关
+  ocrRecognize: (imageBase64: string) => Promise<{
+    success: boolean;
+    text: string;
+    blocks: Array<{
+      text: string;
+      confidence: number;
+      box: number[][];
+    }>;
+    error?: string;
+  }>;
+  ocrRecognizeFile: (filePath: string) => Promise<{
+    success: boolean;
+    text: string;
+    blocks: Array<{
+      text: string;
+      confidence: number;
+      box: number[][];
+    }>;
+    error?: string;
+  }>;
+  ocrStatus: () => Promise<{
+    available: boolean;
+    message: string;
+  }>;
+  ocrSaveToKnowledge: (
+    knowledgeId: string,
+    title: string,
+    content: string
+  ) => Promise<{
+    success: boolean;
+    document_id?: string;
+    file_name?: string;
+    chunk_count?: number;
+    error?: string;
+  }>;
 }
 
 declare global {

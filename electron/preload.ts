@@ -156,6 +156,31 @@ export type {
   KnowledgeAllStorageInfoResult,
 };
 
+// OCR 相关类型
+export interface OcrResult {
+  success: boolean;
+  text: string;
+  blocks: Array<{
+    text: string;
+    confidence: number;
+    box: number[][];
+  }>;
+  error?: string;
+}
+
+export interface OcrStatus {
+  available: boolean;
+  message: string;
+}
+
+export interface OcrSaveToKnowledgeResult {
+  success: boolean;
+  document_id?: string;
+  file_name?: string;
+  chunk_count?: number;
+  error?: string;
+}
+
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld("electronAPI", {
   // 用户认证
@@ -468,6 +493,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
       messages,
       modelId
     ),
+
+  // OCR 识别相关
+  ocrRecognize: (imageBase64: string): Promise<OcrResult> =>
+    ipcRenderer.invoke("ocr:recognize", imageBase64),
+  ocrRecognizeFile: (filePath: string): Promise<OcrResult> =>
+    ipcRenderer.invoke("ocr:recognizeFile", filePath),
+  ocrStatus: (): Promise<OcrStatus> => ipcRenderer.invoke("ocr:status"),
+  ocrSaveToKnowledge: (
+    knowledgeId: string,
+    title: string,
+    content: string
+  ): Promise<OcrSaveToKnowledgeResult> =>
+    ipcRenderer.invoke("ocr:saveToKnowledge", knowledgeId, title, content),
 });
 
 // 类型声明
@@ -692,6 +730,16 @@ export interface ElectronAPI {
   ) => Promise<
     Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
   >;
+
+  // OCR 识别相关
+  ocrRecognize: (imageBase64: string) => Promise<OcrResult>;
+  ocrRecognizeFile: (filePath: string) => Promise<OcrResult>;
+  ocrStatus: () => Promise<OcrStatus>;
+  ocrSaveToKnowledge: (
+    knowledgeId: string,
+    title: string,
+    content: string
+  ) => Promise<OcrSaveToKnowledgeResult>;
 }
 
 declare global {

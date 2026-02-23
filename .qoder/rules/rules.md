@@ -39,8 +39,19 @@ personal-workstation/
 │   ├── ai-tasks.md             # AI 任务清单
 │   └── ai-changelog.md         # AI 修改记录
 ├── electron/                   # Electron 主进程
-│   ├── main.ts                 # 主进程入口
-│   └── preload.ts              # 预加载脚本
+│   ├── main.ts                 # 主进程入口（应用生命周期）
+│   ├── preload.ts              # 预加载脚本
+│   ├── ipc/                    # IPC 处理器模块
+│   │   ├── index.ts            # 统一导出
+│   │   ├── registerUserIpc.ts  # 用户认证、存储、媒体权限
+│   │   ├── registerModelIpc.ts # 模型配置、对话管理
+│   │   ├── registerKnowledgeIpc.ts # 知识库管理
+│   │   ├── registerMemoryIpc.ts    # 记忆管理
+│   │   ├── registerOcrIpc.ts       # OCR 识别
+│   │   └── registerPythonIpc.ts    # Python 服务、Ollama、Skills
+│   ├── database/               # 数据库模块
+│   ├── services/               # 服务层
+│   └── types/                  # 类型定义
 ├── src/                        # 渲染进程源码
 │   ├── main.tsx                # React 入口
 │   ├── App.tsx                 # 根组件
@@ -719,7 +730,12 @@ Python 服务采用双通道架构，同时运行 WebSocket 服务和 HTTP API �
 | 文件 | 位置 | 职责 |
 |------|------|------|
 | 主入口 | `python-service/main.py` | 启动 WebSocket 客户端和 HTTP 服务 |
-| 数据服务 | `python-service/db_service.py` | FastAPI HTTP API，统一数据访问层 |
+| 数据服务入口 | `python-service/db_service.py` | FastAPI 应用配置和路由注册 |
+| API 模块 | `python-service/api/` | 模块化 API 层 |
+| ├── database.py | 数据库连接管理 |
+| ├── models.py | Pydantic 数据模型 |
+| ├── direct_api.py | 直接调用接口（供 Agent 使用） |
+| └── routers/ | 各功能路由模块 |
 | 消息处理 | `python-service/message_handler.py` | WebSocket 消息处理和 Agent 调度 |
 | 模型路由 | `python-service/model_router.py` | 多模型支持（OpenAI/Ollama） |
 | 向量检索 | `python-service/rag/` | RAG 知识库检索 |
@@ -765,6 +781,15 @@ Python 服务采用双通道架构，同时运行 WebSocket 服务和 HTTP API �
 |------|------|------|
 | `/api/users/{id}` | GET | 获取用户信息 |
 | `/api/users/{id}` | PUT | 更新用户资料 |
+
+#### OCR API (`/api/ocr/*`)
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/ocr/status` | GET | 获取 OCR 服务状态 |
+| `/api/ocr/recognize` | POST | Base64 图片 OCR 识别 |
+| `/api/ocr/recognize-file` | POST | 文件路径 OCR 识别 |
+| `/api/ocr/save-to-knowledge` | POST | 保存 OCR 结果到知识库 |
 
 ### Skills 系统
 

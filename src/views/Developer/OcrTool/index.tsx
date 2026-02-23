@@ -1,6 +1,6 @@
 /**
  * OcrTool OCR 功能页面
- * 
+ *
  * 功能：
  * 1. 图片输入：拖拽上传、点击选择、粘贴上传（Ctrl/Cmd+V）
  * 2. OCR 识别：调用 Python OCR 服务
@@ -139,9 +139,7 @@ const OcrTool: React.FC = () => {
         // 保存到历史记录
         saveToHistory(imageBase64, result.text);
 
-        message.success(
-          `识别成功，共 ${result.blocks?.length || 0} 个文字块`
-        );
+        message.success(`识别成功，共 ${result.blocks?.length || 0} 个文字块`);
       } else {
         message.error(result.error || "识别失败");
         setOcrResult("");
@@ -247,9 +245,7 @@ const OcrTool: React.FC = () => {
       );
 
       if (result.success) {
-        message.success(
-          `已保存到知识库，共 ${result.chunk_count || 0} 个分块`
-        );
+        message.success(`已保存到知识库，共 ${result.chunk_count || 0} 个分块`);
         setSaveModalVisible(false);
       } else {
         message.error(result.error || "保存失败");
@@ -326,9 +322,7 @@ const OcrTool: React.FC = () => {
             disabled={!ocrResult && !editableResult}
             className="px-3 py-1.5 text-text-secondary hover:bg-bg-tertiary rounded-lg transition-colors flex items-center gap-1.5 text-sm disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-lg">
-              save
-            </span>
+            <span className="material-symbols-outlined text-lg">save</span>
             保存到知识库
           </button>
           <button
@@ -351,7 +345,9 @@ const OcrTool: React.FC = () => {
           )}
           {ocrAvailable === true && (
             <span className="text-xs text-success flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">check_circle</span>
+              <span className="material-symbols-outlined text-sm">
+                check_circle
+              </span>
               OCR 服务就绪
             </span>
           )}
@@ -467,8 +463,8 @@ const OcrTool: React.FC = () => {
                                   block.confidence > 0.9
                                     ? "bg-success/20 text-success"
                                     : block.confidence > 0.7
-                                      ? "bg-warning/20 text-warning"
-                                      : "bg-error/20 text-error"
+                                    ? "bg-warning/20 text-warning"
+                                    : "bg-error/20 text-error"
                                 }`}
                               >
                                 {(block.confidence * 100).toFixed(1)}%

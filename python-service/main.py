@@ -263,11 +263,11 @@ async def main():
     ws_port = int(os.environ.get("WS_PORT", 8765))
     http_port = int(os.environ.get("HTTP_PORT", "8766"))
 
-    # 传递数据库路径给 db_service
+    # 传递数据库路径给数据库模块
     db_path = os.environ.get("DB_PATH")
     if db_path:
-        import db_service
-        db_service.DB_PATH = db_path
+        import api.database as db_module
+        db_module.DB_PATH = db_path
         logger.info(f"使用数据库路径: {db_path}")
 
     service = AgentService()

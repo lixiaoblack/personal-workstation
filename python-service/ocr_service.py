@@ -96,7 +96,8 @@ class OcrService:
             try:
                 # 抑制 PaddleOCR 的日志输出
                 import logging as paddle_logging
-                paddle_logging.getLogger("ppocr").setLevel(paddle_logging.ERROR)
+                paddle_logging.getLogger(
+                    "ppocr").setLevel(paddle_logging.ERROR)
 
                 from paddleocr import PaddleOCR
 

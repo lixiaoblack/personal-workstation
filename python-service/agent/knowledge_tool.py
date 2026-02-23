@@ -367,7 +367,7 @@ class KnowledgeListTool(BaseTool):
     def _run(self) -> str:
         """获取知识库列表"""
         try:
-            from db_service import direct_list_knowledge
+            from api.direct_api import direct_list_knowledge
 
             knowledge_list = direct_list_knowledge()
 
@@ -443,7 +443,7 @@ class KnowledgeCreateTool(BaseTool):
     ) -> str:
         """创建知识库"""
         try:
-            from db_service import direct_create_knowledge
+            from api.direct_api import direct_create_knowledge
 
             kb = direct_create_knowledge(
                 name=name,

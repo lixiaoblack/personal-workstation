@@ -4,6 +4,50 @@
 
 ---
 
+## [0.5.22] - 2026-02-22
+
+### 新增 (Added)
+
+- OCR API 端点
+  - `/api/ocr/status` - 获取 OCR 服务状态
+  - `/api/ocr/recognize` - Base64 图片 OCR 识别
+  - `/api/ocr/recognize-file` - 文件路径 OCR 识别
+  - `/api/ocr/save-to-knowledge` - 保存 OCR 结果到知识库
+
+### 修改 (Changed)
+
+- **Electron main.ts 模块化重构** (从 1280 行 → 145 行)
+  - 创建 `electron/ipc/` 目录，按功能拆分 IPC 处理器
+  - `registerUserIpc.ts` - 用户认证、存储、媒体权限
+  - `registerModelIpc.ts` - 模型配置、对话管理
+  - `registerKnowledgeIpc.ts` - 知识库管理
+  - `registerMemoryIpc.ts` - 记忆管理
+  - `registerOcrIpc.ts` - OCR 识别
+  - `registerPythonIpc.ts` - Python 服务、Ollama、Skills
+  - `main.ts` 简化为应用生命周期入口
+
+- **Python db_service.py 模块化重构** (从 1261 行 → 95 行)
+  - 创建 `python-service/api/` 模块化 API 层
+  - `database.py` - 数据库连接管理
+  - `models.py` - Pydantic 数据模型
+  - `direct_api.py` - 直接调用接口（供 Agent 使用）
+  - `routers/` - 各功能路由模块
+    - `knowledge.py` - 知识库 API
+    - `conversation.py` - 对话和消息 API
+    - `memory.py` - 记忆和摘要 API
+    - `user.py` - 用户 API
+    - `ocr.py` - OCR API
+  - `db_service.py` 简化为 FastAPI 应用入口
+
+### 更新规范
+
+- 更新 `.qoder/rules/rules.md` 目录结构
+  - 添加 `electron/ipc/` 目录说明
+  - 添加 `python-service/api/` 目录说明
+  - 添加 OCR API 端点文档
+
+---
+
 ## [0.5.14] - 2026-02-19
 
 ### 新增 (Added)

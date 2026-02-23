@@ -845,3 +845,350 @@ tools:
 3. **热加载技能**：Skills 支持运行时加载，无需重启服务
 4. **统一数据层**：所有数据库操作通过 HTTP API，便于维护和调试
 
+---
+
+## Python 开发规范
+
+### 目录结构
+
+```
+python-service/
+├── main.py                 # 主入口（服务启动、配置初始化）
+├── db_service.py           # FastAPI HTTP API 入口
+├── requirements.txt        # Python 依赖
+├── api/                    # 模块化 API 层
+│   ├── __init__.py         # 统一导出
+│   ├── database.py         # 数据库连接管理
+│   ├── models.py           # Pydantic 数据模型
+│   ├── direct_api.py       # 直接调用接口（供 Agent 使用）
+│   └── routers/            # 路由模块
+│       ├── knowledge.py    # 知识库 API
+│       ├── conversation.py # 对话和消息 API
+│       ├── memory.py       # 记忆和摘要 API
+│       ├── user.py         # 用户 API
+│       └── ocr.py          # OCR API
+├── agent/                  # Agent 智能体
+│   ├── graph.py            # LangGraph Agent 图定义
+│   ├── state.py            # Agent 状态管理
+│   ├── tools.py            # Agent 工具注册
+│   ├── knowledge_tool.py   # 知识库检索工具
+│   ├── web_search_tool.py  # 网页搜索工具
+│   ├── web_crawler.py      # 网页采集工具
+│   └── skills/             # 技能系统
+│       ├── registry.py     # 技能注册中心
+│       ├── loader.py       # 技能加载器
+│       └── builtin.py      # 内置技能
+├── rag/                    # RAG 知识库
+│   ├── embeddings.py       # 嵌入向量
+│   ├── vectorstore.py      # 向量存储
+│   ├── retriever.py        # 检索器
+│   ├── text_splitter.py    # 文本分块
+│   └── document_processor.py # 文档处理
+├── skills/                 # 内置技能 YAML 文件
+├── message_handler.py      # WebSocket 消息处理
+├── model_router.py         # 多模型路由
+├── ollama_client.py        # Ollama 客户端
+├── ocr_service.py          # OCR 服务
+├── memory_service.py       # 记忆服务
+└── ws_client.py            # WebSocket 客户端
+```
+
+### 代码规范
+
+#### 命名规范
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 模块文件 | snake_case | `knowledge_tool.py` |
+| 类名 | PascalCase | `KnowledgeRetrieverTool` |
+| 函数/方法 | snake_case | `get_knowledge_list()` |
+| 常量 | UPPER_SNAKE_CASE | `DEFAULT_TIMEOUT` |
+| 变量 | snake_case | `knowledge_id` |
+
+#### 导入顺序
+
+```python
+# 1. 标准库
+import os
+import json
+import asyncio
+from typing import Optional, List, Dict
+
+# 2. 第三方库
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from langchain.schema import HumanMessage
+
+# 3. 项目内部模块
+from api.database import get_db
+from api.models import KnowledgeCreate
+```
+
+#### 注释规范
+
+```python
+async def create_knowledge(data: KnowledgeCreate) -> Dict[str, Any]:
+    """
+    创建知识库
+    
+    Args:
+        data: 知识库创建参数，包含名称、描述、嵌入模型配置
+        
+    Returns:
+        创建的知识库信息字典
+        
+    Raises:
+        HTTPException: 数据库操作失败时抛出
+    """
+    # 生成唯一 ID
+    knowledge_id = f"kb_{uuid.uuid4().hex}"
+    # ...
+```
+
+### API 开发规范
+
+#### 路由定义
+
+```python
+# api/routers/knowledge.py
+from fastapi import APIRouter, HTTPException
+from api.database import get_db
+from api.models import KnowledgeCreate
+
+router = APIRouter(prefix="/api/knowledge", tags=["知识库"])
+
+@router.get("/list")
+async def list_knowledge():
+    """获取知识库列表"""
+    # ...
+```
+
+#### 直接调用接口
+
+供 Agent 直接调用，无需 HTTP 开销：
+
+```python
+# api/direct_api.py
+def direct_list_knowledge() -> List[Dict[str, Any]]:
+    """直接调用：获取知识库列表"""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT * FROM knowledge")
+        return [dict(row) for row in cursor.fetchall()]
+```
+
+### Agent 工具开发
+
+#### 工具定义
+
+```python
+from langchain.tools import BaseTool
+from pydantic import Field
+
+class KnowledgeSearchTool(BaseTool):
+    """
+    知识库检索工具
+    
+    使用场景：
+    - 用户询问需要查询知识库的问题
+    - 需要从已有文档中检索相关信息
+    """
+    
+    name = "knowledge_search"
+    description = "在知识库中检索相关内容"
+    
+    def _run(self, query: str, knowledge_id: str) -> str:
+        """执行检索"""
+        # ...
+```
+
+### Skills 技能开发
+
+#### 技能文件格式 (YAML)
+
+```yaml
+# skills/example_skill.yaml
+name: example_skill
+display_name: 示例技能
+description: 这是一个示例技能
+version: "1.0.0"
+author: system
+enabled: true
+
+type: prompt  # prompt | tool | workflow
+trigger: "示例"  # 触发关键词
+
+tags:
+  - 示例
+  - 测试
+
+system_prompt: |
+  你是一个专业的助手...
+
+tools:
+  - name: example_action
+    description: 执行示例操作
+    parameters:
+      type: object
+      properties:
+        param1:
+          type: string
+          description: 参数说明
+      required: [param1]
+```
+
+---
+
+## Electron-Python 通信规范
+
+### 通信架构
+
+项目采用双通道通信架构：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Electron 主进程                        │
+│                                                             │
+│  ┌─────────────────┐          ┌─────────────────┐          │
+│  │ WebSocket Server│          │   HTTP Client   │          │
+│  │   (8765 端口)   │          │                 │          │
+│  └────────┬────────┘          └────────┬────────┘          │
+│           │                            │                    │
+│           │ WebSocket                  │ HTTP               │
+│           │ (流式响应)                  │ (数据操作)          │
+│           ▼                            ▼                    │
+└───────────┼────────────────────────────┼────────────────────┘
+            │                            │
+            │                            │
+┌───────────┼────────────────────────────┼────────────────────┐
+│           │                            │                    │
+│           ▼                            ▼                    │
+│  ┌─────────────────┐          ┌─────────────────┐          │
+│  │ WebSocket Client│          │  FastAPI Server │          │
+│  │  (ws_client.py) │          │ (db_service.py) │          │
+│  └─────────────────┘          │    (8766 端口)  │          │
+│                               └─────────────────┘          │
+│                      Python 服务                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 双通道职责
+
+| 通道 | 端口 | 用途 | 特点 |
+|------|------|------|------|
+| WebSocket | 8765 | Agent 流式响应、实时通信 | 双向、流式 |
+| HTTP API | 8766 | 数据 CRUD 操作 | 请求-响应 |
+
+### WebSocket 通信
+
+#### 连接流程
+
+1. **Electron 启动 WebSocket 服务器** (端口自动分配)
+2. **Python 服务启动**，连接 Electron WebSocket
+3. **Python 发送标识消息** `client_identify`
+4. **Electron 记录 Python 客户端引用**
+5. **同步模型配置**到 Python
+
+#### 消息类型
+
+| 类型 | 方向 | 描述 |
+|------|------|------|
+| `client_identify` | Python → Electron | 客户端标识 |
+| `chat` | Electron → Python | 普通 LLM 聊天 |
+| `agent_chat` | Electron → Python | Agent 模式聊天 |
+| `chat_stream_start` | Python → Electron | 流式开始 |
+| `chat_stream_chunk` | Python → Electron | 流式内容块 |
+| `chat_stream_end` | Python → Electron | 流式结束 |
+| `chat_error` | Python → Electron | 错误消息 |
+| `agent_step` | Python → Electron | Agent 步骤更新 |
+| `agent_thought` | Python → Electron | Agent 思考过程 |
+| `agent_tool_call` | Python → Electron | Agent 工具调用 |
+| `agent_tool_result` | Python → Electron | Agent 工具结果 |
+| `ollama_status` | Electron → Python | Ollama 状态查询 |
+| `skill_execute` | Electron → Python | 执行技能 |
+| `knowledge_create` | Electron → Python | 创建知识库 |
+
+#### 消息格式
+
+```typescript
+// Electron → Python (聊天请求)
+{
+  "type": "agent_chat",
+  "id": "msg_xxx",
+  "timestamp": 1708123456789,
+  "conversationId": 123,
+  "content": "用户消息内容",
+  "modelId": 1,
+  "useTools": true
+}
+
+// Python → Electron (流式响应)
+{
+  "type": "chat_stream_chunk",
+  "id": "msg_xxx",
+  "timestamp": 1708123456790,
+  "content": "响应内容块"
+}
+```
+
+### HTTP API 通信
+
+#### 客户端使用
+
+```typescript
+// electron/services/pythonApiClient.ts
+import { get, post } from './pythonApiClient';
+
+// GET 请求
+const response = await get('/api/knowledge/list');
+
+// POST 请求
+const result = await post('/api/knowledge/create', {
+  name: '新知识库',
+  description: '描述'
+});
+```
+
+#### 健康检查
+
+```typescript
+// 检查 Python HTTP 服务是否可用
+const isHealthy = await checkPythonApiHealth();
+
+// 等待服务就绪
+const isReady = await waitForPythonApi(30000); // 最多等待 30 秒
+```
+
+### IPC 与 Python 通信
+
+当 Electron IPC 需要调用 Python 服务时：
+
+```typescript
+// electron/ipc/registerOcrIpc.ts
+ipcMain.handle("ocr:recognize", async (_event, imageBase64: string) => {
+  // 通过 HTTP API 调用 Python
+  const response = await post("/api/ocr/recognize", { 
+    image_base64: imageBase64 
+  });
+  return response;
+});
+```
+
+### 错误处理
+
+#### WebSocket 断线
+
+- Python 自动重连（5 秒间隔）
+- Electron 广播 `python_status` 通知渲染进程
+
+#### HTTP 请求失败
+
+- 自动重试（最多 3 次）
+- 指数退避延迟
+
+### 开发注意事项
+
+1. **数据操作优先用 HTTP API**：CRUD 操作使用 HTTP API，便于调试
+2. **流式响应用 WebSocket**：聊天、Agent 等需要流式输出的场景
+3. **消息 ID 追踪**：所有消息携带唯一 ID，便于请求-响应匹配
+4. **超时设置**：WebSocket 请求设置合理超时（默认 30 秒）
+5. **日志记录**：关键通信节点记录日志，便于问题排查

@@ -8,10 +8,7 @@ import { ipcMain } from "electron";
 import * as websocketService from "../services/websocketService";
 import * as pythonEnvService from "../services/pythonEnvService";
 import * as pythonProcessService from "../services/pythonProcessService";
-import type {
-  PythonDetectOptions,
-  PythonServiceConfig,
-} from "../types";
+import type { PythonDetectOptions, PythonServiceConfig } from "../types";
 
 /**
  * 注册 Python 服务和 Ollama 相关 IPC 处理器

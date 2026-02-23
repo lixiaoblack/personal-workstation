@@ -139,14 +139,29 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
       filters: [
         {
           name: "支持的文档",
-          extensions: ["md", "txt", "pdf", "json", "html", "png", "jpg", "jpeg", "bmp", "webp", "gif"],
+          extensions: [
+            "md",
+            "txt",
+            "pdf",
+            "json",
+            "html",
+            "png",
+            "jpg",
+            "jpeg",
+            "bmp",
+            "webp",
+            "gif",
+          ],
         },
         { name: "Markdown", extensions: ["md"] },
         { name: "文本文件", extensions: ["txt"] },
         { name: "PDF", extensions: ["pdf"] },
         { name: "JSON", extensions: ["json"] },
         { name: "HTML", extensions: ["html", "htm"] },
-        { name: "图片", extensions: ["png", "jpg", "jpeg", "bmp", "webp", "gif"] },
+        {
+          name: "图片",
+          extensions: ["png", "jpg", "jpeg", "bmp", "webp", "gif"],
+        },
       ],
     });
     return result;

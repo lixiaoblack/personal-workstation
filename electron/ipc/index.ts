@@ -5,7 +5,12 @@
  */
 
 import type { BrowserWindow } from "electron";
-import { registerUserIpc, getCurrentToken, setCurrentToken, getCurrentUser } from "./registerUserIpc";
+import {
+  registerUserIpc,
+  getCurrentToken,
+  setCurrentToken,
+  getCurrentUser,
+} from "./registerUserIpc";
 import { registerModelIpc } from "./registerModelIpc";
 import { registerKnowledgeIpc } from "./registerKnowledgeIpc";
 import { registerMemoryIpc } from "./registerMemoryIpc";

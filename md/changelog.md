@@ -13,6 +13,7 @@
   - Electron-Python 通信规范（双通道架构、消息协议）
   - Agent 工具开发规范
   - Skills 技能开发规范
+  - Git 发布与打包规范（版本号、发布流程、CI/CD）
 
 +- OCR API 端点
   - `/api/ocr/status` - 获取 OCR 服务状态

@@ -1192,3 +1192,213 @@ ipcMain.handle("ocr:recognize", async (_event, imageBase64: string) => {
 3. **消息 ID 追踪**：所有消息携带唯一 ID，便于请求-响应匹配
 4. **超时设置**：WebSocket 请求设置合理超时（默认 30 秒）
 5. **日志记录**：关键通信节点记录日志，便于问题排查
+
+---
+
+## Git 发布与打包规范
+
+### 版本号规范
+
+项目遵循语义化版本号 (Semantic Versioning)：`MAJOR.MINOR.PATCH`
+
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| MAJOR | 不兼容的 API 变更 | 1.0.0 → 2.0.0 |
+| MINOR | 向后兼容的功能新增 | 1.0.0 → 1.1.0 |
+| PATCH | 向后兼容的问题修复 | 1.0.0 → 1.0.1 |
+
+### 发布流程
+
+#### 1. 准备发布
+
+```bash
+# 1. 确保在主分支
+git checkout main
+
+# 2. 拉取最新代码
+git pull origin main
+
+# 3. 检查代码质量
+pnpm lint
+
+# 4. 本地测试构建
+pnpm build
+```
+
+#### 2. 更新版本号
+
+```bash
+# 更新 package.json 版本号
+# PATCH 版本（修复问题）
+npm version patch -m "chore: 发布 v%s"
+
+# MINOR 版本（新增功能）
+npm version minor -m "chore: 发布 v%s"
+
+# MAJOR 版本（重大更新）
+npm version major -m "chore: 发布 v%s"
+```
+
+#### 3. 更新 Changelog
+
+在 `md/changelog.md` 中添加版本记录：
+
+```markdown
+## [x.x.x] - YYYY-MM-DD
+
+### 新增 (Added)
+- 新功能描述
+
+### 修改 (Changed)
+- 修改内容描述
+
+### 修复 (Fixed)
+- 修复问题描述
+```
+
+#### 4. 提交并推送标签
+
+```bash
+# 提交更改
+git add .
+git commit -m "chore: 发布 vX.X.X"
+
+# 推送代码和标签
+git push origin main --tags
+```
+
+### CI/CD 自动构建
+
+项目使用 GitHub Actions 自动构建和发布。
+
+#### 构建配置文件
+
+- 配置文件：`.github/workflows/build.yml`
+- 触发条件：推送 `v*` 标签 或 手动触发
+
+#### 构建流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    推送 v* 标签                              │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+          ┌──────────────┴──────────────┐
+          ▼                              ▼
+┌─────────────────────┐      ┌─────────────────────┐
+│   build-mac Job     │      │   build-win Job     │
+│   (macOS-latest)    │      │   (Windows-latest)  │
+├─────────────────────┤      ├─────────────────────┤
+│ 1. Setup Node.js 20 │      │ 1. Setup Node.js 20 │
+│ 2. Setup Python 3.11│      │ 2. Setup Python 3.11│
+│ 3. Install pnpm     │      │ 3. Install npm      │
+│ 4. Install deps     │      │ 4. Install deps     │
+│ 5. Build app        │      │ 5. Build app        │
+│ 6. Upload .dmg      │      │ 6. Upload .exe      │
+└──────────┬──────────┘      └──────────┬──────────┘
+           │                            │
+           └──────────────┬─────────────┘
+                          ▼
+              ┌─────────────────────┐
+              │    release Job      │
+              │   (Ubuntu-latest)   │
+              ├─────────────────────┤
+              │ 1. Download 产物    │
+              │ 2. Create Release   │
+              │ 3. Upload 文件      │
+              └─────────────────────┘
+```
+
+#### 构建产物
+
+| 平台 | 文件格式 | 构建环境 |
+|------|----------|----------|
+| macOS (Apple Silicon) | `.dmg` | macos-latest |
+| Windows | `.exe` | windows-latest |
+
+### 手动触发构建
+
+在 GitHub 仓库页面：
+
+1. 进入 **Actions** 标签页
+2. 选择 **Build and Release** 工作流
+3. 点击 **Run workflow**
+4. 选择分支后运行
+
+### 本地打包测试
+
+```bash
+# macOS
+pnpm build:mac
+
+# Windows
+pnpm build:win
+
+# 同时构建两个平台
+pnpm build:all
+```
+
+### 打包配置
+
+#### Electron Builder 配置
+
+项目使用 `electron-builder` 进行打包，配置位于 `package.json`：
+
+```json
+{
+  "build": {
+    "appId": "com.personal.workstation",
+    "productName": "Personal Workstation",
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    }
+  }
+}
+```
+
+#### Python 服务打包
+
+Python 服务使用 PyInstaller 打包为独立可执行文件：
+
+- 配置文件：`python-service/build.spec`
+- 构建脚本：`python-service/build.py`
+- 打包后的可执行文件随应用一起分发
+
+### 发布检查清单
+
+发布前必须确认：
+
+- [ ] 代码已通过 `pnpm lint` 检查
+- [ ] 版本号已更新（package.json）
+- [ ] Changelog 已更新（md/changelog.md）
+- [ ] 本地构建测试通过
+- [ ] 关键功能测试通过
+- [ ] 标签已推送至 GitHub
+
+### 常见问题
+
+#### 构建失败
+
+1. **依赖安装失败**：检查 `requirements.txt` 和 `package.json` 是否有冲突
+2. **Python 打包失败**：确保 PyInstaller 版本为 6.19.0
+3. **签名失败**：检查 `GH_TOKEN` 是否正确配置
+
+#### 版本回退
+
+```bash
+# 删除远程标签
+git push --delete origin vX.X.X
+
+# 删除本地标签
+git tag -d vX.X.X
+
+# 回退提交后重新打标签
+git reset --hard HEAD~1
+```

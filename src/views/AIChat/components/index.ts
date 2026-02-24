@@ -11,3 +11,4 @@ export { default as AIChatInput } from "./AIChatInput";
 export { default as KnowledgeSelectCard } from "./KnowledgeSelectCard";
 export { default as KnowledgeSuggestion } from "./KnowledgeSuggestion";
 export { default as AttachmentFileCard } from "./AttachmentFileCard";
+export { default as AskCard } from "./AskCard";

@@ -273,8 +273,12 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     // 获取知识库建议项
     const getKnowledgeItems = useCallback(
       (keyword?: string): SuggestionItem[] => {
-        const kw = keyword?.toLowerCase() || "";
-        return knowledgeList
+        // keyword 格式："/" 或 "/关键词"，需要去掉开头的 /
+        const kw = keyword?.startsWith("/") 
+          ? keyword.slice(1).toLowerCase() 
+          : (keyword?.toLowerCase() || "");
+        console.log("[AIChatInput] getKnowledgeItems:", { keyword, kw, knowledgeListCount: knowledgeList.length });
+        const items = knowledgeList
           .filter(
             (kb) =>
               !kw ||
@@ -289,6 +293,8 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
               kb.description ? ` · ${kb.description}` : ""
             }`,
           }));
+        console.log("[AIChatInput] getKnowledgeItems result:", items.length, items);
+        return items;
       },
       [knowledgeList]
     );

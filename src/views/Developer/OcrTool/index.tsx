@@ -7,10 +7,10 @@
  * 3. 结果处理：复制到剪贴板、保存到知识库
  * 4. 历史记录：最近识别记录
  */
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { App, Upload, Modal, Input, Select, Spin } from "antd";
 import type { UploadFile } from "antd";
-import { KnowledgeInfo, OcrHistoryItem } from "./types";
+import { KnowledgeInfo, OcrHistoryItem, OcrBlock } from "./types";
 
 const { TextArea } = Input;
 
@@ -22,9 +22,7 @@ const OcrTool: React.FC = () => {
   const { message, modal } = App.useApp();
   const [imagePreview, setImagePreview] = useState<string>("");
   const [ocrResult, setOcrResult] = useState<string>("");
-  const [ocrBlocks, setOcrBlocks] = useState<
-    Array<{ text: string; confidence: number }>
-  >([]);
+  const [ocrBlocks, setOcrBlocks] = useState<OcrBlock[]>([]);
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [ocrAvailable, setOcrAvailable] = useState<boolean | null>(null);
@@ -38,6 +36,11 @@ const OcrTool: React.FC = () => {
   const [selectedKnowledge, setSelectedKnowledge] = useState<string>("");
   const [documentTitle, setDocumentTitle] = useState<string>("");
   const [saving, setSaving] = useState(false);
+
+  // 图片标注相关状态
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // 页面加载时检查 OCR 服务状态和加载历史记录
   useEffect(() => {
@@ -112,6 +115,7 @@ const OcrTool: React.FC = () => {
     reader.onload = () => {
       const base64 = reader.result as string;
       setImagePreview(base64);
+      setSelectedBlockIndex(null); // 重置选中状态
       performOcr(base64);
     };
     reader.readAsDataURL(file);
@@ -120,12 +124,19 @@ const OcrTool: React.FC = () => {
     return false;
   };
 
+  // 图片加载完成时获取尺寸
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+  };
+
   // 执行 OCR 识别
   const performOcr = async (imageBase64: string) => {
     setLoading(true);
     setOcrResult("");
     setOcrBlocks([]);
     setEditableResult("");
+    setSelectedBlockIndex(null);
 
     try {
       console.log("[OcrTool] 开始 OCR 识别...");
@@ -150,6 +161,36 @@ const OcrTool: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 点击文字块时高亮对应区域
+  const handleBlockClick = (index: number) => {
+    setSelectedBlockIndex(selectedBlockIndex === index ? null : index);
+  };
+
+  // 计算边界框的显示位置（相对于图片容器）
+  const getBoxStyle = (box: number[][], containerWidth: number, containerHeight: number) => {
+    if (!box || box.length < 4) return null;
+
+    // box 是四个点的坐标 [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+    // 找出边界框的左上角和右下角
+    const xCoords = box.map(p => p[0]);
+    const yCoords = box.map(p => p[1]);
+    const minX = Math.min(...xCoords);
+    const maxX = Math.max(...xCoords);
+    const minY = Math.min(...yCoords);
+    const maxY = Math.max(...yCoords);
+
+    // 计算缩放比例
+    const scaleX = containerWidth / imageDimensions.width;
+    const scaleY = containerHeight / imageDimensions.height;
+
+    return {
+      left: minX * scaleX,
+      top: minY * scaleY,
+      width: (maxX - minX) * scaleX,
+      height: (maxY - minY) * scaleY,
+    };
   };
 
   // 粘贴上传
@@ -195,6 +236,7 @@ const OcrTool: React.FC = () => {
     setEditableResult("");
     setIsEditing(false);
     setFileList([]);
+    setSelectedBlockIndex(null);
   };
 
   // 打开保存到知识库弹窗
@@ -394,12 +436,79 @@ const OcrTool: React.FC = () => {
                 </p>
               </Upload.Dragger>
             ) : (
-              <div className="flex-1 bg-bg-secondary border border-border rounded-lg overflow-hidden flex items-center justify-center relative">
+              <div
+                ref={imageContainerRef}
+                className="flex-1 bg-bg-secondary border border-border rounded-lg overflow-hidden flex items-center justify-center relative"
+              >
+                {/* 图片 */}
                 <img
                   src={imagePreview}
                   alt="预览"
                   className="max-w-full max-h-full object-contain"
+                  onLoad={handleImageLoad}
                 />
+
+                {/* 边界框叠加层 */}
+                {imageDimensions.width > 0 && imageContainerRef.current && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    {ocrBlocks.map((block, index) => {
+                      const containerRect = imageContainerRef.current?.getBoundingClientRect();
+                      if (!containerRect) return null;
+
+                      // 计算图片在容器中的实际显示区域（object-contain 模式）
+                      const containerAspect = containerRect.width / containerRect.height;
+                      const imageAspect = imageDimensions.width / imageDimensions.height;
+
+                      let displayWidth, displayHeight, offsetX, offsetY;
+                      if (imageAspect > containerAspect) {
+                        // 图片宽度为约束
+                        displayWidth = containerRect.width;
+                        displayHeight = containerRect.width / imageAspect;
+                        offsetX = 0;
+                        offsetY = (containerRect.height - displayHeight) / 2;
+                      } else {
+                        // 图片高度为约束
+                        displayHeight = containerRect.height;
+                        displayWidth = containerRect.height * imageAspect;
+                        offsetX = (containerRect.width - displayWidth) / 2;
+                        offsetY = 0;
+                      }
+
+                      const boxStyle = getBoxStyle(block.box, displayWidth, displayHeight);
+                      if (!boxStyle) return null;
+
+                      const isSelected = selectedBlockIndex === index;
+
+                      return (
+                        <div
+                          key={index}
+                          className={`absolute border-2 transition-all duration-200 ${
+                            isSelected
+                              ? "border-primary bg-primary/20 shadow-lg shadow-primary/30"
+                              : "border-success/50 bg-success/5"
+                          }`}
+                          style={{
+                            left: offsetX + boxStyle.left,
+                            top: offsetY + boxStyle.top,
+                            width: boxStyle.width,
+                            height: boxStyle.height,
+                          }}
+                        >
+                          {/* 序号标签 */}
+                          <div
+                            className={`absolute -top-5 left-0 text-[10px] px-1 rounded ${
+                              isSelected ? "bg-primary text-white" : "bg-success text-white"
+                            }`}
+                          >
+                            {index + 1}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 加载中遮罩 */}
                 {loading && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <Spin size="large" />
@@ -444,22 +553,36 @@ const OcrTool: React.FC = () => {
                   <div className="space-y-2">
                     {/* 显示置信度信息 */}
                     {ocrBlocks.length > 0 && (
-                      <div className="mb-3 p-2 bg-bg-tertiary rounded text-xs">
-                        <div className="text-text-tertiary mb-1">
-                          识别详情（置信度）：
+                      <div className="mb-3 p-2 bg-bg-tertiary rounded text-xs max-h-48 overflow-auto">
+                        <div className="text-text-tertiary mb-2 sticky top-0 bg-bg-tertiary">
+                          识别详情（点击高亮对应区域）：
                         </div>
-                        <div className="max-h-32 overflow-auto space-y-1">
+                        <div className="space-y-1">
                           {ocrBlocks.map((block, index) => (
                             <div
                               key={index}
-                              className="flex items-center gap-2"
+                              onClick={() => handleBlockClick(index)}
+                              className={`flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
+                                selectedBlockIndex === index
+                                  ? "bg-primary/20 border border-primary"
+                                  : "hover:bg-bg-secondary border border-transparent"
+                              }`}
                             >
-                              <span className="text-text-secondary">
-                                {block.text.substring(0, 30)}
-                                {block.text.length > 30 ? "..." : ""}
+                              <span
+                                className={`w-5 h-5 flex items-center justify-center text-[10px] rounded ${
+                                  selectedBlockIndex === index
+                                    ? "bg-primary text-white"
+                                    : "bg-success text-white"
+                                }`}
+                              >
+                                {index + 1}
+                              </span>
+                              <span className="text-text-secondary flex-1 truncate">
+                                {block.text.substring(0, 40)}
+                                {block.text.length > 40 ? "..." : ""}
                               </span>
                               <span
-                                className={`text-xs px-1.5 py-0.5 rounded ${
+                                className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
                                   block.confidence > 0.9
                                     ? "bg-success/20 text-success"
                                     : block.confidence > 0.7
@@ -467,7 +590,7 @@ const OcrTool: React.FC = () => {
                                     : "bg-error/20 text-error"
                                 }`}
                               >
-                                {(block.confidence * 100).toFixed(1)}%
+                                {(block.confidence * 100).toFixed(0)}%
                               </span>
                             </div>
                           ))}
@@ -475,7 +598,7 @@ const OcrTool: React.FC = () => {
                       </div>
                     )}
                     {/* 显示完整结果 */}
-                    <pre className="text-sm font-mono text-text-primary whitespace-pre-wrap bg-bg-secondary p-3 rounded-lg border border-border">
+                    <pre className="text-sm font-mono text-text-primary whitespace-pre-wrap bg-bg-secondary p-3 rounded-lg border border-border max-h-64 overflow-auto">
                       {ocrResult}
                     </pre>
                   </div>

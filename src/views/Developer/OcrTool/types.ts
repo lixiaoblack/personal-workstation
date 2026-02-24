@@ -8,6 +8,13 @@ export interface KnowledgeInfo {
   name: string;
 }
 
+// OCR 文字块
+export interface OcrBlock {
+  text: string;
+  confidence: number;
+  box: number[][];
+}
+
 // OCR 历史记录项
 export interface OcrHistoryItem {
   id: string;

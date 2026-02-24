@@ -44,10 +44,14 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
       (info?: string) => {
         console.log("[KnowledgeSuggestion] getItems 调用, info:", info, "knowledgeList:", knowledgeList?.length);
         const result: SuggestionItem[] = [];
-        // info 是用户输入的 '/' 后面的内容
-        const keyword = info?.toLowerCase() || "";
+        // info 是用户输入的触发字符串，如 "/" 或 "/关键词"
+        // 需要去掉开头的 "/" 得到真正的搜索关键词
+        const keyword = info?.startsWith("/") ? info.slice(1).toLowerCase() : (info?.toLowerCase() || "");
+
+        console.log("[KnowledgeSuggestion] keyword:", keyword, "knowledgeList:", knowledgeList);
 
         knowledgeList.forEach((kb) => {
+          console.log("[KnowledgeSuggestion] 检查知识库:", kb.name, kb);
           // 知识库匹配搜索关键词
           const kbMatch =
             !keyword ||
@@ -83,6 +87,7 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
           }
         });
 
+        console.log("[KnowledgeSuggestion] getItems 结果:", result.length, result);
         return result;
       },
       [knowledgeList, knowledgeDocuments]

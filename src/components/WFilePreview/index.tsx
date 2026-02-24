@@ -5,7 +5,7 @@
  * - Markdown (.md)
  * - JSON (.json)
  * - PDF (.pdf)
- * - 图片 (.jpg, .jpeg, .png, .gif, .webp, .svg)
+ * - 图片 (.jpg, .jpeg, .png, .gif, .webp, .svg) - 支持 OCR 识别和标注
  * - 文本文件 (.txt, .log, .csv)
  * - 代码文件 (.js, .ts, .jsx, .tsx, .py, .java, .css, .html, etc.)
  * - Word 文档 (.doc, .docx) - 需要转换为其他格式或提示下载
@@ -21,18 +21,26 @@
  * />
  * ```
  */
-import React, { useState, useEffect, useMemo } from "react";
-import { Modal, Spin, Empty, Typography } from "antd";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Modal, Spin, Empty, Typography, Button, Tooltip } from "antd";
 import {
   FileTextOutlined,
   FilePdfOutlined,
   FileImageOutlined,
   CodeOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import { CodeHighlighter } from "@ant-design/x";
 
 const { Text, Paragraph } = Typography;
+
+// OCR 文字块类型
+interface OcrBlock {
+  text: string;
+  confidence: number;
+  box: number[][];
+}
 
 // 文件类型分类
 type FileCategory =
@@ -148,6 +156,8 @@ interface WFilePreviewProps {
   fileType: string;
   onClose: () => void;
   width?: number | string;
+  /** 是否启用 OCR 识别（仅图片类型有效） */
+  enableOcr?: boolean;
 }
 
 const WFilePreview: React.FC<WFilePreviewProps> = ({
@@ -156,13 +166,23 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   fileName,
   fileType,
   onClose,
-  width = 900,
+  width = 1100,
+  enableOcr = true,
 }) => {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
-  const [imageDataUrl, setImageDataUrl] = useState<string>(""); // 图片 Base64 数据 URL
+  const [imageDataUrl, setImageDataUrl] = useState<string>("");
+
+  // OCR 相关状态
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrBlocks, setOcrBlocks] = useState<OcrBlock[]>([]);
+  const [ocrText, setOcrText] = useState<string>("");
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [showOcrPanel, setShowOcrPanel] = useState(false);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const category = useMemo(() => getFileCategory(fileType), [fileType]);
 
@@ -195,6 +215,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
             // 构建 Base64 数据 URL
             const dataUrl = `data:${result.mimeType};base64,${result.content}`;
             setImageDataUrl(dataUrl);
+
+            // 自动执行 OCR 识别
+            if (enableOcr) {
+              performOcr(dataUrl);
+            }
           } else {
             setError(result.error || "无法读取图片内容");
           }
@@ -252,7 +277,74 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
       .finally(() => {
         setLoading(false);
       });
-  }, [visible, filePath, category]);
+  }, [visible, filePath, category, enableOcr]);
+
+  // 执行 OCR 识别
+  const performOcr = async (imageBase64: string) => {
+    setOcrLoading(true);
+    setOcrBlocks([]);
+    setOcrText("");
+    setSelectedBlockIndex(null);
+
+    try {
+      console.log("[WFilePreview] 开始 OCR 识别...");
+      const result = await window.electronAPI.ocrRecognize(imageBase64);
+
+      if (result.success) {
+        setOcrText(result.text || "");
+        setOcrBlocks(result.blocks || []);
+        if (result.blocks && result.blocks.length > 0) {
+          setShowOcrPanel(true);
+        }
+        console.log(`[WFilePreview] OCR 识别成功，共 ${result.blocks?.length || 0} 个文字块`);
+      } else {
+        console.warn("[WFilePreview] OCR 识别失败:", result.error);
+      }
+    } catch (error) {
+      console.error("[WFilePreview] OCR 识别失败:", error);
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  // 图片加载完成时获取尺寸
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+  };
+
+  // 点击文字块时高亮对应区域
+  const handleBlockClick = (index: number) => {
+    setSelectedBlockIndex(selectedBlockIndex === index ? null : index);
+  };
+
+  // 计算边界框的显示位置
+  const getBoxStyle = (box: number[][], containerWidth: number, containerHeight: number) => {
+    if (!box || box.length < 4 || imageDimensions.width === 0) return null;
+
+    const xCoords = box.map((p) => p[0]);
+    const yCoords = box.map((p) => p[1]);
+    const minX = Math.min(...xCoords);
+    const maxX = Math.max(...xCoords);
+    const minY = Math.min(...yCoords);
+    const maxY = Math.max(...yCoords);
+
+    const scaleX = containerWidth / imageDimensions.width;
+    const scaleY = containerHeight / imageDimensions.height;
+
+    return {
+      left: minX * scaleX,
+      top: minY * scaleY,
+      width: (maxX - minX) * scaleX,
+      height: (maxY - minY) * scaleY,
+    };
+  };
+
+  // 复制 OCR 结果
+  const handleCopyOcrText = async () => {
+    if (!ocrText) return;
+    await navigator.clipboard.writeText(ocrText);
+  };
 
   // 渲染预览内容
   const renderPreview = () => {
@@ -270,17 +362,170 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
 
     switch (category) {
       case "image":
-        // 图片预览 - 使用 Base64 数据 URL
+        // 图片预览 - 使用 Base64 数据 URL，支持 OCR 标注
         if (!imageDataUrl) {
           return <Empty description="图片加载中..." className="py-20" />;
         }
         return (
-          <div className="flex items-center justify-center p-4 bg-bg-tertiary rounded-lg min-h-[400px]">
-            <img
-              src={imageDataUrl}
-              alt={fileName}
-              className="max-w-full max-h-[70vh] object-contain rounded"
-            />
+          <div className="flex gap-4 h-[70vh]">
+            {/* 左侧：图片预览 */}
+            <div
+              ref={imageContainerRef}
+              className="flex-1 bg-bg-tertiary rounded-lg overflow-hidden flex items-center justify-center relative"
+            >
+              <img
+                src={imageDataUrl}
+                alt={fileName}
+                className="max-w-full max-h-full object-contain"
+                onLoad={handleImageLoad}
+              />
+
+              {/* OCR 边界框叠加层 */}
+              {imageDimensions.width > 0 && ocrBlocks.length > 0 && imageContainerRef.current && (
+                <div className="absolute inset-0 pointer-events-none">
+                  {ocrBlocks.map((block, index) => {
+                    const containerRect = imageContainerRef.current?.getBoundingClientRect();
+                    if (!containerRect) return null;
+
+                    const containerAspect = containerRect.width / containerRect.height;
+                    const imageAspect = imageDimensions.width / imageDimensions.height;
+
+                    let displayWidth, displayHeight, offsetX, offsetY;
+                    if (imageAspect > containerAspect) {
+                      displayWidth = containerRect.width;
+                      displayHeight = containerRect.width / imageAspect;
+                      offsetX = 0;
+                      offsetY = (containerRect.height - displayHeight) / 2;
+                    } else {
+                      displayHeight = containerRect.height;
+                      displayWidth = containerRect.height * imageAspect;
+                      offsetX = (containerRect.width - displayWidth) / 2;
+                      offsetY = 0;
+                    }
+
+                    const boxStyle = getBoxStyle(block.box, displayWidth, displayHeight);
+                    if (!boxStyle) return null;
+
+                    const isSelected = selectedBlockIndex === index;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`absolute border-2 transition-all duration-200 ${
+                          isSelected
+                            ? "border-primary bg-primary/20 shadow-lg shadow-primary/30"
+                            : "border-success/50 bg-success/5"
+                        }`}
+                        style={{
+                          left: offsetX + boxStyle.left,
+                          top: offsetY + boxStyle.top,
+                          width: boxStyle.width,
+                          height: boxStyle.height,
+                        }}
+                      >
+                        <div
+                          className={`absolute -top-5 left-0 text-[10px] px-1 rounded ${
+                            isSelected ? "bg-primary text-white" : "bg-success text-white"
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* OCR 加载中遮罩 */}
+              {ocrLoading && (
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                  <Spin size="large" tip="OCR 识别中..." />
+                </div>
+              )}
+            </div>
+
+            {/* 右侧：OCR 结果面板 */}
+            {showOcrPanel && ocrBlocks.length > 0 && (
+              <div className="w-80 flex flex-col bg-bg-secondary rounded-lg border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-bg-tertiary border-b border-border">
+                  <span className="text-xs font-medium text-text-secondary">
+                    OCR 结果 ({ocrBlocks.length} 个文字块)
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Tooltip title="复制全部文字">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={handleCopyOcrText}
+                      />
+                    </Tooltip>
+                    <Button
+                      type="text"
+                      size="small"
+                      onClick={() => setShowOcrPanel(false)}
+                    >
+                      收起
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto p-2 space-y-1">
+                  {ocrBlocks.map((block, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleBlockClick(index)}
+                      className={`p-2 rounded cursor-pointer transition-colors text-xs ${
+                        selectedBlockIndex === index
+                          ? "bg-primary/20 border border-primary"
+                          : "hover:bg-bg-tertiary border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-5 h-5 flex items-center justify-center text-[10px] rounded flex-shrink-0 ${
+                            selectedBlockIndex === index
+                              ? "bg-primary text-white"
+                              : "bg-success text-white"
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="text-text-secondary flex-1 truncate">
+                          {block.text}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded flex-shrink-0 ${
+                            block.confidence > 0.9
+                              ? "bg-success/20 text-success"
+                              : block.confidence > 0.7
+                              ? "bg-warning/20 text-warning"
+                              : "bg-error/20 text-error"
+                          }`}
+                        >
+                          {(block.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* OCR 结果切换按钮 */}
+            {!showOcrPanel && ocrBlocks.length > 0 && (
+              <div className="absolute right-4 top-4">
+                <Tooltip title="显示 OCR 结果">
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<FileTextOutlined />}
+                    onClick={() => setShowOcrPanel(true)}
+                  >
+                    OCR ({ocrBlocks.length})
+                  </Button>
+                </Tooltip>
+              </div>
+            )}
           </div>
         );
 
@@ -379,6 +624,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
     <div className="flex items-center gap-2">
       {getFileIcon(category)}
       <span>{fileName}</span>
+      {category === "image" && ocrBlocks.length > 0 && (
+        <span className="text-xs text-success ml-2">
+          (已识别 {ocrBlocks.length} 个文字块)
+        </span>
+      )}
     </div>
   );
 

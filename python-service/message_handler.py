@@ -545,15 +545,22 @@ class MessageHandler:
                     att_path = att.get('path', '')
                     att_type = att.get('type', 'other')
                     att_size = att.get('size', 0)
-                    attachment_info.append(f"- 文件名: {att_name}\n  路径: {att_path}\n  类型: {att_type}\n  大小: {att_size} 字节")
+                    # 更清晰地标注文件路径，让 Agent 能正确识别
+                    attachment_info.append(f"""文件名称: {att_name}
+文件路径: {att_path}
+文件类型: {att_type}
+文件大小: {att_size} 字节""")
                 
                 attachment_context = f"""
 [重要：用户上传了以下文件]
 {chr(10).join(attachment_info)}
 
-[指令] 用户上传了文件并询问相关问题，你必须先使用 file_read 工具读取文件内容，然后分析并回答用户问题。
-**不要直接回答，必须先调用 file_read 工具读取文件！**
-调用示例：file_read(file_path="文件路径")
+[指令] 用户上传了文件并询问相关问题，你必须先使用 file_read 工具读取文件内容。
+
+调用示例：
+file_read(file_path="{attachments[0].get('path', '')}")
+
+**不要使用其他路径，必须使用上面列出的文件路径！**
 """
                 logger.info(f"[DeepAgent] 已构建附件上下文，长度: {len(attachment_context)}")
 

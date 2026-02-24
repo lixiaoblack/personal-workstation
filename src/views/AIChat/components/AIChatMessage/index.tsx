@@ -20,6 +20,16 @@ import KnowledgeDocumentListCard, {
 } from "../KnowledgeDocumentListCard";
 import type { Message, ModelConfig } from "@/types/electron";
 
+// 附件文件类型
+interface AttachmentFile {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  mimeType: string;
+  type: "image" | "document" | "code" | "other";
+}
+
 interface AIChatMessageProps {
   message: Message;
   currentModel: ModelConfig | null;
@@ -79,6 +89,27 @@ function extractDocumentsFromSteps(
   return null;
 }
 
+// 格式化文件大小
+function formatFileSize(size: number): string {
+  if (size < 1024) return `${size}B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)}KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+// 获取文件图标
+function getFileIcon(type: string): string {
+  switch (type) {
+    case "image":
+      return "image";
+    case "document":
+      return "description";
+    case "code":
+      return "code";
+    default:
+      return "insert_drive_file";
+  }
+}
+
 const AIChatMessage: React.FC<AIChatMessageProps> = memo(
   ({ message, currentModel }) => {
     const isUser = message.role === "user";
@@ -109,6 +140,12 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
         (message.metadata?.agentSteps as AgentStepItem[]) || [];
       return extractDocumentsFromSteps(agentStepsInMessage);
     }, [isUser, message.metadata?.agentSteps]);
+
+    // 提取用户消息的附件列表
+    const attachments = useMemo(() => {
+      if (!isUser) return [];
+      return (message.metadata?.attachments as AttachmentFile[]) || [];
+    }, [isUser, message.metadata?.attachments]);
 
     // 打字机效果 - 快速模式（只对 AI 消息生效）
     const [enableTypewriter, setEnableTypewriter] = useState(!isUser);
@@ -200,6 +237,32 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
                   defaultExpanded={false}
                 />
               </Think>
+            )}
+
+            {/* 用户消息的附件卡片 */}
+            {isUser && attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {attachments.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-2 px-3 py-2 bg-bg-tertiary rounded-lg border border-border"
+                  >
+                    {/* 文件图标 */}
+                    <span className="material-symbols-outlined text-lg text-primary">
+                      {getFileIcon(file.type)}
+                    </span>
+                    {/* 文件信息 */}
+                    <div className="flex flex-col">
+                      <span className="text-xs text-text-primary max-w-[150px] truncate font-medium">
+                        {file.name}
+                      </span>
+                      <span className="text-[10px] text-text-tertiary">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* 消息气泡 */}

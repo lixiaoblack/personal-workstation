@@ -460,34 +460,53 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
             onSelectKnowledge={onSelectKnowledgeQuick}
             onSelectDocument={onSelectDocumentQuick}
           >
-            {({ onKeyDown: onSuggestionKeyDown }) => (
-              <Sender
-                value={inputValue}
-                onChange={handleChangeWithUrlDetection}
-                onSubmit={handleSubmit}
-                onCancel={isLoading ? handleCancel : undefined}
-                onKeyDown={(e) => {
-                  onSuggestionKeyDown(e);
-                }}
-                onPaste={handlePaste}
-                loading={isLoading}
-                disabled={isDisabled}
-                placeholder={
-                  selectedKnowledgeDisplay
-                    ? `针对「${selectedKnowledgeDisplay}」提问...`
-                    : "在这里输入您的问题，输入 / 快速选择知识库"
+            {({ onTrigger, onKeyDown: onSuggestionKeyDown, open }) => {
+              // 存储触发函数供 onChange 使用
+              const handleInputChange = (value: string) => {
+                handleChangeWithUrlDetection(value);
+                
+                // 检测 '/' 输入，触发 Suggestion
+                if (value.endsWith("/") && !open) {
+                  onTrigger(value.slice(-1));
+                } else if (!value.includes("/") && open) {
+                  onTrigger(false); // 关闭
+                } else if (open && value.includes("/")) {
+                  // 更新搜索关键词
+                  const slashIndex = value.lastIndexOf("/");
+                  const keyword = value.slice(slashIndex + 1);
+                  onTrigger("/" + keyword);
                 }
-                submitType="enter"
-                autoSize={{ minRows: 3, maxRows: 8 }}
-                header={header}
-                footer={footer}
-                allowSpeech={allowSpeechConfig}
-                className="bg-bg-secondary border border-border rounded-2xl shadow-xl focus-within:border-primary/50 transition-all"
-                classNames={{
-                  input: "text-text-primary placeholder:text-text-tertiary",
-                }}
-              />
-            )}
+              };
+
+              return (
+                <Sender
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onSubmit={handleSubmit}
+                  onCancel={isLoading ? handleCancel : undefined}
+                  onKeyDown={(e) => {
+                    onSuggestionKeyDown(e);
+                  }}
+                  onPaste={handlePaste}
+                  loading={isLoading}
+                  disabled={isDisabled}
+                  placeholder={
+                    selectedKnowledgeDisplay
+                      ? `针对「${selectedKnowledgeDisplay}」提问...`
+                      : "在这里输入您的问题，输入 / 快速选择知识库"
+                  }
+                  submitType="enter"
+                  autoSize={{ minRows: 3, maxRows: 8 }}
+                  header={header}
+                  footer={footer}
+                  allowSpeech={allowSpeechConfig}
+                  className="bg-bg-secondary border border-border rounded-2xl shadow-xl focus-within:border-primary/50 transition-all"
+                  classNames={{
+                    input: "text-text-primary placeholder:text-text-tertiary",
+                  }}
+                />
+              );
+            }}
           </KnowledgeSuggestion>
         </div>
       </div>

@@ -8,12 +8,9 @@
  * - 支持搜索过滤
  * - 选择后插入 @知识库名称 或 @知识库/文件名
  */
-import React, { memo, useMemo, useCallback, useState } from "react";
+import React, { memo, useCallback } from "react";
 import { Suggestion } from "@ant-design/x";
-import type {
-  SuggestionItem,
-  RenderChildrenProps,
-} from "@ant-design/x/es/suggestion";
+import type { SuggestionItem, RenderChildrenProps } from "@ant-design/x/es/suggestion";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 import type { KnowledgeInfo, KnowledgeDocumentInfo } from "@/types/electron";
 
@@ -42,52 +39,53 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
     onSelectDocument,
     children,
   }) => {
-    // 搜索关键词
-    const [searchKeyword, setSearchKeyword] = useState("");
+    // 构建建议项列表函数（Suggestion 组件会传入搜索关键词）
+    const getItems = useCallback(
+      (info?: string) => {
+        const result: SuggestionItem[] = [];
+        // info 是用户输入的 '/' 后面的内容
+        const keyword = info?.toLowerCase() || "";
 
-    // 构建建议项列表（根据搜索关键词过滤）
-    const items = useMemo((): SuggestionItem[] => {
-      const result: SuggestionItem[] = [];
-      const keyword = searchKeyword.toLowerCase();
+        knowledgeList.forEach((kb) => {
+          // 知识库匹配搜索关键词
+          const kbMatch =
+            !keyword ||
+            kb.name.toLowerCase().includes(keyword) ||
+            kb.description?.toLowerCase().includes(keyword);
 
-      knowledgeList.forEach((kb) => {
-        // 知识库匹配搜索关键词
-        const kbMatch =
-          !keyword ||
-          kb.name.toLowerCase().includes(keyword) ||
-          kb.description?.toLowerCase().includes(keyword);
+          if (kbMatch) {
+            // 构建知识库下的文档列表
+            const docs = knowledgeDocuments[kb.id] || [];
+            const docItems: SuggestionItem[] = docs
+              .filter(
+                (doc) => !keyword || doc.fileName.toLowerCase().includes(keyword)
+              )
+              .map((doc) => ({
+                label: doc.fileName,
+                value: `@${kb.name}/${doc.fileName}`,
+                icon: <FileOutlined className="text-text-tertiary" />,
+                extra: `${(doc.fileSize / 1024).toFixed(1)} KB · ${
+                  doc.chunkCount
+                } 分块`,
+              }));
 
-        if (kbMatch) {
-          // 构建知识库下的文档列表
-          const docs = knowledgeDocuments[kb.id] || [];
-          const docItems: SuggestionItem[] = docs
-            .filter(
-              (doc) => !keyword || doc.fileName.toLowerCase().includes(keyword)
-            )
-            .map((doc) => ({
-              label: doc.fileName,
-              value: `@${kb.name}/${doc.fileName}`,
-              icon: <FileOutlined className="text-text-tertiary" />,
-              extra: `${(doc.fileSize / 1024).toFixed(1)} KB · ${
-                doc.chunkCount
-              } 分块`,
-            }));
+            // 添加知识库选项
+            result.push({
+              label: kb.name,
+              value: `@${kb.name}`,
+              icon: <FolderOutlined className="text-primary" />,
+              extra: `${kb.documentCount} 个文档${
+                kb.description ? ` · ${kb.description}` : ""
+              }`,
+              children: docItems.length > 0 ? docItems : undefined,
+            });
+          }
+        });
 
-          // 添加知识库选项
-          result.push({
-            label: kb.name,
-            value: `@${kb.name}`,
-            icon: <FolderOutlined className="text-primary" />,
-            extra: `${kb.documentCount} 个文档${
-              kb.description ? ` · ${kb.description}` : ""
-            }`,
-            children: docItems.length > 0 ? docItems : undefined,
-          });
-        }
-      });
-
-      return result;
-    }, [knowledgeList, knowledgeDocuments, searchKeyword]);
+        return result;
+      },
+      [knowledgeList, knowledgeDocuments]
+    );
 
     // 处理选择
     const handleSelect = useCallback(
@@ -120,36 +118,9 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
       [knowledgeList, knowledgeDocuments, onSelectKnowledge, onSelectDocument]
     );
 
-    // 包装 children 渲染函数，在触发时更新搜索关键词
-    const renderChildren = useCallback(
-      (props: RenderChildrenProps<string>) => {
-        // 保存原始 onTrigger
-        const originalOnTrigger = props.onTrigger;
-
-        // 创建包装的 onTrigger
-        const wrappedOnTrigger = (info?: string | false) => {
-          if (typeof info === "string") {
-            // 提取 '/' 后面的搜索关键词
-            const keyword = info.startsWith("/") ? info.slice(1) : info;
-            setSearchKeyword(keyword);
-          } else {
-            setSearchKeyword("");
-          }
-          // 调用原始 onTrigger
-          originalOnTrigger(info);
-        };
-
-        return children({
-          ...props,
-          onTrigger: wrappedOnTrigger,
-        });
-      },
-      [children]
-    );
-
     return (
       <Suggestion
-        items={items}
+        items={getItems}
         onSelect={handleSelect}
         styles={{
           popup: {
@@ -161,7 +132,7 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
           popup: "bg-bg-secondary border border-border rounded-lg shadow-xl",
         }}
       >
-        {renderChildren}
+        {children}
       </Suggestion>
     );
   }

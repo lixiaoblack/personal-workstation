@@ -392,7 +392,8 @@ class MessageHandler:
         logger.info(f"[Agent] 附件数量: {len(attachments)}")
         if attachments:
             for att in attachments:
-                logger.info(f"[Agent] 附件: {att.get('name')} | 路径: {att.get('path')} | 类型: {att.get('type')}")
+                logger.info(
+                    f"[Agent] 附件: {att.get('name')} | 路径: {att.get('path')} | 类型: {att.get('type')}")
 
         try:
             from langchain_core.messages import HumanMessage
@@ -554,10 +555,10 @@ class MessageHandler:
 文件路径: {att_path}
 文件类型: {att_type}
 文件大小: {att_size} 字节""")
-                
+
                 # 设置附件路径映射（用于修正 LLM 可能编造的路径）
                 DeepAgentWrapper.set_attachment_paths(attachment_paths)
-                
+
                 attachment_context = f"""
 [重要：用户上传了以下文件]
 {chr(10).join(attachment_info)}
@@ -569,7 +570,8 @@ file_read(file_path="{attachments[0].get('path', '')}")
 
 **不要使用其他路径，必须使用上面列出的文件路径！**
 """
-                logger.info(f"[DeepAgent] 已构建附件上下文，长度: {len(attachment_context)}")
+                logger.info(
+                    f"[DeepAgent] 已构建附件上下文，长度: {len(attachment_context)}")
                 logger.info(f"[DeepAgent] 附件路径映射: {attachment_paths}")
 
             if default_knowledge_id and knowledge_metadata:
@@ -603,7 +605,8 @@ Description: {kb_desc or 'None'}
 {content}
 
 [再次提醒] 你必须调用 file_read 工具来读取文件内容！"""
-                logger.info(f"[DeepAgent] 使用附件上下文（无知识库），enhanced_content 长度: {len(enhanced_content)}")
+                logger.info(
+                    f"[DeepAgent] 使用附件上下文（无知识库），enhanced_content 长度: {len(enhanced_content)}")
 
             logger.info(
                 f"[DeepAgent] 开始执行，工具数量: {len(tools)}, 已选知识库: {default_knowledge_id}")

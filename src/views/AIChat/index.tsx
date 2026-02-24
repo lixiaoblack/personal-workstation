@@ -612,7 +612,10 @@ const AIChatComponent: React.FC = () => {
       content: messageContent,
       timestamp: Date.now(),
       createdAt: new Date().toISOString(),
-      metadata: currentAttachments.length > 0 ? { attachments: currentAttachments } : undefined,
+      metadata:
+        currentAttachments.length > 0
+          ? { attachments: currentAttachments }
+          : undefined,
     };
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
@@ -626,7 +629,10 @@ const AIChatComponent: React.FC = () => {
         role: "user",
         content,
         timestamp: Date.now(),
-        metadata: currentAttachments.length > 0 ? { attachments: currentAttachments } : undefined,
+        metadata:
+          currentAttachments.length > 0
+            ? { attachments: currentAttachments }
+            : undefined,
       });
       await window.electronAPI.autoSetConversationTitle(conversationId!);
       await loadConversations();
@@ -710,13 +716,16 @@ const AIChatComponent: React.FC = () => {
         history,
         knowledgeId,
         knowledgeMetadata,
-        attachments: currentAttachments.length > 0 ? currentAttachments.map(a => ({
-          name: a.name,
-          path: a.path,
-          type: a.type,
-          size: a.size,
-          mimeType: a.mimeType,
-        })) : undefined,
+        attachments:
+          currentAttachments.length > 0
+            ? currentAttachments.map((a) => ({
+                name: a.name,
+                path: a.path,
+                type: a.type,
+                size: a.size,
+                mimeType: a.mimeType,
+              }))
+            : undefined,
       });
     } else {
       console.log("[AIChat] 发送普通聊天消息:", {

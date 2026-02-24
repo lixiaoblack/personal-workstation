@@ -90,22 +90,55 @@ const URL_REGEX =
   /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi;
 
 // 根据文件扩展名获取文件类型
-const getFileType = (fileName: string, mimeType: string): AttachmentFile["type"] => {
+const getFileType = (
+  fileName: string,
+  mimeType: string
+): AttachmentFile["type"] => {
   const ext = fileName.split(".").pop()?.toLowerCase() || "";
-  
+
   if (mimeType.startsWith("image/")) return "image";
-  
-  const docExts = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "md", "txt", "rtf"];
+
+  const docExts = [
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "md",
+    "txt",
+    "rtf",
+  ];
   if (docExts.includes(ext)) return "document";
-  
-  const codeExts = ["js", "jsx", "ts", "tsx", "py", "java", "c", "cpp", "go", "rs", "css", "scss", "html", "json", "yaml", "yml", "sh"];
+
+  const codeExts = [
+    "js",
+    "jsx",
+    "ts",
+    "tsx",
+    "py",
+    "java",
+    "c",
+    "cpp",
+    "go",
+    "rs",
+    "css",
+    "scss",
+    "html",
+    "json",
+    "yaml",
+    "yml",
+    "sh",
+  ];
   if (codeExts.includes(ext)) return "code";
-  
+
   return "other";
 };
 
 // 生成唯一 ID
-const generateFileId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const generateFileId = () =>
+  `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 const AIChatInput: React.FC<AIChatInputProps> = memo(
   ({
@@ -423,9 +456,13 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
               >
                 {/* 文件图标 */}
                 <span className="material-symbols-outlined text-lg text-primary">
-                  {file.type === "image" ? "image" : 
-                   file.type === "document" ? "description" : 
-                   file.type === "code" ? "code" : "insert_drive_file"}
+                  {file.type === "image"
+                    ? "image"
+                    : file.type === "document"
+                    ? "description"
+                    : file.type === "code"
+                    ? "code"
+                    : "insert_drive_file"}
                 </span>
                 {/* 文件名 */}
                 <span className="text-xs text-text-primary max-w-[120px] truncate">
@@ -433,9 +470,9 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                 </span>
                 {/* 文件大小 */}
                 <span className="text-[10px] text-text-tertiary">
-                  {file.size < 1024 
-                    ? `${file.size}B` 
-                    : file.size < 1024 * 1024 
+                  {file.size < 1024
+                    ? `${file.size}B`
+                    : file.size < 1024 * 1024
                     ? `${(file.size / 1024).toFixed(1)}KB`
                     : `${(file.size / (1024 * 1024)).toFixed(1)}MB`}
                 </span>
@@ -448,7 +485,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
             ))}
           </div>
         )}
-        
+
         {/* 标签和 Agent 开关行 */}
         <div className="flex items-center gap-2">
           {/* 已选标签 */}
@@ -515,7 +552,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     );
 
     return (
-      <div 
+      <div
         className="p-6 bg-transparent"
         onDragOver={handleDragOver}
         onDrop={handleDrop}

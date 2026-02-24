@@ -276,9 +276,11 @@ class DeepAgentWrapper:
                 return path
 
         # 兜底策略：LLM 编造的路径完全不对时，使用第一个附件的路径
-        first_path = list(cls._attachment_paths.values())[0] if cls._attachment_paths else provided_path
+        first_path = list(cls._attachment_paths.values())[
+            0] if cls._attachment_paths else provided_path
         if first_path != provided_path:
-            logger.info(f"[DeepAgent] 路径兜底修正（LLM编造路径）: {provided_path} -> {first_path}")
+            logger.info(
+                f"[DeepAgent] 路径兜底修正（LLM编造路径）: {provided_path} -> {first_path}")
             return first_path
 
         return provided_path
@@ -496,9 +498,11 @@ class DeepAgentWrapper:
             # 如果是 file_read 工具，修正文件路径
             if tool_name == "file_read" and "file_path" in kwargs:
                 original_path = kwargs["file_path"]
-                corrected_path = DeepAgentWrapper.get_correct_file_path(original_path)
+                corrected_path = DeepAgentWrapper.get_correct_file_path(
+                    original_path)
                 if corrected_path != original_path:
-                    logger.info(f"[DeepAgent] 文件路径修正: {original_path} -> {corrected_path}")
+                    logger.info(
+                        f"[DeepAgent] 文件路径修正: {original_path} -> {corrected_path}")
                     kwargs["file_path"] = corrected_path
 
             logger.info(f"[DeepAgent] 异步调用工具: {tool_name}, 参数: {kwargs}")
@@ -1318,9 +1322,11 @@ class DeepAgentWrapper:
             # 如果是 file_read 工具，修正文件路径
             if tool_info["name"] == "file_read" and "file_path" in tool_info["arguments"]:
                 original_path = tool_info["arguments"]["file_path"]
-                corrected_path = DeepAgentWrapper.get_correct_file_path(original_path)
+                corrected_path = DeepAgentWrapper.get_correct_file_path(
+                    original_path)
                 if corrected_path != original_path:
-                    logger.info(f"[DeepAgent] 提取时路径修正: {original_path} -> {corrected_path}")
+                    logger.info(
+                        f"[DeepAgent] 提取时路径修正: {original_path} -> {corrected_path}")
                     tool_info["arguments"]["file_path"] = corrected_path
 
             return tool_info
@@ -1340,9 +1346,11 @@ class DeepAgentWrapper:
                     # 如果是 file_read 工具，修正文件路径
                     if tool_info["name"] == "file_read" and "file_path" in tool_info["arguments"]:
                         original_path = tool_info["arguments"]["file_path"]
-                        corrected_path = DeepAgentWrapper.get_correct_file_path(original_path)
+                        corrected_path = DeepAgentWrapper.get_correct_file_path(
+                            original_path)
                         if corrected_path != original_path:
-                            logger.info(f"[DeepAgent] 提取时路径修正: {original_path} -> {corrected_path}")
+                            logger.info(
+                                f"[DeepAgent] 提取时路径修正: {original_path} -> {corrected_path}")
                             tool_info["arguments"]["file_path"] = corrected_path
 
                     return tool_info

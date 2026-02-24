@@ -536,20 +536,27 @@ class MessageHandler:
             knowledge_metadata = KnowledgeRetrieverTool.get_knowledge_metadata()
             enhanced_content = content
 
-            # 如果有附件，优先处理附件
+            # 如果有附件，设置附件路径映射并构建附件上下文
             attachment_context = ""
             if attachments:
+                # 设置附件路径映射，用于修正 file_read 工具的路径
+                attachment_paths = {}
                 attachment_info = []
                 for att in attachments:
                     att_name = att.get('name', '未知文件')
                     att_path = att.get('path', '')
                     att_type = att.get('type', 'other')
                     att_size = att.get('size', 0)
+                    # 建立文件名到路径的映射
+                    attachment_paths[att_name] = att_path
                     # 更清晰地标注文件路径，让 Agent 能正确识别
                     attachment_info.append(f"""文件名称: {att_name}
 文件路径: {att_path}
 文件类型: {att_type}
 文件大小: {att_size} 字节""")
+                
+                # 设置附件路径映射（用于修正 LLM 可能编造的路径）
+                DeepAgentWrapper.set_attachment_paths(attachment_paths)
                 
                 attachment_context = f"""
 [重要：用户上传了以下文件]
@@ -563,6 +570,7 @@ file_read(file_path="{attachments[0].get('path', '')}")
 **不要使用其他路径，必须使用上面列出的文件路径！**
 """
                 logger.info(f"[DeepAgent] 已构建附件上下文，长度: {len(attachment_context)}")
+                logger.info(f"[DeepAgent] 附件路径映射: {attachment_paths}")
 
             if default_knowledge_id and knowledge_metadata:
                 kb_info = knowledge_metadata.get(default_knowledge_id, {})

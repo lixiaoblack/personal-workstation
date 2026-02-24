@@ -632,6 +632,7 @@ const AIChatComponent: React.FC = () => {
         role: "user",
         content,
         timestamp: Date.now(),
+        metadata: currentAttachments.length > 0 ? { attachments: currentAttachments } : undefined,
       });
       await window.electronAPI.autoSetConversationTitle(conversationId!);
       await loadConversations();

@@ -32,6 +32,7 @@ Deep Agents 提供的核心能力：
 
 import logging
 import asyncio
+import os
 from typing import AsyncIterator, Dict, Any, List, Optional, Callable
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
@@ -203,6 +204,9 @@ class DeepAgentWrapper:
             print(step)
     """
 
+    # 类级别的附件路径映射（用于修正 file_read 工具的路径）
+    _attachment_paths: Dict[str, str] = {}
+
     def __init__(
         self,
         model_id: Optional[int] = None,
@@ -227,6 +231,50 @@ class DeepAgentWrapper:
         # 延迟初始化 agent（在第一次使用时创建）
         self._agent = None
         self._model_config = None
+
+    @classmethod
+    def set_attachment_paths(cls, paths: Dict[str, str]):
+        """
+        设置附件路径映射
+
+        Args:
+            paths: 文件名 -> 文件路径 的映射字典
+        """
+        cls._attachment_paths = paths
+        logger.info(f"[DeepAgent] 设置附件路径映射: {paths}")
+
+    @classmethod
+    def get_correct_file_path(cls, provided_path: str) -> str:
+        """
+        获取正确的文件路径
+
+        如果提供的路径不在附件映射中，尝试查找匹配的路径。
+
+        Args:
+            provided_path: LLM 提供的文件路径
+
+        Returns:
+            正确的文件路径
+        """
+        if not cls._attachment_paths:
+            return provided_path
+
+        # 如果路径直接匹配
+        if provided_path in cls._attachment_paths.values():
+            return provided_path
+
+        # 如果路径在映射中
+        if provided_path in cls._attachment_paths:
+            return cls._attachment_paths[provided_path]
+
+        # 尝试通过文件名匹配
+        provided_name = os.path.basename(provided_path)
+        for name, path in cls._attachment_paths.items():
+            if name == provided_name or os.path.basename(path) == provided_name:
+                logger.info(f"[DeepAgent] 路径修正: {provided_path} -> {path}")
+                return path
+
+        return provided_path
 
     def _get_model_config(self) -> Dict[str, Any]:
         """
@@ -438,6 +486,14 @@ class DeepAgentWrapper:
 
         # 创建异步包装函数
         async def async_tool_wrapper(**kwargs):
+            # 如果是 file_read 工具，修正文件路径
+            if tool_name == "file_read" and "file_path" in kwargs:
+                original_path = kwargs["file_path"]
+                corrected_path = DeepAgentWrapper.get_correct_file_path(original_path)
+                if corrected_path != original_path:
+                    logger.info(f"[DeepAgent] 文件路径修正: {original_path} -> {corrected_path}")
+                    kwargs["file_path"] = corrected_path
+
             logger.info(f"[DeepAgent] 异步调用工具: {tool_name}, 参数: {kwargs}")
 
             try:

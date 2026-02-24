@@ -239,32 +239,6 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
               </Think>
             )}
 
-            {/* 用户消息的附件卡片 */}
-            {isUser && attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {attachments.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-bg-tertiary rounded-lg border border-border"
-                  >
-                    {/* 文件图标 */}
-                    <span className="material-symbols-outlined text-lg text-primary">
-                      {getFileIcon(file.type)}
-                    </span>
-                    {/* 文件信息 */}
-                    <div className="flex flex-col">
-                      <span className="text-xs text-text-primary max-w-[150px] truncate font-medium">
-                        {file.name}
-                      </span>
-                      <span className="text-[10px] text-text-tertiary">
-                        {formatFileSize(file.size)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* 消息气泡 */}
             <Bubble
               placement={isUser ? "end" : "start"}
@@ -274,7 +248,37 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
               content={contentToDisplay}
               contentRender={(content) => {
                 if (isUser) {
-                  return <span className="whitespace-pre-wrap">{content}</span>;
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {/* 附件卡片在气泡内部 */}
+                      {attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {attachments.map((file) => (
+                            <div
+                              key={file.id}
+                              className="flex items-center gap-2 px-2 py-1.5 bg-white/20 rounded border border-white/30"
+                            >
+                              {/* 文件图标 */}
+                              <span className="material-symbols-outlined text-sm text-white">
+                                {getFileIcon(file.type)}
+                              </span>
+                              {/* 文件信息 */}
+                              <div className="flex flex-col">
+                                <span className="text-[11px] text-white max-w-[120px] truncate font-medium">
+                                  {file.name}
+                                </span>
+                                <span className="text-[9px] text-white/70">
+                                  {formatFileSize(file.size)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* 消息文本 */}
+                      <span className="whitespace-pre-wrap">{content}</span>
+                    </div>
+                  );
                 }
                 return <MarkdownRenderer content={content as string} />;
               }}

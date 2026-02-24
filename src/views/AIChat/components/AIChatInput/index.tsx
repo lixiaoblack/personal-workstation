@@ -2,14 +2,16 @@
  * AIChatInput - 输入区域组件
  * 使用 Ant Design X Sender 组件
  * 包含工具栏、输入框、发送按钮、知识库选择器、语音输入
+ * 支持粘贴文件、URL 检测、'/' 快捷选择知识库
  */
-import React, { memo, useCallback, useState, useRef, useEffect } from "react";
+import React, { memo, useCallback, useState, useRef, useEffect, useMemo } from "react";
 import { Select, Switch, Tooltip, message } from "antd";
 import { Sender } from "@ant-design/x";
-import type { ModelConfig, KnowledgeInfo } from "@/types/electron";
+import type { ModelConfig, KnowledgeInfo, KnowledgeDocumentInfo } from "@/types/electron";
 import { ConnectionState } from "@/types/electron";
 import type { StreamState } from "../../config";
 import { useSpeechCapability } from "@/hooks/useSpeechCapability";
+import KnowledgeSuggestion from "../KnowledgeSuggestion";
 
 // SpeechRecognition 类型定义
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +38,15 @@ interface AIChatInputProps {
   knowledgeList: KnowledgeInfo[];
   selectedKnowledgeId: string | null;
   onKnowledgeChange: (knowledgeId: string | null) => void;
+  // 知识库文档映射（用于 '/' 快捷选择）
+  knowledgeDocuments?: Record<string, KnowledgeDocumentInfo[]>;
+  // 附件相关
+  onPasteFile?: (file: { path: string; name: string; size: number; mimeType: string }) => void;
+  onPasteImage?: (file: { path: string; name: string; size: number; mimeType: string; thumbnail?: string }) => void;
+  onDetectUrl?: (url: string) => void;
+  // 快捷选择知识库回调
+  onSelectKnowledgeQuick?: (knowledgeId: string, knowledgeName: string) => void;
+  onSelectDocumentQuick?: (knowledgeId: string, documentId: string, documentName: string) => void;
 }
 
 const AIChatInput: React.FC<AIChatInputProps> = memo(
@@ -52,6 +63,12 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     knowledgeList,
     selectedKnowledgeId,
     onKnowledgeChange,
+    knowledgeDocuments = {},
+    onPasteFile,
+    onPasteImage,
+    onDetectUrl,
+    onSelectKnowledgeQuick,
+    onSelectDocumentQuick,
   }) => {
     // 判断是否可以发送
     const canSend =
@@ -206,18 +223,93 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     }, [onCancel]);
 
     // 处理内容变化
-    const handleChange = useCallback(
-      (value: string) => {
-        onInputChange(value);
+    // handleChange 由 handleChangeWithUrlDetection 替代
+
+    // ========== 粘贴文件检测 ==========
+
+    // URL 正则表达式（移到组件外部避免依赖问题）
+    // 处理粘贴事件
+    const handlePaste = useCallback(
+      (e: React.ClipboardEvent) => {
+        const clipboardData = e.clipboardData;
+        if (!clipboardData) return;
+
+        // 检查文件
+        const files = clipboardData.files;
+        if (files.length > 0) {
+          const file = files[0] as File & { path?: string };
+          const filePath = file.path; // Electron 中可获取本地路径
+
+          if (!filePath) {
+            message.warning("无法获取文件路径，请使用其他方式上传");
+            return;
+          }
+
+          const mimeType = file.type || "application/octet-stream";
+          const isImage = mimeType.startsWith("image/");
+
+          const fileInfo = {
+            path: filePath,
+            name: file.name,
+            size: file.size,
+            mimeType,
+          };
+
+          if (isImage && onPasteImage) {
+            // 图片类型，生成缩略图
+            const reader = new FileReader();
+            reader.onload = () => {
+              onPasteImage({
+                ...fileInfo,
+                thumbnail: reader.result as string,
+              });
+            };
+            reader.readAsDataURL(file);
+          } else if (onPasteFile) {
+            onPasteFile(fileInfo);
+          }
+
+          e.preventDefault();
+          return;
+        }
       },
-      [onInputChange]
+      [onPasteFile, onPasteImage]
     );
 
-    // 处理键盘事件（Sender 组件已内置处理 Enter 发送）
-    // 如需添加额外的键盘快捷键，可在此处理
-    const handleKeyDown = useCallback(() => {
-      // 预留给额外的键盘快捷键处理
-    }, []);
+    // ========== URL 检测 ==========
+
+    // 检测输入中的 URL
+    const detectUrlInInput = useCallback(
+      (value: string) => {
+        if (!onDetectUrl) return;
+
+        // 简单检测：如果输入的是一个 URL
+        const trimmed = value.trim();
+        if (/^https?:\/\/.+/i.test(trimmed)) {
+          onDetectUrl(trimmed);
+        }
+      },
+      [onDetectUrl]
+    );
+
+    // 包装 onChange 以检测 URL
+    const handleChangeWithUrlDetection = useCallback(
+      (value: string) => {
+        onInputChange(value);
+        // 延迟检测，避免频繁触发
+        setTimeout(() => detectUrlInInput(value), 100);
+      },
+      [onInputChange, detectUrlInInput]
+    );
+
+    // ========== 快捷选择知识库 ==========
+
+    // 选中的知识库显示
+    const selectedKnowledgeDisplay = useMemo(() => {
+      if (!selectedKnowledgeId) return null;
+      const kb = knowledgeList.find((k) => k.id === selectedKnowledgeId);
+      return kb ? `@${kb.name}` : null;
+    }, [selectedKnowledgeId, knowledgeList]);
 
     // 计算 allowSpeech 配置
     // 使用受控模式，手动处理语音识别
@@ -336,25 +428,41 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     return (
       <div className="p-6 bg-transparent">
         <div className="max-w-4xl mx-auto">
-          <Sender
-            value={inputValue}
-            onChange={handleChange}
-            onSubmit={handleSubmit}
-            onCancel={isLoading ? handleCancel : undefined}
-            onKeyDown={handleKeyDown}
-            loading={isLoading}
-            disabled={isDisabled}
-            placeholder="在这里输入您的问题，例如：'如何使用 Python 处理地理栅格数据？'"
-            submitType="enter"
-            autoSize={{ minRows: 3, maxRows: 8 }}
-            header={header}
-            footer={footer}
-            allowSpeech={allowSpeechConfig}
-            className="bg-bg-secondary border border-border rounded-2xl shadow-xl focus-within:border-primary/50 transition-all"
-            classNames={{
-              input: "text-text-primary placeholder:text-text-tertiary",
-            }}
-          />
+          <KnowledgeSuggestion
+            knowledgeList={knowledgeList}
+            knowledgeDocuments={knowledgeDocuments}
+            onSelectKnowledge={onSelectKnowledgeQuick}
+            onSelectDocument={onSelectDocumentQuick}
+          >
+            {({ onKeyDown: onSuggestionKeyDown }) => (
+              <Sender
+                value={inputValue}
+                onChange={handleChangeWithUrlDetection}
+                onSubmit={handleSubmit}
+                onCancel={isLoading ? handleCancel : undefined}
+                onKeyDown={(e) => {
+                  onSuggestionKeyDown(e);
+                }}
+                onPaste={handlePaste}
+                loading={isLoading}
+                disabled={isDisabled}
+                placeholder={
+                  selectedKnowledgeDisplay
+                    ? `针对「${selectedKnowledgeDisplay}」提问...`
+                    : "在这里输入您的问题，输入 / 快速选择知识库"
+                }
+                submitType="enter"
+                autoSize={{ minRows: 3, maxRows: 8 }}
+                header={header}
+                footer={footer}
+                allowSpeech={allowSpeechConfig}
+                className="bg-bg-secondary border border-border rounded-2xl shadow-xl focus-within:border-primary/50 transition-all"
+                classNames={{
+                  input: "text-text-primary placeholder:text-text-tertiary",
+                }}
+              />
+            )}
+          </KnowledgeSuggestion>
         </div>
       </div>
     );

@@ -32,7 +32,7 @@ import AIChatHeader from "./components/AIChatHeader";
 import AIChatMessage from "./components/AIChatMessage";
 import AIChatStreamingMessage from "./components/AIChatStreamingMessage";
 import AIChatEmptyState from "./components/AIChatEmptyState";
-import AIChatInput from "./components/AIChatInput";
+import AIChatInput, { TagItem } from "./components/AIChatInput";
 
 const AIChatComponent: React.FC = () => {
   const { connectionState, sendChat, sendAgentChat, lastMessage } =
@@ -50,9 +50,7 @@ const AIChatComponent: React.FC = () => {
 
   // 知识库列表和选中状态
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeInfo[]>([]);
-  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string | null>(
-    null
-  );
+  const [selectedTags, setSelectedTags] = useState<TagItem[]>([]);
 
   // 对话分组列表
   const [conversationGroups, setConversationGroups] = useState<
@@ -679,11 +677,15 @@ const AIChatComponent: React.FC = () => {
         };
       });
 
+      // 从 selectedTags 中获取知识库 ID
+      const knowledgeTag = selectedTags.find((t) => t.type === "knowledge");
+      const knowledgeId = knowledgeTag?.id || undefined;
+
       console.log("[AIChat] 发送 Agent 消息:", {
         content: content.substring(0, 50),
         conversationId: String(conversationId),
         modelId: currentModel.id,
-        knowledgeId: selectedKnowledgeId,
+        knowledgeId,
       });
 
       sendAgentChat({
@@ -691,7 +693,7 @@ const AIChatComponent: React.FC = () => {
         conversationId: String(conversationId),
         modelId: currentModel.id,
         history,
-        knowledgeId: selectedKnowledgeId || undefined,
+        knowledgeId,
         knowledgeMetadata,
       });
     } else {
@@ -717,7 +719,7 @@ const AIChatComponent: React.FC = () => {
     sendChat,
     sendAgentChat,
     agentMode,
-    selectedKnowledgeId,
+    selectedTags,
     knowledgeList,
     loadConversations,
   ]);
@@ -785,11 +787,8 @@ const AIChatComponent: React.FC = () => {
           onAgentModeChange={setAgentMode}
           onSend={handleSend}
           knowledgeList={knowledgeList}
-          selectedKnowledgeId={selectedKnowledgeId}
-          onKnowledgeChange={setSelectedKnowledgeId}
-          onSelectKnowledgeQuick={(id: string) => {
-            setSelectedKnowledgeId(id);
-          }}
+          selectedTags={selectedTags}
+          onTagsChange={setSelectedTags}
         />
       </main>
 

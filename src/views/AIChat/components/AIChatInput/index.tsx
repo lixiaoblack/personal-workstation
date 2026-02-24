@@ -1,8 +1,8 @@
 /**
  * AIChatInput - 输入区域组件
  * 使用 Ant Design X Sender 组件
- * 包含工具栏、输入框、发送按钮、知识库选择器、语音输入
- * 支持粘贴文件、URL 检测、'/' 快捷选择知识库
+ * 包含工具栏、输入框、发送按钮、知识库标签选择器、语音输入
+ * 支持粘贴文件、URL 检测、'/','@','#' 快捷选择
  */
 import React, {
   memo,
@@ -10,10 +10,11 @@ import React, {
   useState,
   useRef,
   useEffect,
-  useMemo,
 } from "react";
-import { Select, Switch, Tooltip, message } from "antd";
-import { Sender } from "@ant-design/x";
+import { Switch, Tooltip, message } from "antd";
+import { Sender, Suggestion } from "@ant-design/x";
+import type { SuggestionItem } from "@ant-design/x/es/suggestion";
+import { CloseOutlined, FolderOutlined } from "@ant-design/icons";
 import type {
   ModelConfig,
   KnowledgeInfo,
@@ -22,7 +23,6 @@ import type {
 import { ConnectionState } from "@/types/electron";
 import type { StreamState } from "../../config";
 import { useSpeechCapability } from "@/hooks/useSpeechCapability";
-import KnowledgeSuggestion from "../KnowledgeSuggestion";
 
 // SpeechRecognition 类型定义
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,6 +33,15 @@ interface SpeechRecognitionEvent extends Event {
 interface SpeechRecognitionErrorEvent extends Event {
   error: string;
   message: string;
+}
+
+/** 标签项类型 */
+export interface TagItem {
+  id: string;
+  label: string;
+  type: "knowledge" | "document" | "topic" | "mention";
+  trigger: string;
+  data?: Record<string, unknown>;
 }
 
 interface AIChatInputProps {
@@ -47,9 +56,8 @@ interface AIChatInputProps {
   onCancel?: () => void;
   // 知识库相关
   knowledgeList: KnowledgeInfo[];
-  selectedKnowledgeId: string | null;
-  onKnowledgeChange: (knowledgeId: string | null) => void;
-  // 知识库文档映射（用于 '/' 快捷选择）
+  selectedTags: TagItem[];
+  onTagsChange: (tags: TagItem[]) => void;
   knowledgeDocuments?: Record<string, KnowledgeDocumentInfo[]>;
   // 附件相关
   onPasteFile?: (file: {
@@ -66,14 +74,11 @@ interface AIChatInputProps {
     thumbnail?: string;
   }) => void;
   onDetectUrl?: (url: string) => void;
-  // 快捷选择知识库回调
-  onSelectKnowledgeQuick?: (knowledgeId: string, knowledgeName: string) => void;
-  onSelectDocumentQuick?: (
-    knowledgeId: string,
-    documentId: string,
-    documentName: string
-  ) => void;
 }
+
+// URL 正则表达式
+const URL_REGEX =
+  /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi;
 
 const AIChatInput: React.FC<AIChatInputProps> = memo(
   ({
@@ -87,14 +92,11 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     onSend,
     onCancel,
     knowledgeList,
-    selectedKnowledgeId,
-    onKnowledgeChange,
-    knowledgeDocuments = {},
+    selectedTags,
+    onTagsChange,
     onPasteFile,
     onPasteImage,
     onDetectUrl,
-    onSelectKnowledgeQuick,
-    onSelectDocumentQuick,
   }) => {
     // 判断是否可以发送
     const canSend =
@@ -120,19 +122,6 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognitionRef = useRef<any>(null);
 
-    // 打印语音能力状态（调试用）
-    useEffect(() => {
-      console.log("[AIChatInput] 语音能力:", {
-        isSupported: speechCapability.isSupported,
-        hasPermission: speechCapability.hasPermission,
-        error: speechCapability.error,
-      });
-    }, [
-      speechCapability.isSupported,
-      speechCapability.hasPermission,
-      speechCapability.error,
-    ]);
-
     // 初始化 SpeechRecognition
     useEffect(() => {
       if (!speechCapability.isSupported) return;
@@ -153,28 +142,19 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
           for (let i = 0; i < event.results.length; i++) {
             transcript += event.results[i][0].transcript;
           }
-          console.log("[AIChatInput] 语音识别结果:", transcript);
           onInputChange(transcript);
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error(
-            "[AIChatInput] 语音识别错误:",
-            event.error,
-            event.message
-          );
           setIsRecording(false);
           if (event.error === "not-allowed") {
-            message.error("麦克风权限被拒绝，请在系统设置中允许访问麦克风");
-          } else if (event.error === "no-speech") {
-            message.warning("未检测到语音，请重试");
-          } else {
+            message.error("麦克风权限被拒绝");
+          } else if (event.error !== "no-speech") {
             message.error(`语音识别错误: ${event.error}`);
           }
         };
 
         recognition.onend = () => {
-          console.log("[AIChatInput] 语音识别结束");
           setIsRecording(false);
         };
 
@@ -186,19 +166,16 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
           try {
             recognitionRef.current.stop();
           } catch {
-            // 忽略停止错误
+            // 忽略
           }
         }
       };
     }, [speechCapability.isSupported, onInputChange]);
 
-    // 处理录音状态变化
+    // 处理录音
     const handleRecordingChange = useCallback(
       async (recording: boolean) => {
-        console.log("[AIChatInput] 录音状态变化:", recording);
-
         if (recording) {
-          // 开始录音前先请求权限
           if (speechCapability.hasPermission === false) {
             const granted = await speechCapability.requestPermission();
             if (!granted) {
@@ -206,26 +183,20 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
               return;
             }
           }
-
-          // 开始语音识别
           if (recognitionRef.current) {
             try {
-              console.log("[AIChatInput] 开始语音识别...");
               recognitionRef.current.start();
               setIsRecording(true);
-            } catch (err) {
-              console.error("[AIChatInput] 启动语音识别失败:", err);
+            } catch {
               message.error("启动语音识别失败");
             }
           }
         } else {
-          // 停止语音识别
           if (recognitionRef.current) {
             try {
-              console.log("[AIChatInput] 停止语音识别...");
               recognitionRef.current.stop();
             } catch {
-              // 忽略停止错误
+              // 忽略
             }
           }
           setIsRecording(false);
@@ -243,102 +214,100 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
 
     // 处理取消
     const handleCancel = useCallback(() => {
-      if (onCancel) {
-        onCancel();
-      }
+      onCancel?.();
     }, [onCancel]);
 
-    // 处理内容变化
-    // handleChange 由 handleChangeWithUrlDetection 替代
-
-    // ========== 粘贴文件检测 ==========
-
-    // URL 正则表达式（移到组件外部避免依赖问题）
-    // 处理粘贴事件
+    // 处理粘贴
     const handlePaste = useCallback(
       (e: React.ClipboardEvent) => {
         const clipboardData = e.clipboardData;
         if (!clipboardData) return;
 
-        // 检查文件
         const files = clipboardData.files;
         if (files.length > 0) {
-          const file = files[0] as File & { path?: string };
-          const filePath = file.path; // Electron 中可获取本地路径
-
-          if (!filePath) {
-            message.warning("无法获取文件路径，请使用其他方式上传");
-            return;
-          }
-
-          const mimeType = file.type || "application/octet-stream";
-          const isImage = mimeType.startsWith("image/");
-
-          const fileInfo = {
-            path: filePath,
-            name: file.name,
-            size: file.size,
-            mimeType,
-          };
-
-          if (isImage && onPasteImage) {
-            // 图片类型，生成缩略图
-            const reader = new FileReader();
-            reader.onload = () => {
-              onPasteImage({
-                ...fileInfo,
-                thumbnail: reader.result as string,
+          for (const file of files) {
+            if (file.type.startsWith("image/")) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                onPasteImage?.({
+                  path: file.name,
+                  name: file.name,
+                  size: file.size,
+                  mimeType: file.type,
+                  thumbnail: reader.result as string,
+                });
+              };
+              reader.readAsDataURL(file);
+            } else {
+              onPasteFile?.({
+                path: file.name,
+                name: file.name,
+                size: file.size,
+                mimeType: file.type,
               });
-            };
-            reader.readAsDataURL(file);
-          } else if (onPasteFile) {
-            onPasteFile(fileInfo);
+            }
           }
-
-          e.preventDefault();
           return;
         }
-      },
-      [onPasteFile, onPasteImage]
-    );
 
-    // ========== URL 检测 ==========
-
-    // 检测输入中的 URL
-    const detectUrlInInput = useCallback(
-      (value: string) => {
-        if (!onDetectUrl) return;
-
-        // 简单检测：如果输入的是一个 URL
-        const trimmed = value.trim();
-        if (/^https?:\/\/.+/i.test(trimmed)) {
-          onDetectUrl(trimmed);
+        // 检查文本中的 URL
+        const text = clipboardData.getData("text");
+        const urlMatch = text.match(URL_REGEX);
+        if (urlMatch) {
+          onDetectUrl?.(urlMatch[0]);
         }
       },
-      [onDetectUrl]
+      [onPasteFile, onPasteImage, onDetectUrl]
     );
 
-    // 包装 onChange 以检测 URL
-    const handleChangeWithUrlDetection = useCallback(
+    // 删除标签
+    const handleRemoveTag = useCallback(
+      (tagId: string, trigger: string) => {
+        onTagsChange(
+          selectedTags.filter((t) => !(t.id === tagId && t.trigger === trigger))
+        );
+      },
+      [selectedTags, onTagsChange]
+    );
+
+    // 获取知识库建议项
+    const getKnowledgeItems = useCallback(
+      (keyword?: string): SuggestionItem[] => {
+        const kw = keyword?.toLowerCase() || "";
+        return knowledgeList
+          .filter(
+            (kb) =>
+              !kw ||
+              kb.name.toLowerCase().includes(kw) ||
+              kb.description?.toLowerCase().includes(kw)
+          )
+          .map((kb) => ({
+            label: kb.name,
+            value: `${kb.name}|::|${kb.id}`,
+            icon: <FolderOutlined className="text-primary" />,
+            extra: `${kb.documentCount} 个文档${
+              kb.description ? ` · ${kb.description}` : ""
+            }`,
+          }));
+      },
+      [knowledgeList]
+    );
+
+    // 处理输入变化（包含 URL 检测和触发符号处理）
+    const handleInputChange = useCallback(
       (value: string) => {
         onInputChange(value);
-        // 延迟检测，避免频繁触发
-        setTimeout(() => detectUrlInInput(value), 100);
+
+        // 检测 URL
+        const urlMatch = value.match(URL_REGEX);
+        if (urlMatch) {
+          onDetectUrl?.(urlMatch[0]);
+        }
       },
-      [onInputChange, detectUrlInInput]
+      [onInputChange, onDetectUrl]
     );
 
-    // ========== 快捷选择知识库 ==========
-
-    // 选中的知识库显示
-    const selectedKnowledgeDisplay = useMemo(() => {
-      if (!selectedKnowledgeId) return null;
-      const kb = knowledgeList.find((k) => k.id === selectedKnowledgeId);
-      return kb ? `@${kb.name}` : null;
-    }, [selectedKnowledgeId, knowledgeList]);
-
-    // 计算 allowSpeech 配置
-    // 使用受控模式，手动处理语音识别
+    // 语音配置
     const allowSpeechConfig = speechCapability.isSupported
       ? {
           recording: isRecording,
@@ -346,158 +315,127 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
         }
       : false;
 
-    // 工具栏头部
+    // 头部工具栏
     const header = (
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/50">
-        <div className="flex items-center gap-1">
-          {/* 添加附件按钮 */}
-          <Tooltip title="添加附件">
-            <button
-              className="p-2 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-lg">
-                attach_file
-              </span>
-            </button>
-          </Tooltip>
-
-          {/* 上传图片按钮 */}
-          <Tooltip title="上传图片">
-            <button
-              className="p-2 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-lg">image</span>
-            </button>
-          </Tooltip>
-
-          <div className="h-4 w-[1px] bg-border mx-1"></div>
-
-          {/* 快捷模板按钮 */}
-          <Tooltip title="快捷模板">
-            <button
-              className="flex items-center gap-1.5 px-3 py-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-all text-xs font-medium"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">
-                temp_preferences_custom
-              </span>
-              <span>快捷模板</span>
-            </button>
-          </Tooltip>
-
-          <div className="h-4 w-[1px] bg-border mx-1"></div>
-
-          {/* 知识库选择器 - 仅在 Agent 模式下显示 */}
-          {agentMode && knowledgeList.length > 0 && (
-            <Select
-              value={selectedKnowledgeId}
-              onChange={onKnowledgeChange}
-              placeholder="选择知识库"
-              allowClear
-              size="small"
-              style={{ minWidth: 150 }}
-              options={knowledgeList.map((kb) => ({
-                value: kb.id,
-                label: `${kb.name} (${kb.documentCount}文档)`,
-              }))}
-            />
-          )}
-
-          <div className="h-4 w-[1px] bg-border mx-1"></div>
-
-          {/* Agent 模式开关 */}
-          <Tooltip
-            title={
-              agentMode
-                ? "Agent 模式：智能体将使用工具完成任务"
-                : "普通模式：直接对话"
-            }
-          >
-            <div className="flex items-center gap-2 px-2">
-              <Switch
-                size="small"
-                checked={agentMode}
-                onChange={onAgentModeChange}
-                checkedChildren="🤖"
-                unCheckedChildren="💬"
-              />
+      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
+        {/* 已选标签 */}
+        {selectedTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedTags.map((tag) => (
               <span
-                className={`text-xs font-medium ${
-                  agentMode ? "text-primary" : "text-text-tertiary"
-                }`}
+                key={`${tag.trigger}-${tag.id}`}
+                className="flex items-center gap-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 rounded-md text-xs"
               >
-                {agentMode ? "Agent" : "对话"}
+                <span className="opacity-70">{tag.trigger}</span>
+                <span>{tag.label}</span>
+                <CloseOutlined
+                  className="cursor-pointer hover:text-error"
+                  onClick={() => handleRemoveTag(tag.id, tag.trigger)}
+                />
               </span>
-            </div>
-          </Tooltip>
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* 快捷键提示 */}
-        <div className="text-[10px] text-text-tertiary font-medium">
-          按 Enter 发送，Shift + Enter 换行
-        </div>
+        <div className="flex-1"></div>
+
+        {/* Agent 模式开关 */}
+        <Tooltip
+          title={
+            agentMode
+              ? "Agent 模式：智能体将使用工具完成任务"
+              : "普通模式：直接对话"
+          }
+        >
+          <div className="flex items-center gap-2 px-2">
+            <Switch
+              size="small"
+              checked={agentMode}
+              onChange={onAgentModeChange}
+              checkedChildren="🤖"
+              unCheckedChildren="💬"
+            />
+            <span
+              className={`text-xs font-medium ${
+                agentMode ? "text-primary" : "text-text-tertiary"
+              }`}
+            >
+              {agentMode ? "Agent" : "对话"}
+            </span>
+          </div>
+        </Tooltip>
       </div>
     );
 
     // 底部提示
     const footer = (
-      <div className="flex justify-center py-2">
+      <div className="flex justify-between items-center py-2">
         <div className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
           <span className="material-symbols-outlined text-base">info</span>
           <span>AI 可能会产生错误，请核实重要信息</span>
         </div>
+        <div className="text-[10px] text-text-tertiary font-medium">
+          Enter 发送 · Shift+Enter 换行 · / 选择知识库
+        </div>
       </div>
     );
-
-    // 调试日志
-    console.log("[AIChatInput] render, knowledgeList:", knowledgeList?.length);
 
     return (
       <div className="p-6 bg-transparent">
         <div className="max-w-4xl mx-auto">
-          <KnowledgeSuggestion
-            knowledgeList={knowledgeList}
-            knowledgeDocuments={knowledgeDocuments}
-            onSelectKnowledge={onSelectKnowledgeQuick}
-            onSelectDocument={onSelectDocumentQuick}
+          <Suggestion
+            items={getKnowledgeItems}
+            onSelect={(value) => {
+              // 解析选择值：label|::|id
+              const [label, id] = value.split("|::|");
+              const newTag: TagItem = {
+                id: id || label,
+                label,
+                type: "knowledge",
+                trigger: "/",
+              };
+              // 检查是否已存在
+              if (!selectedTags.find((t) => t.id === newTag.id && t.trigger === newTag.trigger)) {
+                onTagsChange([...selectedTags, newTag]);
+              }
+              // 清空输入框中的触发符号
+              onInputChange("");
+            }}
+            styles={{
+              popup: { maxHeight: 280, overflow: "auto" },
+            }}
+            classNames={{
+              popup: "bg-bg-secondary border border-border rounded-lg shadow-xl",
+            }}
           >
-            {({ onTrigger, onKeyDown: onSuggestionKeyDown, open }) => {
-              // 存储触发函数供 onChange 使用
-              const handleInputChange = (value: string) => {
-                handleChangeWithUrlDetection(value);
-                
-                // 检测 '/' 输入，触发 Suggestion
-                if (value.endsWith("/") && !open) {
-                  onTrigger(value.slice(-1));
-                } else if (!value.includes("/") && open) {
-                  onTrigger(false); // 关闭
-                } else if (open && value.includes("/")) {
-                  // 更新搜索关键词
-                  const slashIndex = value.lastIndexOf("/");
-                  const keyword = value.slice(slashIndex + 1);
-                  onTrigger("/" + keyword);
+            {({ onTrigger, onKeyDown, open }) => {
+              // 处理输入变化
+              const handleChange = (val: string) => {
+                handleInputChange(val);
+                // 检测 '/' 触发
+                if (val.includes("/")) {
+                  const idx = val.lastIndexOf("/");
+                  onTrigger(val.slice(idx));
+                } else if (open) {
+                  onTrigger(false);
                 }
               };
-
               return (
                 <Sender
                   value={inputValue}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
                   onSubmit={handleSubmit}
                   onCancel={isLoading ? handleCancel : undefined}
                   onKeyDown={(e) => {
-                    onSuggestionKeyDown(e);
+                    if (e.key === "/") {
+                      onTrigger("/");
+                    }
+                    onKeyDown(e);
                   }}
                   onPaste={handlePaste}
                   loading={isLoading}
                   disabled={isDisabled}
-                  placeholder={
-                    selectedKnowledgeDisplay
-                      ? `针对「${selectedKnowledgeDisplay}」提问...`
-                      : "在这里输入您的问题，输入 / 快速选择知识库"
-                  }
+                  placeholder="输入您的问题，输入 / 选择知识库"
                   submitType="enter"
                   autoSize={{ minRows: 3, maxRows: 8 }}
                   header={header}
@@ -510,7 +448,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                 />
               );
             }}
-          </KnowledgeSuggestion>
+          </Suggestion>
         </div>
       </div>
     );

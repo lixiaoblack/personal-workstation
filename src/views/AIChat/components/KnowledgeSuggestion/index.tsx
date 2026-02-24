@@ -1,7 +1,7 @@
 /**
  * KnowledgeSuggestion - 知识库快捷选择器
  * 使用 Ant Design X Suggestion 组件实现 '/' 触发的知识库选择
- * 
+ *
  * 功能：
  * - 输入 '/' 触发下拉菜单
  * - 显示知识库列表和文件列表
@@ -10,7 +10,10 @@
  */
 import React, { memo, useMemo, useCallback, useState } from "react";
 import { Suggestion } from "@ant-design/x";
-import type { SuggestionItem, RenderChildrenProps } from "@ant-design/x/es/suggestion";
+import type {
+  SuggestionItem,
+  RenderChildrenProps,
+} from "@ant-design/x/es/suggestion";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 import type { KnowledgeInfo, KnowledgeDocumentInfo } from "@/types/electron";
 
@@ -22,7 +25,11 @@ interface KnowledgeSuggestionProps {
   /** 选择知识库回调 */
   onSelectKnowledge?: (knowledgeId: string, knowledgeName: string) => void;
   /** 选择文件回调 */
-  onSelectDocument?: (knowledgeId: string, documentId: string, documentName: string) => void;
+  onSelectDocument?: (
+    knowledgeId: string,
+    documentId: string,
+    documentName: string
+  ) => void;
   /** 子元素渲染函数 */
   children: (props: RenderChildrenProps<string>) => React.ReactElement;
 }
@@ -45,20 +52,25 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
 
       knowledgeList.forEach((kb) => {
         // 知识库匹配搜索关键词
-        const kbMatch = !keyword || 
+        const kbMatch =
+          !keyword ||
           kb.name.toLowerCase().includes(keyword) ||
-          (kb.description?.toLowerCase().includes(keyword));
+          kb.description?.toLowerCase().includes(keyword);
 
         if (kbMatch) {
           // 构建知识库下的文档列表
           const docs = knowledgeDocuments[kb.id] || [];
           const docItems: SuggestionItem[] = docs
-            .filter((doc) => !keyword || doc.fileName.toLowerCase().includes(keyword))
+            .filter(
+              (doc) => !keyword || doc.fileName.toLowerCase().includes(keyword)
+            )
             .map((doc) => ({
               label: doc.fileName,
               value: `@${kb.name}/${doc.fileName}`,
               icon: <FileOutlined className="text-text-tertiary" />,
-              extra: `${(doc.fileSize / 1024).toFixed(1)} KB · ${doc.chunkCount} 分块`,
+              extra: `${(doc.fileSize / 1024).toFixed(1)} KB · ${
+                doc.chunkCount
+              } 分块`,
             }));
 
           // 添加知识库选项
@@ -66,7 +78,9 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
             label: kb.name,
             value: `@${kb.name}`,
             icon: <FolderOutlined className="text-primary" />,
-            extra: `${kb.documentCount} 个文档${kb.description ? ` · ${kb.description}` : ''}`,
+            extra: `${kb.documentCount} 个文档${
+              kb.description ? ` · ${kb.description}` : ""
+            }`,
             children: docItems.length > 0 ? docItems : undefined,
           });
         }
@@ -79,9 +93,9 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
     const handleSelect = useCallback(
       (value: string) => {
         // 解析选择值：@知识库名称 或 @知识库名称/文件名
-        const cleanValue = value.replace('@', '');
-        const parts = cleanValue.split('/');
-        
+        const cleanValue = value.replace("@", "");
+        const parts = cleanValue.split("/");
+
         if (parts.length === 1) {
           // 选择的是知识库
           const kbName = parts[0];
@@ -94,7 +108,9 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
           const [kbName, docName] = parts;
           const kb = knowledgeList.find((k) => k.name === kbName);
           if (kb) {
-            const doc = knowledgeDocuments[kb.id]?.find((d) => d.fileName === docName);
+            const doc = knowledgeDocuments[kb.id]?.find(
+              (d) => d.fileName === docName
+            );
             if (doc) {
               onSelectDocument?.(kb.id, doc.id, doc.fileName);
             }
@@ -109,15 +125,15 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
       (props: RenderChildrenProps<string>) => {
         // 保存原始 onTrigger
         const originalOnTrigger = props.onTrigger;
-        
+
         // 创建包装的 onTrigger
         const wrappedOnTrigger = (info?: string | false) => {
-          if (typeof info === 'string') {
+          if (typeof info === "string") {
             // 提取 '/' 后面的搜索关键词
-            const keyword = info.startsWith('/') ? info.slice(1) : info;
+            const keyword = info.startsWith("/") ? info.slice(1) : info;
             setSearchKeyword(keyword);
           } else {
-            setSearchKeyword('');
+            setSearchKeyword("");
           }
           // 调用原始 onTrigger
           originalOnTrigger(info);
@@ -138,11 +154,11 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
         styles={{
           popup: {
             maxHeight: 320,
-            overflow: 'auto',
+            overflow: "auto",
           },
         }}
         classNames={{
-          popup: 'bg-bg-secondary border border-border rounded-lg shadow-xl',
+          popup: "bg-bg-secondary border border-border rounded-lg shadow-xl",
         }}
       >
         {renderChildren}

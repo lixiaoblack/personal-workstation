@@ -4,10 +4,21 @@
  * 包含工具栏、输入框、发送按钮、知识库选择器、语音输入
  * 支持粘贴文件、URL 检测、'/' 快捷选择知识库
  */
-import React, { memo, useCallback, useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  memo,
+  useCallback,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import { Select, Switch, Tooltip, message } from "antd";
 import { Sender } from "@ant-design/x";
-import type { ModelConfig, KnowledgeInfo, KnowledgeDocumentInfo } from "@/types/electron";
+import type {
+  ModelConfig,
+  KnowledgeInfo,
+  KnowledgeDocumentInfo,
+} from "@/types/electron";
 import { ConnectionState } from "@/types/electron";
 import type { StreamState } from "../../config";
 import { useSpeechCapability } from "@/hooks/useSpeechCapability";
@@ -41,12 +52,27 @@ interface AIChatInputProps {
   // 知识库文档映射（用于 '/' 快捷选择）
   knowledgeDocuments?: Record<string, KnowledgeDocumentInfo[]>;
   // 附件相关
-  onPasteFile?: (file: { path: string; name: string; size: number; mimeType: string }) => void;
-  onPasteImage?: (file: { path: string; name: string; size: number; mimeType: string; thumbnail?: string }) => void;
+  onPasteFile?: (file: {
+    path: string;
+    name: string;
+    size: number;
+    mimeType: string;
+  }) => void;
+  onPasteImage?: (file: {
+    path: string;
+    name: string;
+    size: number;
+    mimeType: string;
+    thumbnail?: string;
+  }) => void;
   onDetectUrl?: (url: string) => void;
   // 快捷选择知识库回调
   onSelectKnowledgeQuick?: (knowledgeId: string, knowledgeName: string) => void;
-  onSelectDocumentQuick?: (knowledgeId: string, documentId: string, documentName: string) => void;
+  onSelectDocumentQuick?: (
+    knowledgeId: string,
+    documentId: string,
+    documentName: string
+  ) => void;
 }
 
 const AIChatInput: React.FC<AIChatInputProps> = memo(

@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 from model_router import model_router, ModelConfig, ModelProvider
 from ollama_client import check_ollama_status, get_ollama_models, get_ollama_client
+from ask import AskHandler
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,8 @@ class MessageHandler:
             send_callback: 发送消息的异步回调函数，用于流式消息
         """
         self.send_callback = send_callback
+        # 初始化 Ask 模块
+        self.ask_handler = AskHandler(send_callback=send_callback)
         self.handlers = {
             "ping": self._handle_ping,
             "chat_message": self._handle_chat_message,
@@ -59,6 +62,8 @@ class MessageHandler:
             # Web Crawl 网页采集相关
             "web_crawl": self._handle_web_crawl,
             "web_fetch": self._handle_web_fetch,
+            # Ask 通用交互模块
+            "ask_response": self._handle_ask_response,
         }
         # 会话存储（后续可替换为持久化存储）
         self.conversations: Dict[str, list] = {}
@@ -1697,6 +1702,34 @@ class MessageHandler:
             logger.error(f"[WebFetch] 获取错误: {e}")
             return {
                 "type": "web_fetch_response",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": False,
+                "error": str(e),
+            }
+
+    # ==================== Ask 通用交互模块 ====================
+
+    async def _handle_ask_response(self, message: dict) -> dict:
+        """
+        处理用户对 Ask 的响应
+
+        用户响应通过 AskHandler 处理，设置到对应的询问会话中。
+        后续处理通过上下文进行。
+        """
+        try:
+            success = await self.ask_handler.handle_response(message)
+            return {
+                "type": "ask_response_ack",
+                "id": message.get("id"),
+                "timestamp": int(time.time() * 1000),
+                "success": success,
+                "askId": message.get("askId"),
+            }
+        except Exception as e:
+            logger.error(f"[Ask] 处理响应错误: {e}")
+            return {
+                "type": "ask_response_ack",
                 "id": message.get("id"),
                 "timestamp": int(time.time() * 1000),
                 "success": False,

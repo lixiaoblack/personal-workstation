@@ -109,6 +109,12 @@ export enum MessageType {
   KNOWLEDGE_SELECT_REQUEST = "knowledge_select_request", // 请求选择知识库
   KNOWLEDGE_SELECT_RESPONSE = "knowledge_select_response", // 用户选择结果
   KNOWLEDGE_ADD_RESULT = "knowledge_add_result", // 添加结果通知
+
+  // ==================== 通用 Ask 交互模块 ====================
+  // 用于前后端交互式确认、选择、输入等场景
+  ASK = "ask", // 后端发起询问
+  ASK_RESPONSE = "ask_response", // 用户响应询问
+  ASK_RESULT = "ask_result", // 询问处理结果
 }
 
 // 基础消息结构
@@ -958,6 +964,148 @@ export interface KnowledgeAddResultMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== 通用 Ask 交互模块 ====================
+
+/**
+ * Ask 交互类型
+ */
+export type AskType =
+  | "select" // 单选
+  | "multi" // 多选
+  | "confirm" // 确认（是/否）
+  | "input" // 文本输入
+  | "cascade" // 级联选择
+  | "api_select"; // API 动态选项
+
+/**
+ * Ask 选项
+ */
+export interface AskOption {
+  /** 选项 ID */
+  id: string;
+  /** 显示文本 */
+  label: string;
+  /** 描述 */
+  description?: string;
+  /** 图标 */
+  icon?: string;
+  /** 是否禁用 */
+  disabled?: boolean;
+  /** 分组 */
+  group?: string;
+  /** 子选项（级联选择） */
+  children?: AskOption[];
+  /** 元数据 */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * API 动态选项配置
+ */
+export interface AskApiConfig {
+  /** API 端点 */
+  endpoint: string;
+  /** HTTP 方法 */
+  method?: "GET" | "POST";
+  /** 请求参数 */
+  params?: Record<string, unknown>;
+  /** 结果映射 */
+  resultMapping?: {
+    /** ID 字段路径 */
+    id: string;
+    /** label 字段路径 */
+    label: string;
+    /** 描述字段路径 */
+    description?: string;
+  };
+}
+
+/**
+ * 输入配置
+ */
+export interface AskInputConfig {
+  /** 占位符 */
+  placeholder?: string;
+  /** 默认值 */
+  defaultValue?: string;
+  /** 是否必填 */
+  required?: boolean;
+  /** 校验规则（正则表达式） */
+  validate?: string;
+  /** 最小长度 */
+  minLength?: number;
+  /** 最大长度 */
+  maxLength?: number;
+}
+
+/**
+ * 后端发起询问消息
+ *
+ * 通用交互模式：后端发起询问 → 前端展示卡片 → 用户操作 → 返回结果
+ */
+export interface AskMessage extends BaseMessage {
+  type: MessageType.ASK;
+  /** 询问唯一标识 */
+  askId: string;
+  /** 交互类型 */
+  askType: AskType;
+  /** 标题 */
+  title: string;
+  /** 描述 */
+  description?: string;
+  /** 会话 ID（可选，用于关联聊天） */
+  conversationId?: string;
+  /** 静态选项列表 */
+  options?: AskOption[];
+  /** API 动态选项配置 */
+  apiConfig?: AskApiConfig;
+  /** 输入配置（input 类型） */
+  inputConfig?: AskInputConfig;
+  /** 超时时间（毫秒） */
+  timeout?: number;
+  /** 是否只读（展示结果用） */
+  readonly?: boolean;
+  /** 默认值 */
+  defaultValue?: string | string[] | boolean;
+  /** 上下文数据（后端处理用） */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * 用户响应询问消息
+ */
+export interface AskResponseMessage extends BaseMessage {
+  type: MessageType.ASK_RESPONSE;
+  /** 关联的询问 ID */
+  askId: string;
+  /** 操作类型 */
+  action: "submit" | "cancel" | "timeout";
+  /** 响应值
+   * - select: string (选中的 ID)
+   * - multi: string[] (选中的 ID 列表)
+   * - confirm: boolean
+   * - input: string (输入的文本)
+   * - cascade: string[] (选中的路径)
+   * - api_select: string
+   */
+  value?: string | string[] | boolean | Record<string, unknown>;
+}
+
+/**
+ * 询问处理结果消息
+ */
+export interface AskResultMessage extends BaseMessage {
+  type: MessageType.ASK_RESULT;
+  /** 关联的询问 ID */
+  askId: string;
+  /** 是否成功 */
+  success: boolean;
+  /** 结果消息 */
+  message?: string;
+  /** 附加数据 */
+  data?: Record<string, unknown>;
+}
+
 // 保存记忆
 export interface MemorySaveMessage extends BaseMessage {
   type: MessageType.MEMORY_SAVE;
@@ -1150,7 +1298,11 @@ export type WebSocketMessage =
   | KnowledgeAskAddMessage
   | KnowledgeSelectRequestMessage
   | KnowledgeSelectResponseMessage
-  | KnowledgeAddResultMessage;
+  | KnowledgeAddResultMessage
+  // Ask 通用交互模块
+  | AskMessage
+  | AskResponseMessage
+  | AskResultMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

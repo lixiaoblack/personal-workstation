@@ -75,6 +75,14 @@ export type {
   AttachmentInfo,
   AttachmentType,
   KnowledgeOption,
+  // Ask 通用交互模块类型
+  AskType,
+  AskOption,
+  AskApiConfig,
+  AskInputConfig,
+  AskMessage,
+  AskResponseMessage,
+  AskResultMessage,
   // Memory 记忆相关类型
   MemoryGetContextResponseMessage,
   MemorySaveResponseMessage,

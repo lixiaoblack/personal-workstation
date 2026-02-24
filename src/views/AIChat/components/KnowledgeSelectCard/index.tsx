@@ -1,7 +1,7 @@
 /**
  * KnowledgeSelectCard - 知识库选择卡片组件
  * 在 AI 消息中内嵌显示，用于让用户选择要添加的知识库
- * 
+ *
  * 交互流程：
  * 1. 显示附件信息（文件/图片/URL）
  * 2. 显示"添加到知识库"和"暂不需要"按钮
@@ -10,7 +10,14 @@
  */
 import React, { memo, useState, useCallback } from "react";
 import { Button, Tooltip, Spin, Empty } from "antd";
-import { FolderOutlined, FileOutlined, LinkOutlined, PictureOutlined, PlusOutlined, CheckOutlined } from "@ant-design/icons";
+import {
+  FolderOutlined,
+  FileOutlined,
+  LinkOutlined,
+  PictureOutlined,
+  PlusOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
 import type { AttachmentInfo, KnowledgeOption } from "@/types/electron";
 
 interface KnowledgeSelectCardProps {
@@ -124,7 +131,9 @@ const KnowledgeSelectCard: React.FC<KnowledgeSelectCardProps> = memo(
           {/* 已选知识库 */}
           <div className="flex items-center gap-2 p-2 bg-success/10 rounded border border-success/20">
             <CheckOutlined className="text-success" />
-            <span className="text-sm text-success">已添加到「{selectedKnowledge.name}」</span>
+            <span className="text-sm text-success">
+              已添加到「{selectedKnowledge.name}」
+            </span>
           </div>
 
           {/* 添加结果 */}
@@ -147,7 +156,9 @@ const KnowledgeSelectCard: React.FC<KnowledgeSelectCardProps> = memo(
         <div className="bg-bg-secondary border border-border rounded-lg p-4 max-w-md">
           <div className="flex items-center justify-center gap-3 py-4">
             <Spin size="small" />
-            <span className="text-sm text-text-secondary">正在添加到知识库...</span>
+            <span className="text-sm text-text-secondary">
+              正在添加到知识库...
+            </span>
           </div>
         </div>
       );

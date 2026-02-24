@@ -383,11 +383,16 @@ class MessageHandler:
         knowledge_id = message.get("knowledgeId")  # 知识库 ID（可选）
         knowledge_metadata = message.get("knowledgeMetadata")  # 知识库元数据
         use_deep_agent = message.get("useDeepAgent", True)  # 是否使用 Deep Agent
+        attachments = message.get("attachments", [])  # 附件列表
         msg_id = message.get("id")
 
         logger.info(f"[Agent] 收到消息: {content[:50]}...")
         logger.info(f"[Agent] 知识库元数据: {knowledge_metadata}")
         logger.info(f"[Agent] 使用 Deep Agent: {use_deep_agent}")
+        logger.info(f"[Agent] 附件数量: {len(attachments)}")
+        if attachments:
+            for att in attachments:
+                logger.info(f"[Agent] 附件: {att.get('name')} | 路径: {att.get('path')} | 类型: {att.get('type')}")
 
         try:
             from langchain_core.messages import HumanMessage
@@ -427,6 +432,7 @@ class MessageHandler:
                         model_id=model_id,
                         incoming_history=incoming_history,
                         msg_id=msg_id,
+                        attachments=attachments,
                     )
                     # 如果 Deep Agent 完成执行（包括返回 {"completed": True}），直接返回
                     if result is not None:
@@ -467,6 +473,7 @@ class MessageHandler:
         model_id: Optional[int],
         incoming_history: list,
         msg_id: str,
+        attachments: list = [],
     ) -> Optional[dict]:
         """
         使用 Deep Agent 执行
@@ -483,6 +490,7 @@ class MessageHandler:
             model_id: 模型 ID
             incoming_history: 历史消息
             msg_id: 消息 ID
+            attachments: 附件列表
 
         Returns:
             执行结果，如果 Deep Agent 不可用返回 None
@@ -528,12 +536,40 @@ class MessageHandler:
             knowledge_metadata = KnowledgeRetrieverTool.get_knowledge_metadata()
             enhanced_content = content
 
+            # 如果有附件，优先处理附件
+            attachment_context = ""
+            if attachments:
+                attachment_info = []
+                for att in attachments:
+                    att_name = att.get('name', '未知文件')
+                    att_path = att.get('path', '')
+                    att_type = att.get('type', 'other')
+                    att_size = att.get('size', 0)
+                    attachment_info.append(f"- 文件名: {att_name}\n  路径: {att_path}\n  类型: {att_type}\n  大小: {att_size} 字节")
+                
+                attachment_context = f"""
+[重要：用户上传了以下文件]
+{chr(10).join(attachment_info)}
+
+[指令] 用户上传了文件并询问相关问题，请使用 file_read 工具读取文件内容，然后分析并回答用户问题。
+优先处理用户上传的文件，不要先调用知识库搜索工具。
+"""
+
             if default_knowledge_id and knowledge_metadata:
                 kb_info = knowledge_metadata.get(default_knowledge_id, {})
                 kb_name = kb_info.get("name", "未知知识库")
                 kb_desc = kb_info.get("description", "")
                 # 使用系统提示格式，避免输出给用户
-                enhanced_content = f"""[Context]
+                if attachment_context:
+                    # 有附件时，优先处理附件
+                    enhanced_content = f"""{attachment_context}
+
+[用户问题]
+{content}
+
+[注意] 用户上传了文件，请优先使用 file_read 工具读取并分析文件内容。"""
+                else:
+                    enhanced_content = f"""[Context]
 Knowledge base selected: {kb_name}
 Knowledge base ID: {default_knowledge_id}
 Description: {kb_desc or 'None'}
@@ -542,6 +578,12 @@ Description: {kb_desc or 'None'}
 {content}
 
 [System Note: Use knowledge_search with knowledge_id={default_knowledge_id} directly. Do not call knowledge_list.]"""
+            elif attachment_context:
+                # 只有附件，没有知识库
+                enhanced_content = f"""{attachment_context}
+
+[用户问题]
+{content}"""
 
             logger.info(
                 f"[DeepAgent] 开始执行，工具数量: {len(tools)}, 已选知识库: {default_knowledge_id}")

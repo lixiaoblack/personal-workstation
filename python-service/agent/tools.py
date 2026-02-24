@@ -549,6 +549,212 @@ def register_skills_as_tools(skill_registry, tool_registry):
 global_tool_registry = ToolRegistry()
 
 
+# ==================== 文件读取工具 ====================
+
+class FileReadTool(BaseTool):
+    """
+    文件读取工具
+    
+    读取本地文件内容，支持多种文件格式。
+    Agent 使用此工具读取用户上传的附件文件。
+    """
+    
+    name = "file_read"
+    description = "读取本地文件内容。用于分析用户上传的附件文件。支持文本文件、PDF、Markdown、代码文件等格式。"
+    
+    class ArgsSchema(ToolSchema):
+        file_path: str = Field(description="文件的完整路径")
+        max_length: int = Field(default=10000, description="最大读取字符数，默认10000")
+    
+    args_schema = ArgsSchema
+    
+    def _run(self, file_path: str, max_length: int = 10000) -> str:
+        """
+        读取文件内容
+        
+        Args:
+            file_path: 文件路径
+            max_length: 最大读取字符数
+            
+        Returns:
+            文件内容或错误信息
+        """
+        import os
+        
+        try:
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                return f"错误：文件不存在 - {file_path}"
+            
+            # 获取文件扩展名
+            _, ext = os.path.splitext(file_path)
+            ext = ext.lower()
+            
+            # 获取文件大小
+            file_size = os.path.getsize(file_path)
+            
+            # 根据文件类型选择读取方式
+            if ext == ".pdf":
+                return self._read_pdf(file_path, max_length)
+            elif ext in [".doc", ".docx"]:
+                return self._read_docx(file_path, max_length)
+            elif ext in [".ppt", ".pptx"]:
+                return self._read_pptx(file_path, max_length)
+            elif ext in [".xls", ".xlsx"]:
+                return self._read_xlsx(file_path, max_length)
+            else:
+                # 默认作为文本文件读取
+                return self._read_text(file_path, max_length, file_size)
+                
+        except Exception as e:
+            return f"读取文件失败: {str(e)}"
+    
+    def _read_text(self, file_path: str, max_length: int, file_size: int) -> str:
+        """读取文本文件"""
+        import os
+        
+        try:
+            # 尝试不同编码
+            encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
+            content = None
+            
+            for encoding in encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        content = f.read(max_length + 1)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            if content is None:
+                return f"错误：无法解码文件内容，可能不是文本文件"
+            
+            # 检查是否截断
+            truncated = "" if len(content) <= max_length else "\n\n[...文件内容已截断...]"
+            
+            return f"文件大小: {file_size} 字节\n\n{content[:max_length]}{truncated}"
+            
+        except Exception as e:
+            return f"读取文本文件失败: {str(e)}"
+    
+    def _read_pdf(self, file_path: str, max_length: int) -> str:
+        """读取PDF文件"""
+        try:
+            import fitz  # PyMuPDF
+            
+            doc = fitz.open(file_path)
+            content_parts = []
+            total_length = 0
+            
+            for page_num, page in enumerate(doc):
+                if total_length >= max_length:
+                    content_parts.append(f"\n[...已截断，共{len(doc)}页...]")
+                    break
+                    
+                text = page.get_text()
+                content_parts.append(f"=== 第{page_num + 1}页 ===\n{text}")
+                total_length += len(text)
+            
+            doc.close()
+            
+            full_content = "\n\n".join(content_parts)
+            return f"PDF文件，共{len(doc)}页\n\n{full_content[:max_length]}"
+            
+        except ImportError:
+            return "错误：PDF读取需要安装 PyMuPDF 库 (pip install pymupdf)"
+        except Exception as e:
+            return f"读取PDF失败: {str(e)}"
+    
+    def _read_docx(self, file_path: str, max_length: int) -> str:
+        """读取Word文档"""
+        try:
+            from docx import Document
+            
+            doc = Document(file_path)
+            content_parts = []
+            total_length = 0
+            
+            for para in doc.paragraphs:
+                if total_length >= max_length:
+                    content_parts.append("\n[...内容已截断...]")
+                    break
+                content_parts.append(para.text)
+                total_length += len(para.text)
+            
+            return f"Word文档\n\n" + "\n".join(content_parts)[:max_length]
+            
+        except ImportError:
+            return "错误：Word文档读取需要安装 python-docx 库 (pip install python-docx)"
+        except Exception as e:
+            return f"读取Word文档失败: {str(e)}"
+    
+    def _read_pptx(self, file_path: str, max_length: int) -> str:
+        """读取PPT文件"""
+        try:
+            from pptx import Presentation
+            
+            prs = Presentation(file_path)
+            content_parts = []
+            total_length = 0
+            
+            for slide_num, slide in enumerate(prs.slides):
+                if total_length >= max_length:
+                    content_parts.append("\n[...内容已截断...]")
+                    break
+                    
+                slide_content = [f"=== 幻灯片 {slide_num + 1} ==="]
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text:
+                        slide_content.append(shape.text)
+                
+                text = "\n".join(slide_content)
+                content_parts.append(text)
+                total_length += len(text)
+            
+            return f"PPT文件，共{len(prs.slides)}页\n\n" + "\n\n".join(content_parts)[:max_length]
+            
+        except ImportError:
+            return "错误：PPT读取需要安装 python-pptx 库 (pip install python-pptx)"
+        except Exception as e:
+            return f"读取PPT失败: {str(e)}"
+    
+    def _read_xlsx(self, file_path: str, max_length: int) -> str:
+        """读取Excel文件"""
+        try:
+            from openpyxl import load_workbook
+            
+            wb = load_workbook(file_path, read_only=True)
+            content_parts = []
+            total_length = 0
+            
+            for sheet_name in wb.sheetnames:
+                if total_length >= max_length:
+                    content_parts.append("\n[...内容已截断...]")
+                    break
+                    
+                sheet = wb[sheet_name]
+                sheet_content = [f"=== 工作表: {sheet_name} ==="]
+                
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = " | ".join(str(cell) if cell is not None else "" for cell in row)
+                    sheet_content.append(row_text)
+                    total_length += len(row_text)
+                    
+                    if total_length >= max_length:
+                        break
+                
+                content_parts.append("\n".join(sheet_content))
+            
+            wb.close()
+            
+            return f"Excel文件，共{len(wb.sheetnames)}个工作表\n\n" + "\n\n".join(content_parts)[:max_length]
+            
+        except ImportError:
+            return "错误：Excel读取需要安装 openpyxl 库 (pip install openpyxl)"
+        except Exception as e:
+            return f"读取Excel失败: {str(e)}"
+
+
 def init_default_tools():
     """
     初始化默认工具
@@ -560,6 +766,7 @@ def init_default_tools():
     # 注册内置工具
     global_tool_registry.register(CalculatorTool())
     global_tool_registry.register(EchoTool())
+    global_tool_registry.register(FileReadTool())  # 文件读取工具
 
     logger.info(f"已注册 {len(global_tool_registry.list_tools())} 个默认工具")
 

@@ -551,9 +551,11 @@ class MessageHandler:
 [重要：用户上传了以下文件]
 {chr(10).join(attachment_info)}
 
-[指令] 用户上传了文件并询问相关问题，请使用 file_read 工具读取文件内容，然后分析并回答用户问题。
-优先处理用户上传的文件，不要先调用知识库搜索工具。
+[指令] 用户上传了文件并询问相关问题，你必须先使用 file_read 工具读取文件内容，然后分析并回答用户问题。
+**不要直接回答，必须先调用 file_read 工具读取文件！**
+调用示例：file_read(file_path="文件路径")
 """
+                logger.info(f"[DeepAgent] 已构建附件上下文，长度: {len(attachment_context)}")
 
             if default_knowledge_id and knowledge_metadata:
                 kb_info = knowledge_metadata.get(default_knowledge_id, {})
@@ -583,7 +585,10 @@ Description: {kb_desc or 'None'}
                 enhanced_content = f"""{attachment_context}
 
 [用户问题]
-{content}"""
+{content}
+
+[再次提醒] 你必须调用 file_read 工具来读取文件内容！"""
+                logger.info(f"[DeepAgent] 使用附件上下文（无知识库），enhanced_content 长度: {len(enhanced_content)}")
 
             logger.info(
                 f"[DeepAgent] 开始执行，工具数量: {len(tools)}, 已选知识库: {default_knowledge_id}")

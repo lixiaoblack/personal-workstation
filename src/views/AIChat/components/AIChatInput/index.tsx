@@ -433,8 +433,13 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                   onSubmit={handleSubmit}
                   onCancel={isLoading ? handleCancel : undefined}
                   onKeyDown={(e) => {
+                    // 触发符号
                     if (e.key === "/") {
                       onTrigger("/");
+                    }
+                    // 当下拉框打开时，回车键用于选择项目，不发送消息
+                    if (e.key === "Enter" && !e.shiftKey && open) {
+                      e.preventDefault();
                     }
                     onKeyDown(e);
                   }}

@@ -8,3 +8,4 @@ export { default as AIChatStreamingMessage } from "./AIChatStreamingMessage";
 export { default as AIChatAgentSteps } from "./AIChatAgentSteps";
 export { default as AIChatEmptyState } from "./AIChatEmptyState";
 export { default as AIChatInput } from "./AIChatInput";
+export { default as KnowledgeSelectCard } from "./KnowledgeSelectCard";

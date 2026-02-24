@@ -71,6 +71,10 @@ export type {
   KnowledgeInfo,
   KnowledgeDocumentInfo,
   KnowledgeSearchResult,
+  // Knowledge Selection 知识库选择相关类型
+  AttachmentInfo,
+  AttachmentType,
+  KnowledgeOption,
   // Memory 记忆相关类型
   MemoryGetContextResponseMessage,
   MemorySaveResponseMessage,

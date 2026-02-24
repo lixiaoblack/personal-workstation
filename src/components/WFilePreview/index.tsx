@@ -162,19 +162,13 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   const [content, setContent] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState<string>(""); // 图片 Base64 数据 URL
 
   const category = useMemo(() => getFileCategory(fileType), [fileType]);
 
   // 读取文件内容
   useEffect(() => {
     if (!visible || !filePath) return;
-
-    // 图片和 PDF 不需要读取内容，直接使用 file:// 协议
-    if (category === "image" || category === "pdf") {
-      setContent("");
-      setLoading(false);
-      return;
-    }
 
     // 不支持的类型
     if (category === "unsupported") {
@@ -186,10 +180,60 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
     setLoading(true);
     setError(null);
     setTruncated(false);
+    setContent("");
+    setImageDataUrl("");
 
     console.log("[WFilePreview] Reading file:", filePath);
 
-    // 通过 Electron API 读取文件内容
+    // 图片类型：读取完整内容并转为 Base64 数据 URL
+    if (category === "image") {
+      window.electronAPI
+        .readFileContent(filePath, 50 * 1024 * 1024) // 图片最大 50MB
+        .then((result) => {
+          console.log("[WFilePreview] Image read result:", result);
+          if (result.success && result.content && result.mimeType) {
+            // 构建 Base64 数据 URL
+            const dataUrl = `data:${result.mimeType};base64,${result.content}`;
+            setImageDataUrl(dataUrl);
+          } else {
+            setError(result.error || "无法读取图片内容");
+          }
+        })
+        .catch((err) => {
+          console.error("[WFilePreview] Image read error:", err);
+          setError(err.message || "读取图片失败");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+      return;
+    }
+
+    // PDF 类型：读取完整内容并转为 Base64 数据 URL
+    if (category === "pdf") {
+      window.electronAPI
+        .readFileContent(filePath, 50 * 1024 * 1024) // PDF 最大 50MB
+        .then((result) => {
+          console.log("[WFilePreview] PDF read result:", result);
+          if (result.success && result.content && result.mimeType) {
+            // 构建 Base64 数据 URL
+            const dataUrl = `data:${result.mimeType};base64,${result.content}`;
+            setImageDataUrl(dataUrl);
+          } else {
+            setError(result.error || "无法读取 PDF 内容");
+          }
+        })
+        .catch((err) => {
+          console.error("[WFilePreview] PDF read error:", err);
+          setError(err.message || "读取 PDF 失败");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+      return;
+    }
+
+    // 文本/代码/JSON 等类型
     window.electronAPI
       .readFileContent(filePath)
       .then((result) => {
@@ -226,11 +270,14 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
 
     switch (category) {
       case "image":
-        // 图片预览 - 使用 file:// 协议
+        // 图片预览 - 使用 Base64 数据 URL
+        if (!imageDataUrl) {
+          return <Empty description="图片加载中..." className="py-20" />;
+        }
         return (
           <div className="flex items-center justify-center p-4 bg-bg-tertiary rounded-lg min-h-[400px]">
             <img
-              src={`file://${filePath}`}
+              src={imageDataUrl}
               alt={fileName}
               className="max-w-full max-h-[70vh] object-contain rounded"
             />
@@ -238,11 +285,14 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         );
 
       case "pdf":
-        // PDF 预览 - 使用 iframe 或 embed
+        // PDF 预览 - 使用 Base64 数据 URL
+        if (!imageDataUrl) {
+          return <Empty description="PDF 加载中..." className="py-20" />;
+        }
         return (
           <div className="w-full h-[70vh] rounded overflow-hidden bg-bg-tertiary">
             <iframe
-              src={`file://${filePath}`}
+              src={imageDataUrl}
               className="w-full h-full border-0"
               title={fileName}
             />

@@ -490,6 +490,7 @@ class MessageHandler:
         try:
             from agent import DeepAgentWrapper, MessageSender, create_deep_agent
             from agent.tools import global_tool_registry
+            from agent.knowledge_tool import KnowledgeRetrieverTool
             from langchain_core.messages import HumanMessage, AIMessage
 
             # 创建消息发送器
@@ -522,7 +523,25 @@ class MessageHandler:
                     elif msg["role"] == "assistant":
                         messages.append(AIMessage(content=msg["content"]))
 
-            logger.info(f"[DeepAgent] 开始执行，工具数量: {len(tools)}")
+            # 如果用户选择了知识库，在消息前面注入上下文
+            default_knowledge_id = KnowledgeRetrieverTool.get_default_knowledge()
+            knowledge_metadata = KnowledgeRetrieverTool.get_knowledge_metadata()
+            enhanced_content = content
+            
+            if default_knowledge_id and knowledge_metadata:
+                kb_info = knowledge_metadata.get(default_knowledge_id, {})
+                kb_name = kb_info.get("name", "未知知识库")
+                kb_desc = kb_info.get("description", "")
+                # 在用户消息前添加上下文提示
+                enhanced_content = f"""【用户已选择知识库】{kb_name}
+知识库描述：{kb_desc or '无'}
+知识库ID：{default_knowledge_id}
+
+用户问题：{content}
+
+注意：用户已经选择了知识库，请直接使用 knowledge_search 工具在该知识库中搜索，无需再调用 knowledge_list 查询知识库列表。"""
+
+            logger.info(f"[DeepAgent] 开始执行，工具数量: {len(tools)}, 已选知识库: {default_knowledge_id}")
 
             # 流式执行
             # 注意：Deep Agent 内部通过 message_sender 发送 agent_step 消息

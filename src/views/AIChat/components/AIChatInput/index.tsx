@@ -426,23 +426,29 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                   onTrigger(false);
                 }
               };
+              
+              // 处理键盘事件
+              const handleKeyDown = (e: React.KeyboardEvent) => {
+                // 触发符号
+                if (e.key === "/") {
+                  onTrigger("/");
+                }
+                // 当下拉框打开时，回车键用于选择项目，阻止 Sender 的提交行为
+                if (e.key === "Enter" && !e.shiftKey && open) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+                // 调用 Suggestion 的 onKeyDown
+                onKeyDown(e);
+              };
+              
               return (
                 <Sender
                   value={inputValue}
                   onChange={handleChange}
-                  onSubmit={handleSubmit}
+                  onSubmit={open ? undefined : handleSubmit}
                   onCancel={isLoading ? handleCancel : undefined}
-                  onKeyDown={(e) => {
-                    // 触发符号
-                    if (e.key === "/") {
-                      onTrigger("/");
-                    }
-                    // 当下拉框打开时，回车键用于选择项目，不发送消息
-                    if (e.key === "Enter" && !e.shiftKey && open) {
-                      e.preventDefault();
-                    }
-                    onKeyDown(e);
-                  }}
+                  onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
                   loading={isLoading}
                   disabled={isDisabled}

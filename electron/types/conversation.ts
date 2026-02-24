@@ -28,6 +28,49 @@ export interface AgentStepData {
 // 消息元数据
 export interface MessageMetadata {
   agentSteps?: AgentStepData[];
+  // 知识库选择相关
+  knowledgeSelection?: {
+    /** 附件 ID */
+    attachmentId: string;
+    /** 选择的知识库 ID */
+    knowledgeId: string;
+    /** 选择的知识库名称 */
+    knowledgeName: string;
+    /** 选择时间戳 */
+    selectedAt: number;
+    /** 只读标记，已选择后不可修改 */
+    readonly: true;
+  };
+  // 附件信息
+  attachment?: {
+    /** 附件 ID */
+    id: string;
+    /** 附件类型 */
+    type: "file" | "image" | "url";
+    /** 显示名称 */
+    name: string;
+    /** 文件大小 */
+    size?: number;
+    /** MIME 类型 */
+    mimeType?: string;
+    /** 文件路径 */
+    path?: string;
+    /** URL 地址 */
+    url?: string;
+  };
+  // 知识库添加结果
+  knowledgeAddResult?: {
+    /** 是否成功 */
+    success: boolean;
+    /** 文档 ID */
+    documentId?: string;
+    /** 文档名称 */
+    documentName?: string;
+    /** 分块数量 */
+    chunkCount?: number;
+    /** 错误信息 */
+    error?: string;
+  };
 }
 
 // 消息对象

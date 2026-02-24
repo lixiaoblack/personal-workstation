@@ -179,8 +179,13 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrBlocks, setOcrBlocks] = useState<OcrBlock[]>([]);
   const [ocrText, setOcrText] = useState<string>("");
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(
+    null
+  );
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  }>({ width: 0, height: 0 });
   const [showOcrPanel, setShowOcrPanel] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
@@ -296,7 +301,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
         if (result.blocks && result.blocks.length > 0) {
           setShowOcrPanel(true);
         }
-        console.log(`[WFilePreview] OCR 识别成功，共 ${result.blocks?.length || 0} 个文字块`);
+        console.log(
+          `[WFilePreview] OCR 识别成功，共 ${
+            result.blocks?.length || 0
+          } 个文字块`
+        );
       } else {
         console.warn("[WFilePreview] OCR 识别失败:", result.error);
       }
@@ -319,7 +328,11 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   };
 
   // 计算边界框的显示位置
-  const getBoxStyle = (box: number[][], containerWidth: number, containerHeight: number) => {
+  const getBoxStyle = (
+    box: number[][],
+    containerWidth: number,
+    containerHeight: number
+  ) => {
     if (!box || box.length < 4 || imageDimensions.width === 0) return null;
 
     const xCoords = box.map((p) => p[0]);
@@ -381,48 +394,62 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
               />
 
               {/* OCR 边界框叠加层 - 只显示选中的文字块 */}
-              {imageDimensions.width > 0 && selectedBlockIndex !== null && imageContainerRef.current && ocrBlocks[selectedBlockIndex] && (() => {
-                const containerRect = imageContainerRef.current?.getBoundingClientRect();
-                if (!containerRect) return null;
+              {imageDimensions.width > 0 &&
+                selectedBlockIndex !== null &&
+                imageContainerRef.current &&
+                ocrBlocks[selectedBlockIndex] &&
+                (() => {
+                  const containerRect =
+                    imageContainerRef.current?.getBoundingClientRect();
+                  if (!containerRect) return null;
 
-                const containerAspect = containerRect.width / containerRect.height;
-                const imageAspect = imageDimensions.width / imageDimensions.height;
+                  const containerAspect =
+                    containerRect.width / containerRect.height;
+                  const imageAspect =
+                    imageDimensions.width / imageDimensions.height;
 
-                let displayWidth, displayHeight, offsetX, offsetY;
-                if (imageAspect > containerAspect) {
-                  displayWidth = containerRect.width;
-                  displayHeight = containerRect.width / imageAspect;
-                  offsetX = 0;
-                  offsetY = (containerRect.height - displayHeight) / 2;
-                } else {
-                  displayHeight = containerRect.height;
-                  displayWidth = containerRect.height * imageAspect;
-                  offsetX = (containerRect.width - displayWidth) / 2;
-                  offsetY = 0;
-                }
+                  let displayWidth, displayHeight, offsetX, offsetY;
+                  if (imageAspect > containerAspect) {
+                    displayWidth = containerRect.width;
+                    displayHeight = containerRect.width / imageAspect;
+                    offsetX = 0;
+                    offsetY = (containerRect.height - displayHeight) / 2;
+                  } else {
+                    displayHeight = containerRect.height;
+                    displayWidth = containerRect.height * imageAspect;
+                    offsetX = (containerRect.width - displayWidth) / 2;
+                    offsetY = 0;
+                  }
 
-                const block = ocrBlocks[selectedBlockIndex];
-                const boxStyle = getBoxStyle(block.box, displayWidth, displayHeight);
-                if (!boxStyle) return null;
+                  const block = ocrBlocks[selectedBlockIndex];
+                  const boxStyle = getBoxStyle(
+                    block.box,
+                    displayWidth,
+                    displayHeight
+                  );
+                  if (!boxStyle) return null;
 
-                return (
-                  <div key={selectedBlockIndex} className="absolute inset-0 pointer-events-none">
+                  return (
                     <div
-                      className="absolute border-2 border-primary bg-primary/20 shadow-lg shadow-primary/30 transition-all duration-200"
-                      style={{
-                        left: offsetX + boxStyle.left,
-                        top: offsetY + boxStyle.top,
-                        width: boxStyle.width,
-                        height: boxStyle.height,
-                      }}
+                      key={selectedBlockIndex}
+                      className="absolute inset-0 pointer-events-none"
                     >
-                      <div className="absolute -top-5 left-0 text-[10px] px-1.5 rounded bg-primary text-white">
-                        {selectedBlockIndex + 1}
+                      <div
+                        className="absolute border-2 border-primary bg-primary/20 shadow-lg shadow-primary/30 transition-all duration-200"
+                        style={{
+                          left: offsetX + boxStyle.left,
+                          top: offsetY + boxStyle.top,
+                          width: boxStyle.width,
+                          height: boxStyle.height,
+                        }}
+                      >
+                        <div className="absolute -top-5 left-0 text-[10px] px-1.5 rounded bg-primary text-white">
+                          {selectedBlockIndex + 1}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
               {/* OCR 加载中遮罩 */}
               {ocrLoading && (

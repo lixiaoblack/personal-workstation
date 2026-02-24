@@ -103,6 +103,12 @@ export enum MessageType {
   FRONTEND_BRIDGE_RESPONSE = "frontend_bridge_response", // 桥接调用响应
   FRONTEND_BRIDGE_LIST = "frontend_bridge_list", // 获取可用方法列表
   FRONTEND_BRIDGE_LIST_RESPONSE = "frontend_bridge_list_response", // 方法列表响应
+
+  // Knowledge Selection 知识库选择相关（聊天内嵌交互）
+  KNOWLEDGE_ASK_ADD = "knowledge_ask_add", // Agent 询问是否添加到知识库
+  KNOWLEDGE_SELECT_REQUEST = "knowledge_select_request", // 请求选择知识库
+  KNOWLEDGE_SELECT_RESPONSE = "knowledge_select_response", // 用户选择结果
+  KNOWLEDGE_ADD_RESULT = "knowledge_add_result", // 添加结果通知
 }
 
 // 基础消息结构
@@ -832,6 +838,126 @@ export interface FrontendBridgeListResponseMessage extends BaseMessage {
   error?: string;
 }
 
+// ==================== Knowledge Selection 知识库选择消息类型 ====================
+
+/**
+ * 附件类型
+ */
+export type AttachmentType = "file" | "image" | "url";
+
+/**
+ * 附件信息
+ */
+export interface AttachmentInfo {
+  /** 附件 ID */
+  id: string;
+  /** 附件类型 */
+  type: AttachmentType;
+  /** 显示名称 */
+  name: string;
+  /** 文件大小（字节） */
+  size?: number;
+  /** MIME 类型 */
+  mimeType?: string;
+  /** 文件路径（本地文件） */
+  path?: string;
+  /** URL 地址 */
+  url?: string;
+  /** 缩略图（Base64 或 URL） */
+  thumbnail?: string;
+}
+
+/**
+ * Agent 询问是否添加到知识库消息
+ *
+ * 当 Agent 检测到用户粘贴了文件/图片或输入了 URL 时，
+ * 先进行分析处理，然后询问用户是否需要添加到知识库
+ */
+export interface KnowledgeAskAddMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_ASK_ADD;
+  /** 会话 ID */
+  conversationId: string;
+  /** 分析结果文本（AI 对文件/URL 的概要描述） */
+  content: string;
+  /** 附件信息 */
+  attachment: AttachmentInfo;
+}
+
+/**
+ * 知识库选项（用于选择卡片渲染）
+ */
+export interface KnowledgeOption {
+  id: string;
+  name: string;
+  description?: string;
+  documentCount: number;
+  icon?: string;
+}
+
+/**
+ * 请求选择知识库消息
+ *
+ * 用户确认要添加到知识库后，返回知识库列表供用户选择
+ */
+export interface KnowledgeSelectRequestMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SELECT_REQUEST;
+  /** 会话 ID */
+  conversationId: string;
+  /** 关联的附件 ID */
+  attachmentId: string;
+  /** 知识库列表 */
+  knowledgeList: KnowledgeOption[];
+  /** 是否允许新建知识库 */
+  allowCreate?: boolean;
+}
+
+/**
+ * 用户选择知识库响应消息
+ *
+ * 用户在前端选择知识库后，发送给后端
+ * 选择后记录到消息 metadata，不可修改
+ */
+export interface KnowledgeSelectResponseMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_SELECT_RESPONSE;
+  /** 会话 ID */
+  conversationId: string;
+  /** 关联的附件 ID */
+  attachmentId: string;
+  /** 选择的知识库 ID */
+  knowledgeId: string;
+  /** 选择的知识库名称 */
+  knowledgeName: string;
+  /** 选择时间戳 */
+  selectedAt: number;
+}
+
+/**
+ * 知识库添加结果消息
+ *
+ * 后端处理完成后通知前端结果
+ */
+export interface KnowledgeAddResultMessage extends BaseMessage {
+  type: MessageType.KNOWLEDGE_ADD_RESULT;
+  /** 会话 ID */
+  conversationId: string;
+  /** 是否成功 */
+  success: boolean;
+  /** 关联的附件 ID */
+  attachmentId: string;
+  /** 知识库 ID */
+  knowledgeId: string;
+  /** 知识库名称 */
+  knowledgeName: string;
+  /** 文档 ID（成功时返回） */
+  documentId?: string;
+  /** 文档名称 */
+  documentName?: string;
+  /** 分块数量 */
+  chunkCount?: number;
+  /** 错误信息 */
+  error?: string;
+}
+
 // 保存记忆
 export interface MemorySaveMessage extends BaseMessage {
   type: MessageType.MEMORY_SAVE;
@@ -1020,7 +1146,11 @@ export type WebSocketMessage =
   | FrontendBridgeRequestMessage
   | FrontendBridgeResponseMessage
   | FrontendBridgeListMessage
-  | FrontendBridgeListResponseMessage;
+  | FrontendBridgeListResponseMessage
+  | KnowledgeAskAddMessage
+  | KnowledgeSelectRequestMessage
+  | KnowledgeSelectResponseMessage
+  | KnowledgeAddResultMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

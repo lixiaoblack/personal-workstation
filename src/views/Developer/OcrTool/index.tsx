@@ -38,8 +38,13 @@ const OcrTool: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   // 图片标注相关状态
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(
+    null
+  );
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  }>({ width: 0, height: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // 页面加载时检查 OCR 服务状态和加载历史记录
@@ -169,13 +174,17 @@ const OcrTool: React.FC = () => {
   };
 
   // 计算边界框的显示位置（相对于图片容器）
-  const getBoxStyle = (box: number[][], containerWidth: number, containerHeight: number) => {
+  const getBoxStyle = (
+    box: number[][],
+    containerWidth: number,
+    containerHeight: number
+  ) => {
     if (!box || box.length < 4) return null;
 
     // box 是四个点的坐标 [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
     // 找出边界框的左上角和右下角
-    const xCoords = box.map(p => p[0]);
-    const yCoords = box.map(p => p[1]);
+    const xCoords = box.map((p) => p[0]);
+    const yCoords = box.map((p) => p[1]);
     const minX = Math.min(...xCoords);
     const maxX = Math.max(...xCoords);
     const minY = Math.min(...yCoords);
@@ -449,52 +458,66 @@ const OcrTool: React.FC = () => {
                 />
 
                 {/* 边界框叠加层 - 只显示选中的文字块 */}
-                {imageDimensions.width > 0 && selectedBlockIndex !== null && imageContainerRef.current && ocrBlocks[selectedBlockIndex] && (() => {
-                  const containerRect = imageContainerRef.current?.getBoundingClientRect();
-                  if (!containerRect) return null;
+                {imageDimensions.width > 0 &&
+                  selectedBlockIndex !== null &&
+                  imageContainerRef.current &&
+                  ocrBlocks[selectedBlockIndex] &&
+                  (() => {
+                    const containerRect =
+                      imageContainerRef.current?.getBoundingClientRect();
+                    if (!containerRect) return null;
 
-                  // 计算图片在容器中的实际显示区域（object-contain 模式）
-                  const containerAspect = containerRect.width / containerRect.height;
-                  const imageAspect = imageDimensions.width / imageDimensions.height;
+                    // 计算图片在容器中的实际显示区域（object-contain 模式）
+                    const containerAspect =
+                      containerRect.width / containerRect.height;
+                    const imageAspect =
+                      imageDimensions.width / imageDimensions.height;
 
-                  let displayWidth, displayHeight, offsetX, offsetY;
-                  if (imageAspect > containerAspect) {
-                    // 图片宽度为约束
-                    displayWidth = containerRect.width;
-                    displayHeight = containerRect.width / imageAspect;
-                    offsetX = 0;
-                    offsetY = (containerRect.height - displayHeight) / 2;
-                  } else {
-                    // 图片高度为约束
-                    displayHeight = containerRect.height;
-                    displayWidth = containerRect.height * imageAspect;
-                    offsetX = (containerRect.width - displayWidth) / 2;
-                    offsetY = 0;
-                  }
+                    let displayWidth, displayHeight, offsetX, offsetY;
+                    if (imageAspect > containerAspect) {
+                      // 图片宽度为约束
+                      displayWidth = containerRect.width;
+                      displayHeight = containerRect.width / imageAspect;
+                      offsetX = 0;
+                      offsetY = (containerRect.height - displayHeight) / 2;
+                    } else {
+                      // 图片高度为约束
+                      displayHeight = containerRect.height;
+                      displayWidth = containerRect.height * imageAspect;
+                      offsetX = (containerRect.width - displayWidth) / 2;
+                      offsetY = 0;
+                    }
 
-                  const block = ocrBlocks[selectedBlockIndex];
-                  const boxStyle = getBoxStyle(block.box, displayWidth, displayHeight);
-                  if (!boxStyle) return null;
+                    const block = ocrBlocks[selectedBlockIndex];
+                    const boxStyle = getBoxStyle(
+                      block.box,
+                      displayWidth,
+                      displayHeight
+                    );
+                    if (!boxStyle) return null;
 
-                  return (
-                    <div key={selectedBlockIndex} className="absolute inset-0 pointer-events-none">
+                    return (
                       <div
-                        className="absolute border-2 border-primary bg-primary/20 shadow-lg shadow-primary/30 transition-all duration-200"
-                        style={{
-                          left: offsetX + boxStyle.left,
-                          top: offsetY + boxStyle.top,
-                          width: boxStyle.width,
-                          height: boxStyle.height,
-                        }}
+                        key={selectedBlockIndex}
+                        className="absolute inset-0 pointer-events-none"
                       >
-                        {/* 序号标签 */}
-                        <div className="absolute -top-5 left-0 text-[10px] px-1.5 rounded bg-primary text-white">
-                          {selectedBlockIndex + 1}
+                        <div
+                          className="absolute border-2 border-primary bg-primary/20 shadow-lg shadow-primary/30 transition-all duration-200"
+                          style={{
+                            left: offsetX + boxStyle.left,
+                            top: offsetY + boxStyle.top,
+                            width: boxStyle.width,
+                            height: boxStyle.height,
+                          }}
+                        >
+                          {/* 序号标签 */}
+                          <div className="absolute -top-5 left-0 text-[10px] px-1.5 rounded bg-primary text-white">
+                            {selectedBlockIndex + 1}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
 
                 {/* 加载中遮罩 */}
                 {loading && (

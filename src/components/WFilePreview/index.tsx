@@ -380,61 +380,49 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
                 onLoad={handleImageLoad}
               />
 
-              {/* OCR 边界框叠加层 */}
-              {imageDimensions.width > 0 && ocrBlocks.length > 0 && imageContainerRef.current && (
-                <div className="absolute inset-0 pointer-events-none">
-                  {ocrBlocks.map((block, index) => {
-                    const containerRect = imageContainerRef.current?.getBoundingClientRect();
-                    if (!containerRect) return null;
+              {/* OCR 边界框叠加层 - 只显示选中的文字块 */}
+              {imageDimensions.width > 0 && selectedBlockIndex !== null && imageContainerRef.current && ocrBlocks[selectedBlockIndex] && (() => {
+                const containerRect = imageContainerRef.current?.getBoundingClientRect();
+                if (!containerRect) return null;
 
-                    const containerAspect = containerRect.width / containerRect.height;
-                    const imageAspect = imageDimensions.width / imageDimensions.height;
+                const containerAspect = containerRect.width / containerRect.height;
+                const imageAspect = imageDimensions.width / imageDimensions.height;
 
-                    let displayWidth, displayHeight, offsetX, offsetY;
-                    if (imageAspect > containerAspect) {
-                      displayWidth = containerRect.width;
-                      displayHeight = containerRect.width / imageAspect;
-                      offsetX = 0;
-                      offsetY = (containerRect.height - displayHeight) / 2;
-                    } else {
-                      displayHeight = containerRect.height;
-                      displayWidth = containerRect.height * imageAspect;
-                      offsetX = (containerRect.width - displayWidth) / 2;
-                      offsetY = 0;
-                    }
+                let displayWidth, displayHeight, offsetX, offsetY;
+                if (imageAspect > containerAspect) {
+                  displayWidth = containerRect.width;
+                  displayHeight = containerRect.width / imageAspect;
+                  offsetX = 0;
+                  offsetY = (containerRect.height - displayHeight) / 2;
+                } else {
+                  displayHeight = containerRect.height;
+                  displayWidth = containerRect.height * imageAspect;
+                  offsetX = (containerRect.width - displayWidth) / 2;
+                  offsetY = 0;
+                }
 
-                    const boxStyle = getBoxStyle(block.box, displayWidth, displayHeight);
-                    if (!boxStyle) return null;
+                const block = ocrBlocks[selectedBlockIndex];
+                const boxStyle = getBoxStyle(block.box, displayWidth, displayHeight);
+                if (!boxStyle) return null;
 
-                    const isSelected = selectedBlockIndex === index;
-
-                    return (
-                      <div
-                        key={index}
-                        className={`absolute border-2 transition-all duration-200 ${
-                          isSelected
-                            ? "border-primary bg-primary/20 shadow-lg shadow-primary/30"
-                            : "border-success/50 bg-success/5"
-                        }`}
-                        style={{
-                          left: offsetX + boxStyle.left,
-                          top: offsetY + boxStyle.top,
-                          width: boxStyle.width,
-                          height: boxStyle.height,
-                        }}
-                      >
-                        <div
-                          className={`absolute -top-5 left-0 text-[10px] px-1 rounded ${
-                            isSelected ? "bg-primary text-white" : "bg-success text-white"
-                          }`}
-                        >
-                          {index + 1}
-                        </div>
+                return (
+                  <div key={selectedBlockIndex} className="absolute inset-0 pointer-events-none">
+                    <div
+                      className="absolute border-2 border-primary bg-primary/20 shadow-lg shadow-primary/30 transition-all duration-200"
+                      style={{
+                        left: offsetX + boxStyle.left,
+                        top: offsetY + boxStyle.top,
+                        width: boxStyle.width,
+                        height: boxStyle.height,
+                      }}
+                    >
+                      <div className="absolute -top-5 left-0 text-[10px] px-1.5 rounded bg-primary text-white">
+                        {selectedBlockIndex + 1}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* OCR 加载中遮罩 */}
               {ocrLoading && (

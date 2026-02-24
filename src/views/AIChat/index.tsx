@@ -783,6 +783,9 @@ const AIChatComponent: React.FC = () => {
           knowledgeList={knowledgeList}
           selectedKnowledgeId={selectedKnowledgeId}
           onKnowledgeChange={setSelectedKnowledgeId}
+          onSelectKnowledgeQuick={(id: string) => {
+            setSelectedKnowledgeId(id);
+          }}
         />
       </main>
 

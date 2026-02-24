@@ -249,6 +249,7 @@ class DeepAgentWrapper:
         获取正确的文件路径
 
         如果提供的路径不在附件映射中，尝试查找匹配的路径。
+        如果完全找不到匹配，则使用第一个附件的路径（兜底策略）。
 
         Args:
             provided_path: LLM 提供的文件路径
@@ -263,7 +264,7 @@ class DeepAgentWrapper:
         if provided_path in cls._attachment_paths.values():
             return provided_path
 
-        # 如果路径在映射中
+        # 如果路径在映射中（key 是文件名）
         if provided_path in cls._attachment_paths:
             return cls._attachment_paths[provided_path]
 
@@ -273,6 +274,12 @@ class DeepAgentWrapper:
             if name == provided_name or os.path.basename(path) == provided_name:
                 logger.info(f"[DeepAgent] 路径修正: {provided_path} -> {path}")
                 return path
+
+        # 兜底策略：LLM 编造的路径完全不对时，使用第一个附件的路径
+        first_path = list(cls._attachment_paths.values())[0] if cls._attachment_paths else provided_path
+        if first_path != provided_path:
+            logger.info(f"[DeepAgent] 路径兜底修正（LLM编造路径）: {provided_path} -> {first_path}")
+            return first_path
 
         return provided_path
 

@@ -600,15 +600,9 @@ const AIChatComponent: React.FC = () => {
 
     console.log("[AIChat] 准备发送消息，conversationId:", conversationId);
 
-    // 构建消息内容（包含附件信息）
-    let messageContent = content;
+    // 构建消息内容（附件信息通过 metadata 传递，不在内容中显示）
+    const messageContent = content;
     const currentAttachments = [...attachments];
-    if (currentAttachments.length > 0) {
-      const fileInfo = currentAttachments.map(file => 
-        `[附件: ${file.name} | 路径: ${file.path} | 类型: ${file.type} | 大小: ${file.size}字节]`
-      ).join('\n');
-      messageContent = `${content}\n\n---\n关联文件:\n${fileInfo}`;
-    }
 
     // 添加用户消息
     const userMessage: Message = {

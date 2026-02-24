@@ -10,7 +10,10 @@
  */
 import React, { memo, useCallback } from "react";
 import { Suggestion } from "@ant-design/x";
-import type { SuggestionItem, RenderChildrenProps } from "@ant-design/x/es/suggestion";
+import type {
+  SuggestionItem,
+  RenderChildrenProps,
+} from "@ant-design/x/es/suggestion";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 import type { KnowledgeInfo, KnowledgeDocumentInfo } from "@/types/electron";
 
@@ -42,13 +45,25 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
     // 构建建议项列表函数（Suggestion 组件会传入搜索关键词）
     const getItems = useCallback(
       (info?: string) => {
-        console.log("[KnowledgeSuggestion] getItems 调用, info:", info, "knowledgeList:", knowledgeList?.length);
+        console.log(
+          "[KnowledgeSuggestion] getItems 调用, info:",
+          info,
+          "knowledgeList:",
+          knowledgeList?.length
+        );
         const result: SuggestionItem[] = [];
         // info 是用户输入的触发字符串，如 "/" 或 "/关键词"
         // 需要去掉开头的 "/" 得到真正的搜索关键词
-        const keyword = info?.startsWith("/") ? info.slice(1).toLowerCase() : (info?.toLowerCase() || "");
+        const keyword = info?.startsWith("/")
+          ? info.slice(1).toLowerCase()
+          : info?.toLowerCase() || "";
 
-        console.log("[KnowledgeSuggestion] keyword:", keyword, "knowledgeList:", knowledgeList);
+        console.log(
+          "[KnowledgeSuggestion] keyword:",
+          keyword,
+          "knowledgeList:",
+          knowledgeList
+        );
 
         knowledgeList.forEach((kb) => {
           console.log("[KnowledgeSuggestion] 检查知识库:", kb.name, kb);
@@ -63,7 +78,8 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
             const docs = knowledgeDocuments[kb.id] || [];
             const docItems: SuggestionItem[] = docs
               .filter(
-                (doc) => !keyword || doc.fileName.toLowerCase().includes(keyword)
+                (doc) =>
+                  !keyword || doc.fileName.toLowerCase().includes(keyword)
               )
               .map((doc) => ({
                 label: doc.fileName,
@@ -87,7 +103,11 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
           }
         });
 
-        console.log("[KnowledgeSuggestion] getItems 结果:", result.length, result);
+        console.log(
+          "[KnowledgeSuggestion] getItems 结果:",
+          result.length,
+          result
+        );
         return result;
       },
       [knowledgeList, knowledgeDocuments]

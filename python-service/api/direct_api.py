@@ -255,3 +255,43 @@ def direct_ocr_recognize_file(file_path: str) -> Dict[str, Any]:
         return ocr_recognize_image(file_path)
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+# ==================== 知识库文档直接调用 ====================
+
+def direct_list_knowledge_documents(knowledge_id: str) -> List[Dict[str, Any]]:
+    """
+    直接调用：获取知识库文档列表
+
+    Args:
+        knowledge_id: 知识库 ID
+
+    Returns:
+        文档列表，包含 id, fileName, filePath, fileType, fileSize, chunkCount, ocrText, ocrBlocks 等
+    """
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, knowledge_id, file_name, file_path, file_type, 
+                   file_size, chunk_count, ocr_text, ocr_blocks, created_at
+            FROM knowledge_documents WHERE knowledge_id = ?
+            ORDER BY created_at DESC
+        """, (knowledge_id,))
+        rows = cursor.fetchall()
+
+        # 转换为前端期望的格式
+        documents = []
+        for row in rows:
+            documents.append({
+                "id": row["id"],
+                "knowledgeId": row["knowledge_id"],
+                "fileName": row["file_name"],
+                "filePath": row["file_path"],
+                "fileType": row["file_type"],
+                "fileSize": row["file_size"],
+                "chunkCount": row["chunk_count"],
+                "ocrText": row["ocr_text"],
+                "ocrBlocks": row["ocr_blocks"],
+                "createdAt": row["created_at"],
+            })
+
+        return documents

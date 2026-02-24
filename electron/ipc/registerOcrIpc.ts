@@ -39,7 +39,7 @@ interface OcrStatus {
  * 注册 OCR 相关 IPC 处理器
  */
 export function registerOcrIpc(): void {
-  // OCR 识别 Base64 图片
+  // OCR 识别 Base64 图片（超时时间 60 秒）
   ipcMain.handle(
     "ocr:recognize",
     async (_event, imageBase64: string): Promise<OcrResult> => {
@@ -50,7 +50,11 @@ export function registerOcrIpc(): void {
           text: string;
           blocks: Array<{ text: string; confidence: number; box: number[][] }>;
           error?: string;
-        }>("/api/ocr/recognize", { image_base64: imageBase64 });
+        }>(
+          "/api/ocr/recognize",
+          { image_base64: imageBase64 },
+          { timeout: 60000 }
+        );
 
         if (response.success && response.data) {
           return {
@@ -78,7 +82,7 @@ export function registerOcrIpc(): void {
     }
   );
 
-  // OCR 识别图片文件
+  // OCR 识别图片文件（超时时间 60 秒）
   ipcMain.handle(
     "ocr:recognizeFile",
     async (_event, filePath: string): Promise<OcrResult> => {
@@ -89,7 +93,10 @@ export function registerOcrIpc(): void {
           text: string;
           blocks: Array<{ text: string; confidence: number; box: number[][] }>;
           error?: string;
-        }>(`/api/ocr/recognize-file?file_path=${encodeURIComponent(filePath)}`);
+        }>(
+          `/api/ocr/recognize-file?file_path=${encodeURIComponent(filePath)}`,
+          { timeout: 60000 }
+        );
 
         if (response.success && response.data) {
           return {

@@ -84,6 +84,11 @@ class KnowledgeRetrieverTool(BaseTool):
         """设置知识库元数据（用于智能匹配）"""
         cls._knowledge_metadata = metadata
 
+    @classmethod
+    def get_knowledge_metadata(cls) -> Dict[str, Dict[str, Any]]:
+        """获取知识库元数据"""
+        return cls._knowledge_metadata
+
     def _run(
         self,
         query: str,
@@ -321,8 +326,8 @@ class KnowledgeRetrieverTool(BaseTool):
         return matched
 
     def _format_results(self, results: List[Dict[str, Any]]) -> str:
-        """格式化检索结果"""
-        lines = ["从知识库中找到以下相关信息：\n"]
+        """格式化检索结果 - 只返回数据，不包含指令性内容"""
+        lines = []
 
         for i, result in enumerate(results, 1):
             content = result.get("content", "")
@@ -341,7 +346,6 @@ class KnowledgeRetrieverTool(BaseTool):
             lines.append(f"内容: {content}")
             lines.append("")
 
-        lines.append("请基于以上信息回答用户问题，并注明信息来源。")
         return "\n".join(lines)
 
 
@@ -367,24 +371,27 @@ class KnowledgeListTool(BaseTool):
     def _run(self) -> str:
         """获取知识库列表"""
         try:
+            # 如果用户已选择了知识库，直接返回已选知识库的信息
+            default_knowledge_id = KnowledgeRetrieverTool.get_default_knowledge()
+            knowledge_metadata = KnowledgeRetrieverTool.get_knowledge_metadata()
+
+            if default_knowledge_id and knowledge_metadata:
+                kb_info = knowledge_metadata.get(default_knowledge_id, {})
+                kb_name = kb_info.get("name", "未知知识库")
+                return f"已选择知识库: {kb_name} (ID: {default_knowledge_id})"
+
             from api.direct_api import direct_list_knowledge
 
             knowledge_list = direct_list_knowledge()
 
             if not knowledge_list:
-                return "当前没有可用的知识库。请先创建知识库并上传文档。"
+                return "当前没有可用的知识库。"
 
-            lines = ["可用的知识库：\n"]
+            lines = ["可用的知识库："]
             for kb in knowledge_list:
                 name = kb.get('name', '未命名')
                 kb_id = kb.get('id', '未知')
-                doc_count = kb.get('document_count', 0)
-                description = kb.get('description', '')
-
                 lines.append(f"- {name} (ID: {kb_id})")
-                lines.append(f"  文档数: {doc_count}")
-                if description:
-                    lines.append(f"  描述: {description}")
 
             return "\n".join(lines)
 
@@ -465,6 +472,87 @@ class KnowledgeCreateTool(BaseTool):
             return f"创建失败: {str(e)}"
 
 
+class KnowledgeListDocumentsSchema(ToolSchema):
+    """知识库文档列表参数"""
+
+    knowledge_id: Optional[str] = Field(
+        default=None,
+        description="知识库 ID，如果不指定则使用用户选择的知识库"
+    )
+
+
+class KnowledgeListDocumentsTool(BaseTool):
+    """
+    知识库文档列表工具
+
+    列出知识库中的所有文档，返回文档列表供前端展示。
+    使用场景：
+    - 用户询问知识库中有哪些文件
+    - 用户想查看知识库的文档列表
+    - 用户需要了解知识库内容
+    """
+
+    name = "knowledge_list_documents"
+    description = (
+        "列出知识库中的所有文档。"
+        "当用户询问知识库中有哪些文件、文档列表时使用此工具。"
+        "返回文档列表，包含文件名、类型、大小等信息。"
+    )
+
+    args_schema = KnowledgeListDocumentsSchema
+
+    def _run(self, knowledge_id: Optional[str] = None) -> str:
+        """获取知识库文档列表"""
+        import json
+
+        # 使用传入的知识库 ID 或默认值
+        actual_knowledge_id = knowledge_id or KnowledgeRetrieverTool.get_default_knowledge()
+
+        if not actual_knowledge_id:
+            return "请先选择知识库。"
+
+        try:
+            from api.direct_api import direct_list_knowledge_documents
+
+            documents = direct_list_knowledge_documents(actual_knowledge_id)
+
+            if not documents:
+                return f"知识库中没有文档。"
+
+            # 返回 JSON 格式，方便前端解析
+            result = {
+                "knowledge_id": actual_knowledge_id,
+                "count": len(documents),
+                "documents": documents,
+            }
+
+            # 同时返回文本格式供 Agent 理解
+            lines = [f"知识库中共有 {len(documents)} 个文档："]
+            for doc in documents:
+                file_size = doc.get("fileSize", 0)
+                size_str = self._format_file_size(file_size)
+                lines.append(
+                    f"- {doc.get('fileName', '未知文件')} ({doc.get('fileType', '未知类型')}, {size_str})"
+                )
+
+            return json.dumps(result, ensure_ascii=False)
+
+        except Exception as e:
+            logger.error(f"[KnowledgeListDocumentsTool] 获取文档列表失败: {e}")
+            return f"获取文档列表失败: {str(e)}"
+
+    def _format_file_size(self, size: int) -> str:
+        """格式化文件大小"""
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        elif size < 1024 * 1024 * 1024:
+            return f"{size / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size / (1024 * 1024 * 1024):.1f} GB"
+
+
 def register_knowledge_tools():
     """注册知识库相关工具"""
     global global_tool_registry
@@ -486,6 +574,12 @@ def register_knowledge_tools():
     if knowledge_create_tool.name not in global_tool_registry.list_tools():
         global_tool_registry.register(knowledge_create_tool)
         logger.info("已注册知识库创建工具: knowledge_create")
+
+    # 注册知识库文档列表工具
+    knowledge_list_documents_tool = KnowledgeListDocumentsTool()
+    if knowledge_list_documents_tool.name not in global_tool_registry.list_tools():
+        global_tool_registry.register(knowledge_list_documents_tool)
+        logger.info("已注册知识库文档列表工具: knowledge_list_documents")
 
     logger.info(f"当前已注册工具: {global_tool_registry.list_tools()}")
 

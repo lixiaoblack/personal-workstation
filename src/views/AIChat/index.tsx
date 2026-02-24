@@ -32,7 +32,7 @@ import AIChatHeader from "./components/AIChatHeader";
 import AIChatMessage from "./components/AIChatMessage";
 import AIChatStreamingMessage from "./components/AIChatStreamingMessage";
 import AIChatEmptyState from "./components/AIChatEmptyState";
-import AIChatInput, { TagItem } from "./components/AIChatInput";
+import AIChatInput, { TagItem, AttachmentFile } from "./components/AIChatInput";
 
 const AIChatComponent: React.FC = () => {
   const { connectionState, sendChat, sendAgentChat, lastMessage } =
@@ -76,6 +76,9 @@ const AIChatComponent: React.FC = () => {
 
   // 输入内容
   const [inputValue, setInputValue] = useState("");
+
+  // 附件文件列表
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
 
   // 编辑对话标题弹窗
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -154,7 +157,11 @@ const AIChatComponent: React.FC = () => {
         const result = await window.electronAPI.listKnowledge();
         console.log("[AIChat] listKnowledge 结果:", result);
         if (result.success && result.knowledge) {
-          console.log("[AIChat] 知识库列表:", result.knowledge.length, result.knowledge);
+          console.log(
+            "[AIChat] 知识库列表:",
+            result.knowledge.length,
+            result.knowledge
+          );
           setKnowledgeList(result.knowledge);
         } else {
           console.log("[AIChat] 知识库加载失败:", result.error);
@@ -593,17 +600,30 @@ const AIChatComponent: React.FC = () => {
 
     console.log("[AIChat] 准备发送消息，conversationId:", conversationId);
 
+    // 构建消息内容（包含附件信息）
+    let messageContent = content;
+    const currentAttachments = [...attachments];
+    if (currentAttachments.length > 0) {
+      const fileInfo = currentAttachments.map(file => 
+        `[附件: ${file.name} | 路径: ${file.path} | 类型: ${file.type} | 大小: ${file.size}字节]`
+      ).join('\n');
+      messageContent = `${content}\n\n---\n关联文件:\n${fileInfo}`;
+    }
+
     // 添加用户消息
     const userMessage: Message = {
       id: Date.now(),
       conversationId: conversationId!,
       role: "user",
-      content,
+      content: messageContent,
       timestamp: Date.now(),
       createdAt: new Date().toISOString(),
+      metadata: currentAttachments.length > 0 ? { attachments: currentAttachments } : undefined,
     };
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    // 清空附件列表
+    setAttachments([]);
 
     // 保存用户消息到数据库
     try {
@@ -689,12 +709,19 @@ const AIChatComponent: React.FC = () => {
       });
 
       sendAgentChat({
-        content,
+        content: messageContent,
         conversationId: String(conversationId),
         modelId: currentModel.id,
         history,
         knowledgeId,
         knowledgeMetadata,
+        attachments: currentAttachments.length > 0 ? currentAttachments.map(a => ({
+          name: a.name,
+          path: a.path,
+          type: a.type,
+          size: a.size,
+          mimeType: a.mimeType,
+        })) : undefined,
       });
     } else {
       console.log("[AIChat] 发送普通聊天消息:", {
@@ -704,7 +731,7 @@ const AIChatComponent: React.FC = () => {
       });
 
       sendChat({
-        content,
+        content: messageContent,
         conversationId: String(conversationId),
         modelId: currentModel.id,
         history,
@@ -722,6 +749,7 @@ const AIChatComponent: React.FC = () => {
     selectedTags,
     knowledgeList,
     loadConversations,
+    attachments,
   ]);
 
   return (
@@ -789,6 +817,8 @@ const AIChatComponent: React.FC = () => {
           knowledgeList={knowledgeList}
           selectedTags={selectedTags}
           onTagsChange={setSelectedTags}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
         />
       </main>
 

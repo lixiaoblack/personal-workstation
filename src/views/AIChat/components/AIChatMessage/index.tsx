@@ -15,16 +15,72 @@ import {
 } from "../../config";
 import type { AgentStepItem } from "../../config";
 import AIChatAgentSteps from "../AIChatAgentSteps";
+import KnowledgeDocumentListCard, {
+  type DocumentItem,
+} from "../KnowledgeDocumentListCard";
 import type { Message, ModelConfig } from "@/types/electron";
 
 interface AIChatMessageProps {
   message: Message;
   currentModel: ModelConfig | null;
-  isExpanded?: boolean;
+}
+
+// 从工具结果中提取文档列表
+function extractDocumentsFromSteps(
+  steps: AgentStepItem[]
+): { knowledgeId: string; documents: unknown[] } | null {
+  // 方式1：查找 tool_result 类型的步骤（工具名称在 toolCall.name 中）
+  for (const step of steps) {
+    if (
+      step.type === "tool_result" &&
+      step.toolCall?.name === "knowledge_list_documents" &&
+      step.content
+    ) {
+      try {
+        const result = JSON.parse(step.content);
+        if (result.knowledge_id && Array.isArray(result.documents)) {
+          return {
+            knowledgeId: result.knowledge_id,
+            documents: result.documents,
+          };
+        }
+      } catch {
+        // 解析失败，继续尝试其他方式
+      }
+    }
+  }
+
+  // 方式2：查找 tool_call 类型的步骤，然后找下一个 tool_result
+  for (const step of steps) {
+    if (
+      step.type === "tool_call" &&
+      step.toolCall?.name === "knowledge_list_documents"
+    ) {
+      // 找到对应的工具结果（下一个步骤）
+      const stepIndex = steps.indexOf(step);
+      const resultStep = steps[stepIndex + 1];
+      if (resultStep?.type === "tool_result" && resultStep.content) {
+        try {
+          // 尝试解析 JSON
+          const result = JSON.parse(resultStep.content);
+          if (result.knowledge_id && Array.isArray(result.documents)) {
+            return {
+              knowledgeId: result.knowledge_id,
+              documents: result.documents,
+            };
+          }
+        } catch {
+          // 解析失败，返回 null
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 const AIChatMessage: React.FC<AIChatMessageProps> = memo(
-  ({ message, currentModel, isExpanded }) => {
+  ({ message, currentModel }) => {
     const isUser = message.role === "user";
 
     // 过滤掉 answer 类型
@@ -45,6 +101,14 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
 
     // 是否显示思考过程（只有有工具调用时才显示）
     const showThinking = thinkingSteps.length > 0 && hasToolCallsFlag;
+
+    // 提取文档列表（如果有 knowledge_list_documents 工具调用）
+    const documentsData = useMemo(() => {
+      if (isUser) return null;
+      const agentStepsInMessage =
+        (message.metadata?.agentSteps as AgentStepItem[]) || [];
+      return extractDocumentsFromSteps(agentStepsInMessage);
+    }, [isUser, message.metadata?.agentSteps]);
 
     // 打字机效果 - 快速模式（只对 AI 消息生效）
     const [enableTypewriter, setEnableTypewriter] = useState(!isUser);
@@ -126,17 +190,14 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
               )}
             </div>
 
-            {/* Agent 思考过程（有工具调用时才显示，使用 Think 组件包裹） */}
+            {/* Agent 思考过程（有工具调用时才显示，使用 Think 组件包裹）
+                完成的消息默认折叠思考过程，只显示最终结果 */}
             {!isUser && showThinking && (
-              <Think
-                title="思考过程"
-                defaultExpanded={isExpanded}
-                className="mb-2"
-              >
+              <Think title="思考过程" defaultExpanded={false} className="mb-2">
                 <AIChatAgentSteps
                   steps={thinkingSteps}
                   isStreaming={false}
-                  isExpanded={true}
+                  defaultExpanded={false}
                 />
               </Think>
             )}
@@ -163,6 +224,16 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
                     },
               }}
             />
+
+            {/* 文档列表卡片（如果有 knowledge_list_documents 工具调用） */}
+            {!isUser && documentsData && documentsData.documents.length > 0 && (
+              <div className="mt-2">
+                <KnowledgeDocumentListCard
+                  knowledgeId={documentsData.knowledgeId}
+                  documents={documentsData.documents as DocumentItem[]}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

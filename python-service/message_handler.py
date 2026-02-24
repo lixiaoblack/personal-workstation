@@ -527,21 +527,24 @@ class MessageHandler:
             default_knowledge_id = KnowledgeRetrieverTool.get_default_knowledge()
             knowledge_metadata = KnowledgeRetrieverTool.get_knowledge_metadata()
             enhanced_content = content
-            
+
             if default_knowledge_id and knowledge_metadata:
                 kb_info = knowledge_metadata.get(default_knowledge_id, {})
                 kb_name = kb_info.get("name", "未知知识库")
                 kb_desc = kb_info.get("description", "")
-                # 在用户消息前添加上下文提示
-                enhanced_content = f"""【用户已选择知识库】{kb_name}
-知识库描述：{kb_desc or '无'}
-知识库ID：{default_knowledge_id}
+                # 使用系统提示格式，避免输出给用户
+                enhanced_content = f"""[Context]
+Knowledge base selected: {kb_name}
+Knowledge base ID: {default_knowledge_id}
+Description: {kb_desc or 'None'}
 
-用户问题：{content}
+[User Question]
+{content}
 
-注意：用户已经选择了知识库，请直接使用 knowledge_search 工具在该知识库中搜索，无需再调用 knowledge_list 查询知识库列表。"""
+[System Note: Use knowledge_search with knowledge_id={default_knowledge_id} directly. Do not call knowledge_list.]"""
 
-            logger.info(f"[DeepAgent] 开始执行，工具数量: {len(tools)}, 已选知识库: {default_knowledge_id}")
+            logger.info(
+                f"[DeepAgent] 开始执行，工具数量: {len(tools)}, 已选知识库: {default_knowledge_id}")
 
             # 流式执行
             # 注意：Deep Agent 内部通过 message_sender 发送 agent_step 消息
@@ -550,7 +553,7 @@ class MessageHandler:
             has_final_answer = False
 
             async for step in agent.astream(
-                input_text=content,
+                input_text=enhanced_content,
                 messages=messages if messages else None,
                 conversation_id=conversation_id
             ):
@@ -635,7 +638,30 @@ class MessageHandler:
             执行结果
         """
         from agent import ReActAgent
+        from agent.knowledge_tool import KnowledgeRetrieverTool
         from langchain_core.messages import HumanMessage
+
+        # 如果用户选择了知识库，在消息前面注入上下文
+        default_knowledge_id = KnowledgeRetrieverTool.get_default_knowledge()
+        knowledge_metadata = KnowledgeRetrieverTool.get_knowledge_metadata()
+        enhanced_content = content
+
+        if default_knowledge_id and knowledge_metadata:
+            kb_info = knowledge_metadata.get(default_knowledge_id, {})
+            kb_name = kb_info.get("name", "未知知识库")
+            kb_desc = kb_info.get("description", "")
+            # 在用户消息前添加上下文提示
+            enhanced_content = f"""【重要】用户已明确选择知识库：{kb_name}
+知识库ID: {default_knowledge_id}
+知识库描述: {kb_desc or '无'}
+
+【用户问题】{content}
+
+【指令】用户已指定要查询的知识库，请直接使用 knowledge_search 工具，参数如下：
+- query: 用户的搜索意图
+- knowledge_id: {default_knowledge_id}
+
+禁止调用 knowledge_list 工具，用户已经选择了知识库，不需要再列出所有知识库。"""
 
         # 创建 Agent 实例
         agent = ReActAgent(model_id=model_id)
@@ -648,10 +674,12 @@ class MessageHandler:
                     messages.append(HumanMessage(content=msg["content"]))
                 # 其他角色的消息可以后续添加
 
-        # 执行 Agent（流式输出思考过程）
+        logger.info(f"[ReActAgent] 开始执行，已选知识库: {default_knowledge_id}")
+
+        # 执行 Agent（流式输出思考过程）- 使用增强后的内容
         sent_step_count = 0  # 已发送的步骤数量
         async for event in agent.astream(
-            input_text=content,
+            input_text=enhanced_content,
             messages=messages if messages else None,
             conversation_id=conversation_id
         ):
@@ -1315,6 +1343,7 @@ class MessageHandler:
         """处理添加文档请求"""
         knowledge_id = message.get("knowledgeId")
         file_path = message.get("filePath")
+        original_file_name = message.get("originalFileName")  # 原始文件名
 
         if not knowledge_id or not file_path:
             return {
@@ -1343,9 +1372,47 @@ class MessageHandler:
                     "error": f"文件不存在: {file_path}",
                 }
 
+            # 获取文件扩展名
+            file_ext = os.path.splitext(file_path)[1].lower()
+            image_extensions = ['.jpg', '.jpeg',
+                                '.png', '.gif', '.webp', '.bmp']
+            ocr_text = None
+            ocr_blocks = None  # OCR 边界框信息
+
+            # 处理图片文件：执行 OCR 识别
+            if file_ext in image_extensions:
+                try:
+                    from ocr_service import ocr_recognize_image
+                    import json
+                    logger.info(f"[Knowledge] 对图片执行 OCR: {file_path}")
+                    ocr_result = ocr_recognize_image(file_path)
+                    if ocr_result and ocr_result.get('success'):
+                        ocr_text = ocr_result.get('text', '')
+                        # 保存完整的 blocks 信息（包含边界框和识别率）
+                        if ocr_result.get('blocks'):
+                            ocr_blocks = json.dumps(
+                                ocr_result.get('blocks'), ensure_ascii=False)
+                        logger.info(
+                            f"[Knowledge] OCR 识别成功，文字长度: {len(ocr_text)}, blocks: {len(ocr_result.get('blocks', []))}")
+                except Exception as ocr_error:
+                    logger.warning(f"[Knowledge] OCR 识别失败: {ocr_error}")
+
             # 处理文档
             processor = DocumentProcessor()
             documents = processor.process_file(file_path)
+
+            # 如果是图片且没有文档内容，但有 OCR 结果，使用 OCR 内容
+            if not documents and ocr_text:
+                from rag.document_processor import DocumentChunk
+                documents = [DocumentChunk(
+                    content=ocr_text,
+                    metadata={
+                        'source': os.path.basename(file_path),
+                        'file_type': 'image',
+                        'ocr': True
+                    }
+                )]
+                logger.info(f"[Knowledge] 使用 OCR 内容作为文档")
 
             if not documents:
                 return {
@@ -1380,6 +1447,9 @@ class MessageHandler:
                 embedding_service=embedding_service,
             )
 
+            # 使用原始文件名（如果提供），否则使用文件路径中的文件名
+            file_name = original_file_name or os.path.basename(file_path)
+
             return {
                 "type": "knowledge_add_document_response",
                 "id": message.get("id"),
@@ -1388,11 +1458,13 @@ class MessageHandler:
                 "document": {
                     "id": str(uuid.uuid4()),
                     "knowledgeId": knowledge_id,
-                    "fileName": os.path.basename(file_path),
+                    "fileName": file_name,
                     "filePath": file_path,
-                    "fileType": os.path.splitext(file_path)[1],
+                    "fileType": file_ext,
                     "fileSize": os.path.getsize(file_path),
                     "chunkCount": count,
+                    "ocrText": ocr_text,
+                    "ocrBlocks": ocr_blocks,
                     "createdAt": int(time.time() * 1000),
                 },
             }

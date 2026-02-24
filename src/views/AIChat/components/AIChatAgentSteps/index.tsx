@@ -15,12 +15,11 @@ import type { AgentStepItem } from "../../config";
 interface AIChatAgentStepsProps {
   steps: AgentStepItem[];
   isStreaming?: boolean;
-  isExpanded?: boolean;
-  onToggleExpand?: () => void;
+  defaultExpanded?: boolean;
 }
 
 const AIChatAgentSteps: React.FC<AIChatAgentStepsProps> = memo(
-  ({ steps, isStreaming = false, isExpanded = false }) => {
+  ({ steps, isStreaming = false, defaultExpanded = false }) => {
     // 过滤掉 answer 类型
     const thinkingSteps = useMemo(() => filterThinkingSteps(steps), [steps]);
 
@@ -76,7 +75,7 @@ const AIChatAgentSteps: React.FC<AIChatAgentStepsProps> = memo(
         <ThoughtChain
           items={thoughtChainItems}
           defaultExpandedKeys={
-            isExpanded
+            defaultExpanded
               ? (thoughtChainItems
                   .map((item) => item.key)
                   .filter(Boolean) as string[])

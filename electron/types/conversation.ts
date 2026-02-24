@@ -41,7 +41,7 @@ export interface MessageMetadata {
     /** 只读标记，已选择后不可修改 */
     readonly: true;
   };
-  // 附件信息
+  // 附件信息（单个）
   attachment?: {
     /** 附件 ID */
     id: string;
@@ -58,6 +58,15 @@ export interface MessageMetadata {
     /** URL 地址 */
     url?: string;
   };
+  // 附件列表（拖拽文件）
+  attachments?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    size: number;
+    mimeType: string;
+    type: "image" | "document" | "code" | "other";
+  }>;
   // 知识库添加结果
   knowledgeAddResult?: {
     /** 是否成功 */

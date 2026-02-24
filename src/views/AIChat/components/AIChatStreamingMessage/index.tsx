@@ -87,11 +87,15 @@ const AIChatStreamingMessage: React.FC<AIChatStreamingMessageProps> = memo(
               <Think
                 loading={!content && thinkingSteps.length > 0}
                 title="思考过程"
-                defaultExpanded={false}
+                defaultExpanded={true}
                 blink={thinkingSteps.length > 0 && !content}
                 className="mb-2"
               >
-                <AIChatAgentSteps steps={thinkingSteps} isStreaming={true} />
+                <AIChatAgentSteps
+                  steps={thinkingSteps}
+                  isStreaming={true}
+                  defaultExpanded={true}
+                />
               </Think>
             )}
 

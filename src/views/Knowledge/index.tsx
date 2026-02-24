@@ -60,6 +60,8 @@ const KnowledgePage: React.FC = () => {
     path: string;
     name: string;
     type: string;
+    ocrText?: string;
+    ocrBlocks?: string;
   } | null>(null);
 
   // 加载嵌入模型配置
@@ -210,9 +212,11 @@ const KnowledgePage: React.FC = () => {
       setUploadProgress(50);
 
       // 文件已经保存，现在需要添加到知识库（向量化）
+      // 传递原始文件名
       const uploadResult = await window.electronAPI.addKnowledgeDocument(
         selectedKnowledge.id,
-        result.files[0].path
+        result.files[0].path,
+        result.files[0].originalName
       );
 
       setUploadProgress(100);
@@ -265,9 +269,11 @@ const KnowledgePage: React.FC = () => {
       setUploadProgress(60);
 
       // 添加到知识库（向量化）
+      // 传递原始文件名
       const uploadResult = await window.electronAPI.addKnowledgeDocument(
         selectedKnowledge.id,
-        saveResult.file.path
+        saveResult.file.path,
+        saveResult.file.originalName
       );
 
       setUploadProgress(100);
@@ -348,6 +354,8 @@ const KnowledgePage: React.FC = () => {
       path: document.filePath,
       name: document.fileName,
       type: document.fileType,
+      ocrText: document.ocrText,
+      ocrBlocks: document.ocrBlocks as string | undefined,
     });
     setPreviewVisible(true);
   };
@@ -431,6 +439,8 @@ const KnowledgePage: React.FC = () => {
           filePath={previewFile.path}
           fileName={previewFile.name}
           fileType={previewFile.type}
+          ocrText={previewFile.ocrText}
+          ocrBlocks={previewFile.ocrBlocks}
           onClose={handleClosePreview}
         />
       )}

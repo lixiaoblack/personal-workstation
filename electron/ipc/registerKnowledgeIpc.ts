@@ -302,7 +302,12 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
   // 添加文档到知识库
   ipcMain.handle(
     "knowledge:addDocument",
-    async (_event, knowledgeId: string, filePath: string) => {
+    async (
+      _event,
+      knowledgeId: string,
+      filePath: string,
+      originalFileName?: string
+    ) => {
       try {
         const wsInfo = websocketService.getServerInfo();
         if (!wsInfo.pythonConnected) {
@@ -314,7 +319,7 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
 
         const result = (await websocketService.sendKnowledgeRequest(
           MessageType.KNOWLEDGE_ADD_DOCUMENT,
-          { knowledgeId, filePath }
+          { knowledgeId, filePath, originalFileName }
         )) as {
           success: boolean;
           document?: unknown;
@@ -335,6 +340,8 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
               "unknown";
             const fileSize = (doc.fileSize as number) || 0;
             const chunkCount = (doc.chunkCount as number) || 0;
+            const ocrText = doc.ocrText as string | undefined;
+            const ocrBlocks = doc.ocrBlocks as string | undefined;
 
             const document = knowledgeService.addDocument(
               knowledgeId,
@@ -342,7 +349,9 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
               filePath,
               fileType,
               fileSize,
-              chunkCount
+              chunkCount,
+              ocrText,
+              ocrBlocks
             );
 
             return {

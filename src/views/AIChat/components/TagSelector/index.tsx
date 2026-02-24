@@ -2,7 +2,7 @@
  * TagSelector - 通用标签选择器
  * 支持通过触发符号（如 '/', '#', '@'）打开选择面板
  * 选中后变成 Tag 显示，可删除
- * 
+ *
  * 使用示例：
  * <TagSelector
  *   triggers={{
@@ -79,12 +79,12 @@ const TagSelector: React.FC<TagSelectorProps> = memo(
     const getSuggestionItems = useCallback(
       (info?: string) => {
         if (!currentTrigger || !info) return [];
-        
+
         // info 格式："/" 或 "/关键词"
-        const keyword = info.startsWith(activeTrigger!) 
-          ? info.slice(1).toLowerCase() 
-          : (info?.toLowerCase() || "");
-        
+        const keyword = info.startsWith(activeTrigger!)
+          ? info.slice(1).toLowerCase()
+          : info?.toLowerCase() || "";
+
         return currentTrigger.getItems(keyword);
       },
       [currentTrigger, activeTrigger]
@@ -98,7 +98,7 @@ const TagSelector: React.FC<TagSelectorProps> = memo(
         // 解析选择值
         // 格式：label|id （由 getItems 生成）
         const [label, id] = selectedValue.split("|::|");
-        
+
         const newTag: TagItem = {
           id: id || label,
           label,
@@ -107,7 +107,9 @@ const TagSelector: React.FC<TagSelectorProps> = memo(
         };
 
         // 检查是否已存在
-        if (!value.find((t) => t.id === newTag.id && t.trigger === newTag.trigger)) {
+        if (
+          !value.find((t) => t.id === newTag.id && t.trigger === newTag.trigger)
+        ) {
           onChange([...value, newTag]);
         }
 
@@ -121,7 +123,9 @@ const TagSelector: React.FC<TagSelectorProps> = memo(
     // 删除标签
     const handleRemoveTag = useCallback(
       (tagId: string, trigger: string) => {
-        onChange(value.filter((t) => !(t.id === tagId && t.trigger === trigger)));
+        onChange(
+          value.filter((t) => !(t.id === tagId && t.trigger === trigger))
+        );
       },
       [value, onChange]
     );
@@ -134,7 +138,7 @@ const TagSelector: React.FC<TagSelectorProps> = memo(
         // 检测触发符号
         const triggerKeys = Object.keys(triggers);
         let foundTrigger: string | null = null;
-        
+
         for (const key of triggerKeys) {
           if (val.includes(key)) {
             foundTrigger = key;
@@ -214,7 +218,7 @@ const TagSelector: React.FC<TagSelectorProps> = memo(
                   return;
                 }
               }
-              
+
               // 没有触发符号时关闭
               if (open) {
                 onTrigger(false);

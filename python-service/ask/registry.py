@@ -85,7 +85,8 @@ class AskRegistry:
             session.response = response
             session.completed = True
             session.event.set()
-            logger.debug(f"[AskRegistry] 设置响应: {ask_id}, action={response.action}")
+            logger.debug(
+                f"[AskRegistry] 设置响应: {ask_id}, action={response.action}")
             return True
 
     async def wait_for_response(

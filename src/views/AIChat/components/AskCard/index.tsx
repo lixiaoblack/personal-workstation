@@ -1,6 +1,6 @@
 /**
  * AskCard - 通用交互询问卡片组件
- * 
+ *
  * 支持多种交互类型：
  * - select: 单选
  * - multi: 多选
@@ -16,17 +16,17 @@ import {
   CloseCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
-import type {
-  AskOption,
-  AskMessage,
-  AskInputConfig,
-} from "@/types/electron";
+import type { AskOption, AskMessage, AskInputConfig } from "@/types/electron";
 
 interface AskCardProps {
   /** 询问消息 */
   message: AskMessage;
   /** 用户响应回调 */
-  onRespond?: (askId: string, action: "submit" | "cancel", value?: unknown) => void;
+  onRespond?: (
+    askId: string,
+    action: "submit" | "cancel",
+    value?: unknown
+  ) => void;
   /** 是否已响应（禁用状态） */
   responded?: boolean;
   /** 响应结果 */
@@ -61,7 +61,9 @@ const AskSelect: React.FC<{
             <div className="flex flex-col">
               <span className="text-text-primary">{option.label}</span>
               {option.description && (
-                <span className="text-xs text-text-tertiary">{option.description}</span>
+                <span className="text-xs text-text-tertiary">
+                  {option.description}
+                </span>
               )}
             </div>
           </Radio>
@@ -89,14 +91,14 @@ const AskMulti: React.FC<{
     <List
       dataSource={options}
       renderItem={(option) => (
-        <List.Item
-          className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg transition-colors"
-        >
+        <List.Item className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg transition-colors">
           <Checkbox value={option.id} className="w-full">
             <div className="flex flex-col">
               <span className="text-text-primary">{option.label}</span>
               {option.description && (
-                <span className="text-xs text-text-tertiary">{option.description}</span>
+                <span className="text-xs text-text-tertiary">
+                  {option.description}
+                </span>
               )}
             </div>
           </Checkbox>
@@ -153,9 +155,7 @@ const AskInput: React.FC<{
     onChange={(e) => onChange(e.target.value)}
     disabled={disabled}
     className="mt-2"
-    status={
-      config?.required && !value.trim() ? "error" : undefined
-    }
+    status={config?.required && !value.trim() ? "error" : undefined}
   />
 ));
 
@@ -219,7 +219,9 @@ const AskCascade: React.FC<{
               <div className="flex flex-col">
                 <span className="text-text-primary">{option.label}</span>
                 {option.description && (
-                  <span className="text-xs text-text-tertiary">{option.description}</span>
+                  <span className="text-xs text-text-tertiary">
+                    {option.description}
+                  </span>
                 )}
               </div>
               {option.children && option.children.length > 0 && (
@@ -271,9 +273,13 @@ const AskCard: React.FC<AskCardProps> = memo(
               <CloseCircleOutlined className="text-error text-lg" />
             )}
             <div>
-              <div className="text-text-primary font-medium">{message.title}</div>
+              <div className="text-text-primary font-medium">
+                {message.title}
+              </div>
               {result.message && (
-                <div className="text-sm text-text-secondary">{result.message}</div>
+                <div className="text-sm text-text-secondary">
+                  {result.message}
+                </div>
               )}
             </div>
           </div>
@@ -286,9 +292,13 @@ const AskCard: React.FC<AskCardProps> = memo(
       <div className="p-4 bg-bg-secondary rounded-xl border border-border">
         {/* 标题和描述 */}
         <div className="mb-4">
-          <div className="text-text-primary font-medium mb-1">{message.title}</div>
+          <div className="text-text-primary font-medium mb-1">
+            {message.title}
+          </div>
           {message.description && (
-            <div className="text-sm text-text-secondary">{message.description}</div>
+            <div className="text-sm text-text-secondary">
+              {message.description}
+            </div>
           )}
         </div>
 

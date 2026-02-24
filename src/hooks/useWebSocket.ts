@@ -25,6 +25,13 @@ interface SendChatOptions {
   stream?: boolean;
   knowledgeId?: string; // 知识库 ID（可选，用于知识检索）
   knowledgeMetadata?: Record<string, { name: string; description: string }>; // 知识库元数据
+  attachments?: Array<{
+    name: string;
+    path: string;
+    type: string;
+    size: number;
+    mimeType: string;
+  }>; // 附件列表
 }
 
 interface UseWebSocketReturn {
@@ -205,6 +212,7 @@ export function useWebSocket(
         history,
         knowledgeId,
         knowledgeMetadata,
+        attachments,
       } = options;
       const message = createMessage<AgentChatMessage>(MessageType.AGENT_CHAT, {
         content,
@@ -213,6 +221,7 @@ export function useWebSocket(
         history,
         knowledgeId,
         knowledgeMetadata,
+        attachments,
       });
       return send(message);
     },

@@ -260,10 +260,41 @@ function runMigrations(database: Database.Database): void {
       file_type TEXT,
       file_size INTEGER DEFAULT 0,
       chunk_count INTEGER DEFAULT 0,
+      ocr_text TEXT,
       created_at INTEGER,
       FOREIGN KEY (knowledge_id) REFERENCES knowledge(id) ON DELETE CASCADE
     );
   `);
+
+  // 数据迁移：为 knowledge_documents 表添加 ocr_text 列（如果不存在）
+  try {
+    const docColumns = database
+      .prepare("PRAGMA table_info(knowledge_documents)")
+      .all() as Array<{ name: string }>;
+    const hasOcrText = docColumns.some((col) => col.name === "ocr_text");
+    if (!hasOcrText) {
+      database.exec(`ALTER TABLE knowledge_documents ADD COLUMN ocr_text TEXT`);
+      console.log("[Database] 已添加 knowledge_documents.ocr_text 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 ocr_text 列失败:", error);
+  }
+
+  // 数据迁移：为 knowledge_documents 表添加 ocr_blocks 列（存储 OCR 边界框信息）
+  try {
+    const docColumns = database
+      .prepare("PRAGMA table_info(knowledge_documents)")
+      .all() as Array<{ name: string }>;
+    const hasOcrBlocks = docColumns.some((col) => col.name === "ocr_blocks");
+    if (!hasOcrBlocks) {
+      database.exec(
+        `ALTER TABLE knowledge_documents ADD COLUMN ocr_blocks TEXT`
+      );
+      console.log("[Database] 已添加 knowledge_documents.ocr_blocks 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 ocr_blocks 列失败:", error);
+  }
 
   // 知识库索引
   database.exec(`

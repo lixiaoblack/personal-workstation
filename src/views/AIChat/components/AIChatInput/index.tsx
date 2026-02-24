@@ -2,15 +2,9 @@
  * AIChatInput - 输入区域组件
  * 使用 Ant Design X Sender 组件
  * 包含工具栏、输入框、发送按钮、知识库标签选择器、语音输入
- * 支持粘贴文件、URL 检测、'/','@','#' 快捷选择
+ * 支持粘贴文件、拖拽文件、URL 检测、'/','@','#' 快捷选择
  */
-import React, {
-  memo,
-  useCallback,
-  useState,
-  useRef,
-  useEffect,
-} from "react";
+import React, { memo, useCallback, useState, useRef, useEffect } from "react";
 import { Switch, Tooltip, message } from "antd";
 import { Sender, Suggestion } from "@ant-design/x";
 import type { SuggestionItem } from "@ant-design/x/es/suggestion";
@@ -44,6 +38,19 @@ export interface TagItem {
   data?: Record<string, unknown>;
 }
 
+/** 附件文件类型 */
+export interface AttachmentFile {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  mimeType: string;
+  type: "image" | "document" | "code" | "other";
+  status: "pending" | "uploading" | "uploaded";
+  knowledgeId?: string;
+  thumbnail?: string;
+}
+
 interface AIChatInputProps {
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -60,6 +67,8 @@ interface AIChatInputProps {
   onTagsChange: (tags: TagItem[]) => void;
   knowledgeDocuments?: Record<string, KnowledgeDocumentInfo[]>;
   // 附件相关
+  attachments: AttachmentFile[];
+  onAttachmentsChange: (files: AttachmentFile[]) => void;
   onPasteFile?: (file: {
     path: string;
     name: string;
@@ -80,6 +89,24 @@ interface AIChatInputProps {
 const URL_REGEX =
   /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi;
 
+// 根据文件扩展名获取文件类型
+const getFileType = (fileName: string, mimeType: string): AttachmentFile["type"] => {
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  
+  if (mimeType.startsWith("image/")) return "image";
+  
+  const docExts = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "md", "txt", "rtf"];
+  if (docExts.includes(ext)) return "document";
+  
+  const codeExts = ["js", "jsx", "ts", "tsx", "py", "java", "c", "cpp", "go", "rs", "css", "scss", "html", "json", "yaml", "yml", "sh"];
+  if (codeExts.includes(ext)) return "code";
+  
+  return "other";
+};
+
+// 生成唯一 ID
+const generateFileId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
 const AIChatInput: React.FC<AIChatInputProps> = memo(
   ({
     inputValue,
@@ -94,6 +121,8 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     knowledgeList,
     selectedTags,
     onTagsChange,
+    attachments,
+    onAttachmentsChange,
     onPasteFile,
     onPasteImage,
     onDetectUrl,
@@ -270,14 +299,70 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
       [selectedTags, onTagsChange]
     );
 
+    // 处理拖拽进入
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, []);
+
+    // 处理文件拖放
+    const handleDrop = useCallback(
+      (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isLoading) return;
+
+        const files = e.dataTransfer.files;
+        if (files.length === 0) return;
+
+        // Electron 中可以通过 file.path 获取本地文件路径
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i] as File & { path?: string };
+          const filePath = file.path;
+
+          if (!filePath) {
+            message.warning("无法获取文件路径");
+            continue;
+          }
+
+          // 创建附件对象
+          const attachment: AttachmentFile = {
+            id: generateFileId(),
+            name: file.name,
+            path: filePath,
+            size: file.size,
+            mimeType: file.type || "application/octet-stream",
+            type: getFileType(file.name, file.type),
+            status: "pending",
+          };
+
+          onAttachmentsChange([...attachments, attachment]);
+        }
+      },
+      [isLoading, attachments, onAttachmentsChange]
+    );
+
+    // 删除附件
+    const handleRemoveAttachment = useCallback(
+      (attachmentId: string) => {
+        onAttachmentsChange(attachments.filter((a) => a.id !== attachmentId));
+      },
+      [attachments, onAttachmentsChange]
+    );
+
     // 获取知识库建议项
     const getKnowledgeItems = useCallback(
       (keyword?: string): SuggestionItem[] => {
         // keyword 格式："/" 或 "/关键词"，需要去掉开头的 /
-        const kw = keyword?.startsWith("/") 
-          ? keyword.slice(1).toLowerCase() 
-          : (keyword?.toLowerCase() || "");
-        console.log("[AIChatInput] getKnowledgeItems:", { keyword, kw, knowledgeListCount: knowledgeList.length });
+        const kw = keyword?.startsWith("/")
+          ? keyword.slice(1).toLowerCase()
+          : keyword?.toLowerCase() || "";
+        console.log("[AIChatInput] getKnowledgeItems:", {
+          keyword,
+          kw,
+          knowledgeListCount: knowledgeList.length,
+        });
         const items = knowledgeList
           .filter(
             (kb) =>
@@ -293,7 +378,11 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
               kb.description ? ` · ${kb.description}` : ""
             }`,
           }));
-        console.log("[AIChatInput] getKnowledgeItems result:", items.length, items);
+        console.log(
+          "[AIChatInput] getKnowledgeItems result:",
+          items.length,
+          items
+        );
         return items;
       },
       [knowledgeList]
@@ -323,53 +412,92 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
 
     // 头部工具栏
     const header = (
-      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-        {/* 已选标签 */}
-        {selectedTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedTags.map((tag) => (
-              <span
-                key={`${tag.trigger}-${tag.id}`}
-                className="flex items-center gap-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 rounded-md text-xs"
+      <div className="flex flex-col gap-2 px-2 py-1.5 border-b border-border">
+        {/* 附件文件卡片 */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((file) => (
+              <div
+                key={file.id}
+                className="flex items-center gap-2 px-2 py-1.5 bg-bg-tertiary rounded-lg border border-border group"
               >
-                <span className="opacity-70">{tag.trigger}</span>
-                <span>{tag.label}</span>
+                {/* 文件图标 */}
+                <span className="material-symbols-outlined text-lg text-primary">
+                  {file.type === "image" ? "image" : 
+                   file.type === "document" ? "description" : 
+                   file.type === "code" ? "code" : "insert_drive_file"}
+                </span>
+                {/* 文件名 */}
+                <span className="text-xs text-text-primary max-w-[120px] truncate">
+                  {file.name}
+                </span>
+                {/* 文件大小 */}
+                <span className="text-[10px] text-text-tertiary">
+                  {file.size < 1024 
+                    ? `${file.size}B` 
+                    : file.size < 1024 * 1024 
+                    ? `${(file.size / 1024).toFixed(1)}KB`
+                    : `${(file.size / (1024 * 1024)).toFixed(1)}MB`}
+                </span>
+                {/* 删除按钮 */}
                 <CloseOutlined
-                  className="cursor-pointer hover:text-error"
-                  onClick={() => handleRemoveTag(tag.id, tag.trigger)}
+                  className="text-text-tertiary hover:text-error cursor-pointer text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => handleRemoveAttachment(file.id)}
                 />
-              </span>
+              </div>
             ))}
           </div>
         )}
+        
+        {/* 标签和 Agent 开关行 */}
+        <div className="flex items-center gap-2">
+          {/* 已选标签 */}
+          {selectedTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedTags.map((tag) => (
+                <span
+                  key={`${tag.trigger}-${tag.id}`}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 rounded-md text-xs"
+                >
+                  <span className="opacity-70">{tag.trigger}</span>
+                  <span>{tag.label}</span>
+                  <CloseOutlined
+                    className="cursor-pointer hover:text-error"
+                    onClick={() => handleRemoveTag(tag.id, tag.trigger)}
+                  />
+                </span>
+              ))}
+            </div>
+          )}
 
-        <div className="flex-1"></div>
+          <div className="flex-1"></div>
 
-        {/* Agent 模式开关 */}
-        <Tooltip
-          title={
-            agentMode
-              ? "Agent 模式：智能体将使用工具完成任务"
-              : "普通模式：直接对话"
-          }
-        >
-          <div className="flex items-center gap-2 px-2">
-            <Switch
-              size="small"
-              checked={agentMode}
-              onChange={onAgentModeChange}
-              checkedChildren="🤖"
-              unCheckedChildren="💬"
-            />
-            <span
-              className={`text-xs font-medium ${
-                agentMode ? "text-primary" : "text-text-tertiary"
-              }`}
-            >
-              {agentMode ? "Agent" : "对话"}
-            </span>
-          </div>
-        </Tooltip>
+          {/* Agent 模式开关 */}
+          <Tooltip
+            title={
+              agentMode
+                ? "Agent 模式：智能体将使用工具完成任务"
+                : "普通模式：直接对话"
+            }
+          >
+            <div className="flex items-center gap-2 px-2">
+              <Switch
+                size="small"
+                checked={agentMode}
+                onChange={onAgentModeChange}
+                checkedChildren="🤖"
+                unCheckedChildren="💬"
+              />
+              <span
+                className={`text-xs font-medium ${
+                  agentMode ? "text-primary" : "text-text-tertiary"
+                }`}
+              >
+                {agentMode ? "Agent" : "对话"}
+              </span>
+            </div>
+          </Tooltip>
+        </div>
       </div>
     );
 
@@ -387,7 +515,11 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
     );
 
     return (
-      <div className="p-6 bg-transparent">
+      <div 
+        className="p-6 bg-transparent"
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <div className="max-w-4xl mx-auto">
           <Suggestion
             items={getKnowledgeItems}
@@ -401,7 +533,11 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                 trigger: "/",
               };
               // 检查是否已存在
-              if (!selectedTags.find((t) => t.id === newTag.id && t.trigger === newTag.trigger)) {
+              if (
+                !selectedTags.find(
+                  (t) => t.id === newTag.id && t.trigger === newTag.trigger
+                )
+              ) {
                 onTagsChange([...selectedTags, newTag]);
               }
               // 清空输入框中的触发符号
@@ -411,7 +547,8 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
               popup: { maxHeight: 280, overflow: "auto" },
             }}
             classNames={{
-              popup: "bg-bg-secondary border border-border rounded-lg shadow-xl",
+              popup:
+                "bg-bg-secondary border border-border rounded-lg shadow-xl",
             }}
           >
             {({ onTrigger, onKeyDown, open }) => {
@@ -426,7 +563,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                   onTrigger(false);
                 }
               };
-              
+
               // 处理键盘事件
               const handleKeyDown = (e: React.KeyboardEvent) => {
                 // 触发符号
@@ -441,7 +578,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
                 // 调用 Suggestion 的 onKeyDown
                 onKeyDown(e);
               };
-              
+
               return (
                 <Sender
                   value={inputValue}

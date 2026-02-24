@@ -139,15 +139,17 @@ export function addDocument(
   filePath: string,
   fileType: string,
   fileSize: number,
-  chunkCount: number
+  chunkCount: number,
+  ocrText?: string,
+  ocrBlocks?: string
 ): KnowledgeDocumentInfo {
   const db = getDatabase();
   const id = `doc_${randomUUID().replace(/-/g, "")}`;
   const now = Date.now();
 
   const stmt = db.prepare(`
-    INSERT INTO knowledge_documents (id, knowledge_id, file_name, file_path, file_type, file_size, chunk_count, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO knowledge_documents (id, knowledge_id, file_name, file_path, file_type, file_size, chunk_count, ocr_text, ocr_blocks, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -158,6 +160,8 @@ export function addDocument(
     fileType,
     fileSize,
     chunkCount,
+    ocrText || null,
+    ocrBlocks || null,
     now
   );
 
@@ -172,6 +176,8 @@ export function addDocument(
     fileType,
     fileSize,
     chunkCount,
+    ocrText,
+    ocrBlocks,
     createdAt: now,
   };
 }
@@ -264,6 +270,8 @@ function transformDocumentInfo(data: any): KnowledgeDocumentInfo {
     fileType: (data.file_type || data.fileType) as string,
     fileSize: (data.file_size || data.fileSize) as number,
     chunkCount: (data.chunk_count || data.chunkCount) as number,
+    ocrText: (data.ocr_text || data.ocrText) as string | undefined,
+    ocrBlocks: (data.ocr_blocks || data.ocrBlocks) as string | undefined,
     createdAt: (data.created_at || data.createdAt) as number,
   };
 }

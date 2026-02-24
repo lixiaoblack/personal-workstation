@@ -134,7 +134,7 @@ async def list_knowledge_documents(knowledge_id: str):
     with get_db() as conn:
         cursor = conn.execute("""
             SELECT id, knowledge_id, file_name, file_path, file_type, 
-                   file_size, chunk_count, created_at
+                   file_size, chunk_count, ocr_text, ocr_blocks, created_at
             FROM knowledge_documents WHERE knowledge_id = ?
             ORDER BY created_at DESC
         """, (knowledge_id,))

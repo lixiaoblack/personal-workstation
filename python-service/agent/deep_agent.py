@@ -78,6 +78,22 @@ DEEP_AGENT_SYSTEM_PROMPT = """你是一个智能助手，具有强大的任务�
 3. 如果是日常问候或常识问题，直接回答
 4. 根据检索结果回答用户问题，并注明信息来源
 
+## 🎯 输出格式要求（非常重要）
+
+**最终回答必须满足**：
+- 直接回答用户的问题，不要有任何前缀或说明
+- 不要写"根据检索结果"、"根据知识库"等开场白
+- 不要描述你查看了什么文档或调用了什么工具
+- 不要包含技术细节（知识库ID、文件名、相关度分数等）
+- 用自然、流畅的语言直接给出答案
+
+**错误示例**：
+根据检索结果，这个知识库主要包含以下内容：
+1. Skills 是...
+
+**正确示例**：
+这个知识库介绍了 Claude 的 Skills 系统。Skills 是包含指令、脚本和资源的文件夹，Claude 可以动态加载来提升特定任务的表现。
+
 ## 核心能力
 
 ### 1. 任务规划 (Planning)
@@ -106,6 +122,7 @@ DEEP_AGENT_SYSTEM_PROMPT = """你是一个智能助手，具有强大的任务�
 2. 但涉及用户存储的信息（账号密码等）必须先检索知识库
 3. 仔细分析工具返回的结果
 4. 如果工具调用失败，尝试其他方法或直接回答
+5. 最终回答要简洁，不要输出工具调用的原始内容
 """
 
 
@@ -697,6 +714,37 @@ class DeepAgentWrapper:
                     if tool_call_info:
                         step_type = "tool_call"
                     else:
+                        # 检查是否是工具结果（ToolMessage）
+                        logger.info(
+                            f"[DeepAgent] node={node_name}, 尝试提取 tool_result")
+                        tool_result = self._extract_tool_result(
+                            state_update, history_message_count)
+                        logger.info(f"[DeepAgent] tool_result={tool_result}")
+                        if tool_result:
+                            # 发送 tool_result 步骤
+                            result_step = {
+                                "node": node_name,
+                                "step_type": "tool_result",
+                                "content": tool_result.get("content", ""),
+                                "iteration": iteration,
+                                "update": state_update,
+                                "tool_call": {
+                                    "name": tool_result.get("name", "unknown"),
+                                    "arguments": {},
+                                    "result": tool_result.get("content", "")
+                                }
+                            }
+                            if self.message_sender and conversation_id:
+                                await self.message_sender.send_step(
+                                    conversation_id=conversation_id,
+                                    step_type="tool_result",
+                                    content=tool_result.get("content", ""),
+                                    tool_call=result_step["tool_call"],
+                                    iteration=iteration
+                                )
+                            yield result_step
+                            continue
+
                         # 已经有工具调用，但没有新的工具调用
                         # 说明是工具执行后的最终答案，作为流式内容发送
                         # 不在思考过程中显示，避免重复
@@ -1071,7 +1119,10 @@ class DeepAgentWrapper:
 
     def _is_ai_message(self, message) -> bool:
         """
-        检查消息是否是 AI 消息（非用户消息）
+        检查消息是否是 AI 消息（需要流式输出给用户的消息）
+
+        注意：ToolMessage 是工具返回结果，不应该作为流式内容输出给用户。
+        工具结果应该通过 tool_result 步骤发送到思考过程。
 
         Args:
             message: LangChain 消息对象
@@ -1084,6 +1135,9 @@ class DeepAgentWrapper:
             # type 为 'human' 表示用户消息，跳过
             if message.type == 'human':
                 return False
+            # type 为 'tool' 表示工具消息，不应该流式输出
+            if message.type == 'tool':
+                return False
             # type 为 'ai' 表示 AI 消息
             if message.type == 'ai':
                 return True
@@ -1094,8 +1148,11 @@ class DeepAgentWrapper:
             # HumanMessage 是用户消息，跳过
             if class_name == 'HumanMessage':
                 return False
-            # AIMessage 或 ToolMessage 是 AI 相关消息
-            if class_name in ['AIMessage', 'ToolMessage']:
+            # ToolMessage 是工具返回结果，不应该流式输出给用户
+            if class_name == 'ToolMessage':
+                return False
+            # AIMessage 是 AI 消息，需要流式输出
+            if class_name == 'AIMessage':
                 return True
 
         # 字典类型检查 role
@@ -1103,11 +1160,14 @@ class DeepAgentWrapper:
             role = message.get('role', '')
             if role == 'user':
                 return False
-            if role in ['assistant', 'ai', 'tool']:
+            # tool 角色是工具消息，不应该流式输出
+            if role == 'tool':
+                return False
+            if role in ['assistant', 'ai']:
                 return True
 
-        # 默认情况，无法判断，保守处理返回 True
-        return True
+        # 默认情况，无法判断，保守处理返回 False
+        return False
 
     def _extract_tool_call(self, state_update) -> Optional[Dict]:
         """
@@ -1193,6 +1253,134 @@ class DeepAgentWrapper:
                     }
 
         return None
+
+    def _extract_tool_result(self, state_update, history_count: int = 0) -> Optional[Dict]:
+        """
+        提取工具结果信息（ToolMessage）
+
+        检测是否有工具执行结果。
+
+        Args:
+            state_update: 状态更新
+            history_count: 历史消息数量
+
+        Returns:
+            工具结果信息字典，包含 name 和 content；如果没有返回 None
+        """
+        logger.info(
+            f"[DeepAgent] _extract_tool_result: state_update_type={type(state_update).__name__}")
+
+        # 处理 LangGraph 的 Command 对象（如 Overwrite）
+        if hasattr(state_update, '__class__') and state_update.__class__.__name__ in ['Overwrite', 'Command']:
+            try:
+                if hasattr(state_update, 'value'):
+                    value = state_update.value
+                    logger.debug(
+                        f"[DeepAgent] _extract_tool_result: Overwrite value type={type(value).__name__}, len={len(value) if isinstance(value, list) else 'N/A'}")
+                    if isinstance(value, list) and value:
+                        # 查找 ToolMessage
+                        for msg in reversed(value[history_count:] if history_count else value):
+                            result = self._extract_tool_result_from_message(
+                                msg)
+                            if result:
+                                return result
+            except Exception as e:
+                logger.debug(f"[DeepAgent] 处理 Overwrite 对象失败: {e}")
+            return None
+
+        # 处理字典类型
+        if isinstance(state_update, dict):
+            messages = state_update.get("messages", [])
+            logger.info(
+                f"[DeepAgent] _extract_tool_result: dict keys={list(state_update.keys())}, messages type={type(messages).__name__}, len={len(messages) if isinstance(messages, list) else 'N/A'}")
+            if messages and hasattr(messages, '__class__') and messages.__class__.__name__ == 'Overwrite':
+                return self._extract_tool_result(messages, history_count)
+
+            if messages and isinstance(messages, list):
+                # 查找新消息中的 ToolMessage
+                for msg in reversed(messages[history_count:] if history_count else messages):
+                    msg_type = getattr(msg, 'type', None) if hasattr(
+                        msg, 'type') else None
+                    msg_class = msg.__class__.__name__ if hasattr(
+                        msg, '__class__') else 'unknown'
+                    logger.info(
+                        f"[DeepAgent] _extract_tool_result: 检查消息 type={msg_type}, class={msg_class}")
+                    result = self._extract_tool_result_from_message(msg)
+                    if result:
+                        return result
+
+        # 处理列表类型
+        if isinstance(state_update, list):
+            logger.debug(
+                f"[DeepAgent] _extract_tool_result: list len={len(state_update)}")
+            for msg in reversed(state_update[history_count:] if history_count else state_update):
+                result = self._extract_tool_result_from_message(msg)
+                if result:
+                    return result
+
+        return None
+
+    def _extract_tool_result_from_message(self, message) -> Optional[Dict]:
+        """
+        从消息对象中提取工具结果信息
+
+        Args:
+            message: LangChain 消息对象
+
+        Returns:
+            工具结果信息字典，包含 name 和 content；如果不是 ToolMessage 返回 None
+        """
+        # 检查是否是 ToolMessage
+        is_tool = False
+        tool_name = None
+        content = None
+
+        # 通过 type 属性检查
+        if hasattr(message, 'type'):
+            if message.type == 'tool':
+                is_tool = True
+                # ToolMessage 有 name 属性表示工具名称
+                if hasattr(message, 'name'):
+                    tool_name = message.name
+                logger.debug(f"[DeepAgent] 检测到 tool 类型消息: name={tool_name}")
+
+        # 通过类名检查
+        if hasattr(message, '__class__'):
+            class_name = message.__class__.__name__
+            if class_name == 'ToolMessage':
+                is_tool = True
+                # ToolMessage 有 name 属性表示工具名称
+                if hasattr(message, 'name'):
+                    tool_name = message.name
+                logger.debug(
+                    f"[DeepAgent] 检测到 ToolMessage 类: name={tool_name}")
+
+        # 通过字典 role 检查
+        if isinstance(message, dict):
+            if message.get('role') == 'tool':
+                is_tool = True
+                tool_name = message.get('name')
+                logger.debug(f"[DeepAgent] 检测到 tool role 字典: name={tool_name}")
+
+        if not is_tool:
+            return None
+
+        # 提取内容
+        if hasattr(message, 'content'):
+            content = str(message.content)
+        elif isinstance(message, dict):
+            content = str(message.get('content', ''))
+
+        if content is None:
+            return None
+
+        logger.info(
+            f"[DeepAgent] 提取到工具结果: name={tool_name}, content_len={len(content)}")
+
+        return {
+            "name": tool_name or "unknown",
+            "content": content
+        }
 
     def _extract_steps(self, result: Dict) -> List[AgentStep]:
         """

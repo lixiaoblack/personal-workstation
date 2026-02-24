@@ -338,9 +338,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("knowledge:get", knowledgeId),
   addKnowledgeDocument: (
     knowledgeId: string,
-    filePath: string
+    filePath: string,
+    originalFileName?: string
   ): Promise<KnowledgeAddDocumentResult> =>
-    ipcRenderer.invoke("knowledge:addDocument", knowledgeId, filePath),
+    ipcRenderer.invoke(
+      "knowledge:addDocument",
+      knowledgeId,
+      filePath,
+      originalFileName
+    ),
   removeKnowledgeDocument: (
     knowledgeId: string,
     documentId: string
@@ -618,7 +624,8 @@ export interface ElectronAPI {
   getKnowledge: (knowledgeId: string) => Promise<KnowledgeListResult>;
   addKnowledgeDocument: (
     knowledgeId: string,
-    filePath: string
+    filePath: string,
+    originalFileName?: string
   ) => Promise<KnowledgeAddDocumentResult>;
   removeKnowledgeDocument: (
     knowledgeId: string,

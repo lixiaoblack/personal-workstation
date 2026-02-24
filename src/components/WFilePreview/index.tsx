@@ -158,6 +158,10 @@ interface WFilePreviewProps {
   width?: number | string;
   /** 是否启用 OCR 识别（仅图片类型有效） */
   enableOcr?: boolean;
+  /** 已有的 OCR 识别结果（如果有，则直接使用，不再重新识别） */
+  ocrText?: string;
+  /** 已有的 OCR 边界框信息（JSON 字符串或数组） */
+  ocrBlocks?: string | OcrBlock[];
 }
 
 const WFilePreview: React.FC<WFilePreviewProps> = ({
@@ -168,6 +172,8 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
   onClose,
   width = 1100,
   enableOcr = true,
+  ocrText: providedOcrText,
+  ocrBlocks: providedOcrBlocks,
 }) => {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<string>("");
@@ -221,8 +227,49 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
             const dataUrl = `data:${result.mimeType};base64,${result.content}`;
             setImageDataUrl(dataUrl);
 
-            // 自动执行 OCR 识别
-            if (enableOcr) {
+            // 如果已有 OCR 结果，直接使用
+            if (providedOcrText || providedOcrBlocks) {
+              console.log("[WFilePreview] 使用已有的 OCR 结果");
+
+              // 设置 OCR 文本
+              if (providedOcrText) {
+                setOcrText(providedOcrText);
+              }
+
+              // 解析并设置 OCR 边界框
+              if (providedOcrBlocks) {
+                try {
+                  const blocks =
+                    typeof providedOcrBlocks === "string"
+                      ? JSON.parse(providedOcrBlocks)
+                      : providedOcrBlocks;
+
+                  if (Array.isArray(blocks) && blocks.length > 0) {
+                    setOcrBlocks(blocks);
+                    // 如果没有单独提供文本，从 blocks 中提取
+                    if (!providedOcrText) {
+                      const fullText = blocks.map((b) => b.text).join("\n");
+                      setOcrText(fullText);
+                    }
+                    setShowOcrPanel(true);
+                    console.log(
+                      "[WFilePreview] 已加载 OCR 边界框:",
+                      blocks.length,
+                      "个"
+                    );
+                  }
+                } catch (e) {
+                  console.warn("[WFilePreview] 解析 ocrBlocks 失败:", e);
+                }
+              } else if (providedOcrText) {
+                // 只有文本没有边界框时，创建简单文字块
+                setOcrBlocks([
+                  { text: providedOcrText, confidence: 1.0, box: [] },
+                ]);
+                setShowOcrPanel(true);
+              }
+            } else if (enableOcr) {
+              // 自动执行 OCR 识别
               performOcr(dataUrl);
             }
           } else {
@@ -282,7 +329,14 @@ const WFilePreview: React.FC<WFilePreviewProps> = ({
       .finally(() => {
         setLoading(false);
       });
-  }, [visible, filePath, category, enableOcr]);
+  }, [
+    visible,
+    filePath,
+    category,
+    enableOcr,
+    providedOcrText,
+    providedOcrBlocks,
+  ]);
 
   // 执行 OCR 识别
   const performOcr = async (imageBase64: string) => {

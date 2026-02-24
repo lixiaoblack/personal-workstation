@@ -103,7 +103,8 @@ class AskHandler:
 
         # 发送询问消息
         await self._send(message.to_dict())
-        logger.info(f"[AskHandler] 发起询问: {ask_id}, type={ask_type.value}, title={title}")
+        logger.info(
+            f"[AskHandler] 发起询问: {ask_id}, type={ask_type.value}, title={title}")
 
         return ask_id
 

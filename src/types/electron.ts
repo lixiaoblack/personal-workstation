@@ -71,6 +71,7 @@ export type {
   KnowledgeInfo,
   KnowledgeDocumentInfo,
   KnowledgeSearchResult,
+  OcrBlock,
   // Knowledge Selection 知识库选择相关类型
   AttachmentInfo,
   AttachmentType,
@@ -309,7 +310,8 @@ export interface ElectronAPI {
   }>;
   addKnowledgeDocument: (
     knowledgeId: string,
-    filePath: string
+    filePath: string,
+    originalFileName?: string
   ) => Promise<{
     success: boolean;
     document?: KnowledgeDocumentInfo;

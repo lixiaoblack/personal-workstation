@@ -168,6 +168,13 @@ export interface AgentChatMessage extends BaseMessage {
   maxIterations?: number; // 最大迭代次数，默认 5
   knowledgeId?: string; // 知识库 ID（可选，用于知识检索）
   knowledgeMetadata?: Record<string, { name: string; description: string }>; // 知识库元数据（用于智能匹配）
+  attachments?: Array<{
+    name: string;
+    path: string;
+    type: string;
+    size: number;
+    mimeType: string;
+  }>; // 附件列表
 }
 
 // 聊天响应
@@ -400,6 +407,15 @@ export interface KnowledgeInfo {
 }
 
 /**
+ * OCR 文字块类型
+ */
+export interface OcrBlock {
+  text: string;
+  confidence: number;
+  box: number[][];
+}
+
+/**
  * 知识库文档信息
  */
 export interface KnowledgeDocumentInfo {
@@ -410,6 +426,10 @@ export interface KnowledgeDocumentInfo {
   fileType: string;
   fileSize: number;
   chunkCount: number;
+  /** OCR 识别结果（仅图片类型有效） */
+  ocrText?: string;
+  /** OCR 边界框信息（JSON 字符串或解析后的数组） */
+  ocrBlocks?: string | OcrBlock[];
   createdAt: number;
 }
 

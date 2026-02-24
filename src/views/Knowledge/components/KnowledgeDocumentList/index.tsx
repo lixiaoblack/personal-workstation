@@ -14,12 +14,20 @@ import {
 import type { KnowledgeDocumentInfo } from "@/types/electron";
 import { formatFileSize } from "../../config";
 
+// OCR 文字块类型
+interface OcrBlock {
+  text: string;
+  confidence: number;
+  box: number[][];
+}
+
 // 文档状态类型
 type DocStatus = "ready" | "processing" | "error";
 
 // 文档展示信息（扩展状态）
 export interface DocumentDisplayInfo extends KnowledgeDocumentInfo {
   status?: DocStatus;
+  ocrBlocks?: string | OcrBlock[];
 }
 
 // 状态标签组件

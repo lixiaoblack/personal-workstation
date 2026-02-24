@@ -9,3 +9,4 @@ export { default as AIChatAgentSteps } from "./AIChatAgentSteps";
 export { default as AIChatEmptyState } from "./AIChatEmptyState";
 export { default as AIChatInput } from "./AIChatInput";
 export { default as KnowledgeSelectCard } from "./KnowledgeSelectCard";
+export { default as KnowledgeSuggestion } from "./KnowledgeSuggestion";

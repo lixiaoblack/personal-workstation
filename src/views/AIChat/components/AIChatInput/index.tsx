@@ -451,6 +451,9 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
       </div>
     );
 
+    // 调试日志
+    console.log("[AIChatInput] render, knowledgeList:", knowledgeList?.length);
+
     return (
       <div className="p-6 bg-transparent">
         <div className="max-w-4xl mx-auto">

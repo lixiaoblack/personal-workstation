@@ -42,6 +42,7 @@ const KnowledgeSuggestion: React.FC<KnowledgeSuggestionProps> = memo(
     // 构建建议项列表函数（Suggestion 组件会传入搜索关键词）
     const getItems = useCallback(
       (info?: string) => {
+        console.log("[KnowledgeSuggestion] getItems 调用, info:", info, "knowledgeList:", knowledgeList?.length);
         const result: SuggestionItem[] = [];
         // info 是用户输入的 '/' 后面的内容
         const keyword = info?.toLowerCase() || "";

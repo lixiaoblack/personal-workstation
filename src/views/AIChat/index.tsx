@@ -154,8 +154,12 @@ const AIChatComponent: React.FC = () => {
     (async () => {
       try {
         const result = await window.electronAPI.listKnowledge();
+        console.log("[AIChat] listKnowledge 结果:", result);
         if (result.success && result.knowledge) {
+          console.log("[AIChat] 知识库列表:", result.knowledge.length, result.knowledge);
           setKnowledgeList(result.knowledge);
+        } else {
+          console.log("[AIChat] 知识库加载失败:", result.error);
         }
       } catch (error) {
         console.error("加载知识库列表失败:", error);

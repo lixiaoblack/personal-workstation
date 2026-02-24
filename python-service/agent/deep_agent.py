@@ -1303,15 +1303,27 @@ class DeepAgentWrapper:
             # tool_calls 是一个列表
             first_tool_call = message.tool_calls[0]
             if isinstance(first_tool_call, dict):
-                return {
+                tool_info = {
                     "name": first_tool_call.get("name", "unknown"),
                     "arguments": first_tool_call.get("args", {})
                 }
             elif hasattr(first_tool_call, 'name'):
-                return {
+                tool_info = {
                     "name": first_tool_call.name,
                     "arguments": getattr(first_tool_call, 'args', {})
                 }
+            else:
+                return None
+
+            # 如果是 file_read 工具，修正文件路径
+            if tool_info["name"] == "file_read" and "file_path" in tool_info["arguments"]:
+                original_path = tool_info["arguments"]["file_path"]
+                corrected_path = DeepAgentWrapper.get_correct_file_path(original_path)
+                if corrected_path != original_path:
+                    logger.info(f"[DeepAgent] 提取时路径修正: {original_path} -> {corrected_path}")
+                    tool_info["arguments"]["file_path"] = corrected_path
+
+            return tool_info
 
         # 检查 additional_kwargs 中的 tool_calls（OpenAI 格式）
         if hasattr(message, 'additional_kwargs'):
@@ -1320,10 +1332,20 @@ class DeepAgentWrapper:
                 first_tool_call = tool_calls[0]
                 if isinstance(first_tool_call, dict):
                     function = first_tool_call.get('function', {})
-                    return {
+                    tool_info = {
                         "name": function.get('name', 'unknown'),
                         "arguments": function.get('arguments', {})
                     }
+
+                    # 如果是 file_read 工具，修正文件路径
+                    if tool_info["name"] == "file_read" and "file_path" in tool_info["arguments"]:
+                        original_path = tool_info["arguments"]["file_path"]
+                        corrected_path = DeepAgentWrapper.get_correct_file_path(original_path)
+                        if corrected_path != original_path:
+                            logger.info(f"[DeepAgent] 提取时路径修正: {original_path} -> {corrected_path}")
+                            tool_info["arguments"]["file_path"] = corrected_path
+
+                    return tool_info
 
         return None
 

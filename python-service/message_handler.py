@@ -596,7 +596,10 @@ file_read(file_path="{attachments[0].get('path', '')}")
 
 {search_result}
 
-[检索说明] 以上内容来自用户选择的知识库，请优先基于这些内容回答问题。如果检索结果与用户问题无关或不完整，再根据你的知识补充。"""
+[重要指令] 
+1. 以上检索结果已经包含了用户问题的答案，请直接基于这些内容回答问题
+2. 不要调用 web_search、knowledge_search 等工具，检索结果已经足够
+3. 如果检索结果不完整，可以根据你的知识补充，但要明确标注哪些是补充内容"""
                         logger.info(f"[DeepAgent] 知识库检索成功，结果长度: {len(search_result)}")
                     else:
                         logger.info(f"[DeepAgent] 知识库未找到相关内容: {search_result[:100] if search_result else 'empty'}")
@@ -792,7 +795,10 @@ file_read(file_path="{attachments[0].get('path', '')}")
 
 {search_result}
 
-【检索说明】以上内容来自用户选择的知识库，请优先基于这些内容回答问题。"""
+【重要指令】
+1. 以上检索结果已经包含了用户问题的答案，请直接基于这些内容回答问题
+2. 不要调用 web_search、knowledge_search 等工具，检索结果已经足够
+3. 如果检索结果不完整，可以根据你的知识补充，但要明确标注哪些是补充内容"""
                     logger.info(f"[ReActAgent] 知识库检索成功，结果长度: {len(search_result)}")
                 else:
                     logger.info(f"[ReActAgent] 知识库未找到相关内容")

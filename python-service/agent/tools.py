@@ -644,12 +644,13 @@ class FileReadTool(BaseTool):
             import fitz  # PyMuPDF
 
             doc = fitz.open(file_path)
+            total_pages = len(doc)  # 先保存总页数
             content_parts = []
             total_length = 0
 
             for page_num, page in enumerate(doc):
                 if total_length >= max_length:
-                    content_parts.append(f"\n[...已截断，共{len(doc)}页...]")
+                    content_parts.append(f"\n[...已截断，共{total_pages}页...]")
                     break
 
                 text = page.get_text()
@@ -659,7 +660,7 @@ class FileReadTool(BaseTool):
             doc.close()
 
             full_content = "\n\n".join(content_parts)
-            return f"PDF文件，共{len(doc)}页\n\n{full_content[:max_length]}"
+            return f"PDF文件，共{total_pages}页\n\n{full_content[:max_length]}"
 
         except ImportError:
             return "错误：PDF读取需要安装 PyMuPDF 库 (pip install pymupdf)"

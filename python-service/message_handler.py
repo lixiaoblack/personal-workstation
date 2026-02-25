@@ -667,8 +667,11 @@ Description: {kb_desc or 'None'}
                 })
 
             # 如果有附件，发送 knowledge_ask_add 消息询问用户是否添加到知识库
+            # 注意：延迟发送，确保前端有足够时间处理 chat_stream_end 并更新 UI
             if attachments:
                 import uuid
+                # 延迟 500ms 发送，确保前端已完成消息渲染
+                await asyncio.sleep(0.5)
                 for att in attachments:
                     await self.send_callback({
                         "type": "knowledge_ask_add",

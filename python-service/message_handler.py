@@ -578,6 +578,31 @@ file_read(file_path="{attachments[0].get('path', '')}")
                 kb_info = knowledge_metadata.get(default_knowledge_id, {})
                 kb_name = kb_info.get("name", "未知知识库")
                 kb_desc = kb_info.get("description", "")
+                
+                # 先自动检索知识库，获取相关内容
+                knowledge_context = ""
+                try:
+                    from agent.knowledge_tool import KnowledgeRetrieverTool
+                    retriever = KnowledgeRetrieverTool()
+                    # 执行检索
+                    search_result = retriever._run(
+                        query=content,
+                        knowledge_id=default_knowledge_id
+                    )
+                    if search_result and "未找到" not in search_result and "没有找到" not in search_result:
+                        knowledge_context = f"""
+[知识库检索结果]
+以下是从「{kb_name}」知识库中检索到的相关内容：
+
+{search_result}
+
+[检索说明] 以上内容来自用户选择的知识库，请优先基于这些内容回答问题。如果检索结果与用户问题无关或不完整，再根据你的知识补充。"""
+                        logger.info(f"[DeepAgent] 知识库检索成功，结果长度: {len(search_result)}")
+                    else:
+                        logger.info(f"[DeepAgent] 知识库未找到相关内容: {search_result[:100] if search_result else 'empty'}")
+                except Exception as e:
+                    logger.warning(f"[DeepAgent] 知识库检索失败: {e}")
+                
                 # 使用系统提示格式，避免输出给用户
                 if attachment_context:
                     # 有附件时，优先处理附件
@@ -587,16 +612,25 @@ file_read(file_path="{attachments[0].get('path', '')}")
 {content}
 
 [注意] 用户上传了文件，请优先使用 file_read 工具读取并分析文件内容。"""
+                elif knowledge_context:
+                    # 有知识库检索结果
+                    enhanced_content = f"""{knowledge_context}
+
+[用户问题]
+{content}"""
                 else:
+                    # 知识库检索无结果，提示 Agent 仍可尝试检索
                     enhanced_content = f"""[Context]
-Knowledge base selected: {kb_name}
-Knowledge base ID: {default_knowledge_id}
-Description: {kb_desc or 'None'}
+用户选择了知识库: {kb_name}
+知识库 ID: {default_knowledge_id}
+描述: {kb_desc or '无'}
+
+[重要] 知识库自动检索未找到相关内容。你可以：
+1. 尝试使用 knowledge_search 工具以不同的关键词再次检索
+2. 根据你的知识回答，但需告知用户知识库中暂无相关内容
 
 [User Question]
-{content}
-
-[System Note: Use knowledge_search with knowledge_id={default_knowledge_id} directly. Do not call knowledge_list.]"""
+{content}"""
             elif attachment_context:
                 # 只有附件，没有知识库
                 enhanced_content = f"""{attachment_context}
@@ -740,18 +774,47 @@ Description: {kb_desc or 'None'}
             kb_info = knowledge_metadata.get(default_knowledge_id, {})
             kb_name = kb_info.get("name", "未知知识库")
             kb_desc = kb_info.get("description", "")
+            
+            # 先自动检索知识库，获取相关内容
+            knowledge_context = ""
+            try:
+                from agent.knowledge_tool import KnowledgeRetrieverTool
+                retriever = KnowledgeRetrieverTool()
+                search_result = retriever._run(
+                    query=content,
+                    knowledge_id=default_knowledge_id
+                )
+                if search_result and "未找到" not in search_result and "没有找到" not in search_result:
+                    knowledge_context = f"""
+【知识库检索结果】
+以下是从「{kb_name}」知识库中检索到的相关内容：
+
+{search_result}
+
+【检索说明】以上内容来自用户选择的知识库，请优先基于这些内容回答问题。"""
+                    logger.info(f"[ReActAgent] 知识库检索成功，结果长度: {len(search_result)}")
+                else:
+                    logger.info(f"[ReActAgent] 知识库未找到相关内容")
+            except Exception as e:
+                logger.warning(f"[ReActAgent] 知识库检索失败: {e}")
+            
             # 在用户消息前添加上下文提示
-            enhanced_content = f"""【重要】用户已明确选择知识库：{kb_name}
+            if knowledge_context:
+                enhanced_content = f"""{knowledge_context}
+
+【用户问题】{content}
+
+【指令】请基于知识库检索结果回答问题。如果检索结果不完整，可以补充你的知识。"""
+            else:
+                enhanced_content = f"""【重要】用户已明确选择知识库：{kb_name}
 知识库ID: {default_knowledge_id}
 知识库描述: {kb_desc or '无'}
 
 【用户问题】{content}
 
-【指令】用户已指定要查询的知识库，请直接使用 knowledge_search 工具，参数如下：
-- query: 用户的搜索意图
-- knowledge_id: {default_knowledge_id}
-
-禁止调用 knowledge_list 工具，用户已经选择了知识库，不需要再列出所有知识库。"""
+【指令】知识库自动检索未找到相关内容。你可以：
+1. 使用 knowledge_search 工具以不同关键词再次检索
+2. 根据你的知识回答，但需告知用户知识库中暂无相关内容"""
 
         # 创建 Agent 实例
         agent = ReActAgent(model_id=model_id)

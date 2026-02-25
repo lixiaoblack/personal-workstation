@@ -11,6 +11,7 @@ import {
   hasErrors,
 } from "../../config";
 import type { AgentStepItem } from "../../config";
+import "./index.css";
 
 interface AIChatAgentStepsProps {
   steps: AgentStepItem[];
@@ -51,7 +52,7 @@ const AIChatAgentSteps: React.FC<AIChatAgentStepsProps> = memo(
     // 流式状态：始终展开
     if (isStreaming) {
       return (
-        <div className="mb-2 bg-bg-secondary rounded-lg border border-border p-3">
+        <div className="mb-2 bg-bg-secondary rounded-lg border border-border p-3 ai-chat-agent-steps">
           <ThoughtChain
             items={itemsWithStatus}
             defaultExpandedKeys={
@@ -68,7 +69,7 @@ const AIChatAgentSteps: React.FC<AIChatAgentStepsProps> = memo(
     // 完成状态：默认折叠，可展开
     return (
       <div
-        className={`mb-2 bg-bg-secondary rounded-lg p-3 ${
+        className={`mb-2 bg-bg-secondary rounded-lg p-3 ai-chat-agent-steps ${
           hasError ? "border border-error" : "border border-border"
         }`}
       >

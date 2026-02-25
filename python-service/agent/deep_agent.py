@@ -529,15 +529,20 @@ class DeepAgentWrapper:
             if tool_name == "file_read":
                 from .tools import set_file_read_progress_callback
                 
+                # 获取 send_callback（从 message_sender 或直接使用）
+                send_cb = None
+                if self.message_sender and hasattr(self.message_sender, 'send_callback'):
+                    send_cb = self.message_sender.send_callback
+                
                 # 创建进度回调函数
                 async def progress_callback(progress_info):
-                    if self.send_callback:
-                        await self.send_callback({
+                    if send_cb:
+                        await send_cb({
                             "type": "agent_step",
                             "id": f"agent_step_{int(time.time() * 1000)}_{tool_name}",
                             "content": progress_info.get("message", ""),
-                            "step_type": "progress",
-                            "tool_name": tool_name,
+                            "stepType": "progress",
+                            "toolName": tool_name,
                             "progress": progress_info.get("progress"),
                             "stage": progress_info.get("stage"),
                             "timestamp": int(time.time() * 1000)

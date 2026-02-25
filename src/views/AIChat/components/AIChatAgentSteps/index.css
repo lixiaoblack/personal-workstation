@@ -1,0 +1,32 @@
+/**
+ * AIChatAgentSteps 组件样式
+ */
+
+/* 确保内容区域可以正确换行 */
+.ai-chat-agent-steps {
+  overflow-x: hidden;
+}
+
+/* description 区域强制换行 */
+.ai-chat-agent-steps .ant-x-thought-chain-item-description,
+.ai-chat-agent-steps [class*="description"] {
+  word-break: break-all;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* content 区域强制换行 */
+.ai-chat-agent-steps .ant-x-thought-chain-item-content,
+.ai-chat-agent-steps [class*="content"] {
+  word-break: break-all;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* 路径文本特殊处理 */
+.ai-chat-agent-steps [class*="description"] span,
+.ai-chat-agent-steps [class*="content"] span {
+  word-break: break-all;
+}

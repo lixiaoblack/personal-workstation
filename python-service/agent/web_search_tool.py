@@ -82,9 +82,13 @@ class WebSearchTool(BaseTool):
             搜索结果的格式化字符串
         """
         try:
-            from duckduckgo_search import DDGS
+            # 新版 duckduckgo_search 已重命名为 ddgs
+            try:
+                from ddgs import DDGS
+            except ImportError:
+                from duckduckgo_search import DDGS
         except ImportError:
-            return "错误：未安装 duckduckgo-search 库，请运行 pip install duckduckgo-search"
+            return "错误：未安装 ddgs 库，请运行 pip install ddgs"
 
         try:
             logger.info(f"[WebSearch] 搜索: {query}, 区域: {region}, 数量: {max_results}")
@@ -154,9 +158,13 @@ class NewsSearchTool(BaseTool):
     def _run(self, query: str, max_results: int = 5) -> str:
         """执行新闻搜索"""
         try:
-            from duckduckgo_search import DDGS
+            # 新版 duckduckgo_search 已重命名为 ddgs
+            try:
+                from ddgs import DDGS
+            except ImportError:
+                from duckduckgo_search import DDGS
         except ImportError:
-            return "错误：未安装 duckduckgo-search 库"
+            return "错误：未安装 ddgs 库"
 
         try:
             logger.info(f"[NewsSearch] 搜索新闻: {query}")

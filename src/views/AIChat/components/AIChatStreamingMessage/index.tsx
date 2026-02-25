@@ -42,7 +42,7 @@ const AIChatStreamingMessage: React.FC<AIChatStreamingMessageProps> = memo(
     const isStreaming = !!content || showThinking;
 
     // 打字机效果 - 快速模式
-    const { displayText, isTyping, skip } = useTypewriter(content, {
+    const { displayText, isTyping } = useTypewriter(content, {
       charDelay: 5, // 快速打字
       enabled: true,
     });
@@ -72,14 +72,6 @@ const AIChatStreamingMessage: React.FC<AIChatStreamingMessageProps> = memo(
                 <span className="animate-pulse text-primary">生成中...</span>
               ) : null}
               {hasError && <span className="text-error">部分工具调用失败</span>}
-              {isTyping && displayText && (
-                <button
-                  onClick={skip}
-                  className="text-text-tertiary hover:text-text-secondary transition-colors"
-                >
-                  跳过
-                </button>
-              )}
             </div>
 
             {/* 思考过程（有工具调用时才显示，使用 Think 组件包裹） */}

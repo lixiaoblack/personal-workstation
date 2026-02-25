@@ -156,7 +156,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
       return messageAge > 2000;
     });
 
-    const { displayText, isTyping, skip } = useTypewriter(
+    const { displayText, isTyping } = useTypewriter(
       isUser ? "" : message.content,
       {
         charDelay: 5, // 快速打字
@@ -221,14 +221,6 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
                     <span className="text-success">思考完成</span>
                   )}
                   {hasError && <span className="text-error">部分失败</span>}
-                  {isTyping && contentToDisplay && (
-                    <button
-                      onClick={skip}
-                      className="text-text-tertiary hover:text-text-secondary transition-colors"
-                    >
-                      跳过
-                    </button>
-                  )}
                 </>
               )}
             </div>

@@ -224,7 +224,13 @@ const AIChatComponent: React.FC = () => {
 
   // 自动滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // 只有在有内容或消息变化时才滚动
+    if (streamState.content || messages.length > 0) {
+      // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+    }
   }, [messages, streamState.content]);
 
   // ===== 摘要生成机制 =====
@@ -437,6 +443,11 @@ const AIChatComponent: React.FC = () => {
             });
             await loadMessages(cid);
             await loadConversations();
+
+            // 确保消息渲染后滚动到底部
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+            }, 100);
 
             // 检查是否需要生成摘要（每10条消息触发一次）
             await checkAndGenerateSummary(cid);

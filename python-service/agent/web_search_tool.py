@@ -172,9 +172,9 @@ class NewsSearchTool(BaseTool):
 
             results = []
             with DDGS() as ddgs:
-                # 使用新闻搜索
+                # 使用新闻搜索 - 新版 ddgs 使用 query 参数
                 news_results = list(ddgs.news(
-                    keywords=query,
+                    query=query,
                     max_results=max_results
                 ))
 

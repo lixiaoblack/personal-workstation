@@ -148,7 +148,13 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
     }, [isUser, message.metadata?.attachments]);
 
     // 打字机效果 - 快速模式（只对 AI 消息生效）
-    const [enableTypewriter, setEnableTypewriter] = useState(!isUser);
+    // 对于新消息（2秒内创建的）跳过打字机效果，因为流式输出已经显示过了
+    const [enableTypewriter, setEnableTypewriter] = useState(() => {
+      if (isUser) return false;
+      // 如果消息是 2 秒内创建的，认为是刚从流式结束加载的，跳过打字机
+      const messageAge = Date.now() - (message.timestamp || 0);
+      return messageAge > 2000;
+    });
 
     const { displayText, isTyping, skip } = useTypewriter(
       isUser ? "" : message.content,

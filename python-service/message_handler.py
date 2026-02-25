@@ -510,22 +510,14 @@ class MessageHandler:
             message_sender = MessageSender(send_callback=send_step_callback)
 
             # 获取所有工具
-            all_tools = [
+            tools = [
                 global_tool_registry.get_tool(name)
                 for name in global_tool_registry.list_tools()
                 if global_tool_registry.get_tool(name)
             ]
             
-            # 获取默认知识库（提前获取，用于决定是否过滤工具）
+            # 获取默认知识库（提前获取，用于注入检索结果）
             default_knowledge_id = KnowledgeRetrieverTool.get_default_knowledge()
-            
-            # 如果用户选择了知识库，移除 web_search、news_search 和 knowledge_search 工具
-            # 强制 Agent 直接使用已注入的检索结果
-            if default_knowledge_id:
-                tools = [t for t in all_tools if t and t.name not in ('web_search', 'news_search', 'knowledge_search')]
-                logger.info(f"[DeepAgent] 知识库模式：移除 web_search/news_search/knowledge_search，工具数量: {len(tools)}/{len(all_tools)}")
-            else:
-                tools = all_tools
 
             # 创建 Deep Agent
             agent = create_deep_agent(
@@ -607,8 +599,10 @@ file_read(file_path="{attachments[0].get('path', '')}")
 {search_result}
 
 [回答要求] 
-1. 请直接基于以上检索结果回答用户问题
-2. 如果检索结果不完整，可以根据你的知识补充，但要明确标注哪些是补充内容"""
+1. **优先**基于以上知识库检索结果回答用户问题
+2. 如果知识库内容已足够回答问题，直接回答即可
+3. 如果知识库内容不完整或无法完全回答，可以调用 web_search 等工具补充信息
+4. 回答时明确标注信息来源（知识库/网络搜索/自身知识）"""
                         logger.info(f"[DeepAgent] 知识库检索成功，结果长度: {len(search_result)}")
                     else:
                         logger.info(f"[DeepAgent] 知识库未找到相关内容: {search_result[:100] if search_result else 'empty'}")
@@ -631,13 +625,15 @@ file_read(file_path="{attachments[0].get('path', '')}")
 [用户问题]
 {content}"""
                 else:
-                    # 知识库检索无结果，Agent 只能基于自身知识回答
+                    # 知识库检索无结果，Agent 可以使用其他工具补充
                     enhanced_content = f"""[Context]
 用户选择了知识库: {kb_name}
 知识库 ID: {default_knowledge_id}
 描述: {kb_desc or '无'}
 
-[重要] 知识库自动检索未找到相关内容。请根据你的知识回答，并告知用户知识库中暂无相关内容。
+[重要] 知识库自动检索未找到相关内容。你可以：
+1. 使用 web_search 工具搜索网络信息
+2. 根据你的知识回答，并告知用户知识库中暂无相关内容
 
 [User Question]
 {content}"""
@@ -803,8 +799,10 @@ file_read(file_path="{attachments[0].get('path', '')}")
 {search_result}
 
 【回答要求】
-1. 请直接基于以上检索结果回答用户问题
-2. 如果检索结果不完整，可以根据你的知识补充，但要明确标注哪些是补充内容"""
+1. **优先**基于以上知识库检索结果回答用户问题
+2. 如果知识库内容已足够回答问题，直接回答即可
+3. 如果知识库内容不完整或无法完全回答，可以调用 web_search 等工具补充信息
+4. 回答时明确标注信息来源（知识库/网络搜索/自身知识）"""
                     logger.info(f"[ReActAgent] 知识库检索成功，结果长度: {len(search_result)}")
                 else:
                     logger.info(f"[ReActAgent] 知识库未找到相关内容")
@@ -825,7 +823,9 @@ file_read(file_path="{attachments[0].get('path', '')}")
 
 【用户问题】{content}
 
-【指令】知识库自动检索未找到相关内容。请根据你的知识回答，并告知用户知识库中暂无相关内容。"""
+【指令】知识库自动检索未找到相关内容。你可以：
+1. 使用 web_search 工具搜索网络信息
+2. 根据你的知识回答，并告知用户知识库中暂无相关内容"""
 
         # 创建 Agent 实例
         agent = ReActAgent(model_id=model_id)

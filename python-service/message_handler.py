@@ -583,31 +583,74 @@ file_read(file_path="{attachments[0].get('path', '')}")
                 
                 # 先自动检索知识库，获取相关内容
                 knowledge_context = ""
+                knowledge_search_result = None
                 try:
                     from agent.knowledge_tool import KnowledgeRetrieverTool
                     retriever = KnowledgeRetrieverTool()
                     # 执行检索（使用异步方法）
-                    search_result = await retriever._call_async(
+                    knowledge_search_result = await retriever._call_async(
                         query=content,
                         knowledge_id=default_knowledge_id
                     )
-                    if search_result and "未找到" not in search_result and "没有找到" not in search_result and "错误" not in search_result:
-                        knowledge_context = f"""
-[知识库检索结果]
-以下是从「{kb_name}」知识库中检索到的相关内容：
+                    if knowledge_search_result and "未找到" not in knowledge_search_result and "没有找到" not in knowledge_search_result and "错误" not in knowledge_search_result:
+                        knowledge_context = f"""以下是从「{kb_name}」知识库中检索到的相关内容：
 
-{search_result}
-
-[回答要求] 
-1. **优先**基于以上知识库检索结果回答用户问题
-2. 如果知识库内容已足够回答问题，直接回答即可
-3. 如果知识库内容不完整或无法完全回答，可以调用 web_search 等工具补充信息
-4. 回答时明确标注信息来源（知识库/网络搜索/自身知识）"""
-                        logger.info(f"[DeepAgent] 知识库检索成功，结果长度: {len(search_result)}")
+{knowledge_search_result}"""
+                        logger.info(f"[DeepAgent] 知识库检索成功，结果长度: {len(knowledge_search_result)}")
                     else:
-                        logger.info(f"[DeepAgent] 知识库未找到相关内容: {search_result[:100] if search_result else 'empty'}")
+                        logger.info(f"[DeepAgent] 知识库未找到相关内容: {knowledge_search_result[:100] if knowledge_search_result else 'empty'}")
                 except Exception as e:
                     logger.warning(f"[DeepAgent] 知识库检索失败: {e}")
+                
+                # 🎯 关键改进：如果知识库有检索结果，直接用 LLM 回答，不走 Agent
+                if knowledge_context and not attachment_context:
+                    logger.info(f"[DeepAgent] 知识库有结果，直接 LLM 回答（跳过 Agent 工具调用）")
+                    
+                    # 构建消息
+                    llm_messages = []
+                    if incoming_history:
+                        for msg in incoming_history:
+                            if msg["role"] == "user":
+                                llm_messages.append({"role": "user", "content": msg["content"]})
+                            elif msg["role"] == "assistant":
+                                llm_messages.append({"role": "assistant", "content": msg["content"]})
+                    
+                    # 添加知识库上下文和用户问题
+                    user_message = f"""{knowledge_context}
+
+请基于以上知识库内容回答用户问题：{content}"""
+                    llm_messages.append({"role": "user", "content": user_message})
+                    
+                    # 直接用 LLM 流式回答
+                    full_content = ""
+                    try:
+                        async for chunk in model_router.chat_stream_async(
+                            messages=llm_messages,
+                            model_id=model_id
+                        ):
+                            full_content += chunk
+                            await self.send_callback({
+                                "type": "chat_stream_chunk",
+                                "id": f"{msg_id}_chunk",
+                                "timestamp": int(time.time() * 1000),
+                                "conversationId": conversation_id,
+                                "content": chunk,
+                                "chunkIndex": 0,
+                            })
+                        
+                        # 发送结束消息
+                        await self.send_callback({
+                            "type": "chat_stream_end",
+                            "id": f"{msg_id}_end",
+                            "timestamp": int(time.time() * 1000),
+                            "conversationId": conversation_id,
+                            "fullContent": full_content,
+                        })
+                        logger.info(f"[DeepAgent] LLM 直接回答完成，内容长度: {len(full_content)}")
+                        return {"completed": True}
+                    except Exception as e:
+                        logger.error(f"[DeepAgent] LLM 直接回答失败: {e}，降级到 Agent 流程")
+                        # 继续走 Agent 流程作为降级
                 
                 # 使用系统提示格式，避免输出给用户
                 if attachment_context:

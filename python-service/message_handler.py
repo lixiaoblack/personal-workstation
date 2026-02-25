@@ -515,7 +515,7 @@ class MessageHandler:
                 for name in global_tool_registry.list_tools()
                 if global_tool_registry.get_tool(name)
             ]
-            
+
             # 获取默认知识库（提前获取，用于注入检索结果）
             default_knowledge_id = KnowledgeRetrieverTool.get_default_knowledge()
 
@@ -580,7 +580,7 @@ file_read(file_path="{attachments[0].get('path', '')}")
                 kb_info = knowledge_metadata.get(default_knowledge_id, {})
                 kb_name = kb_info.get("name", "未知知识库")
                 kb_desc = kb_info.get("description", "")
-                
+
                 # 先自动检索知识库，获取相关内容
                 knowledge_context = ""
                 knowledge_search_result = None
@@ -596,31 +596,40 @@ file_read(file_path="{attachments[0].get('path', '')}")
                         knowledge_context = f"""以下是从「{kb_name}」知识库中检索到的相关内容：
 
 {knowledge_search_result}"""
-                        logger.info(f"[DeepAgent] 知识库检索成功，结果长度: {len(knowledge_search_result)}")
+                        logger.info(
+                            f"[DeepAgent] 知识库检索成功，结果长度: {len(knowledge_search_result)}")
                     else:
-                        logger.info(f"[DeepAgent] 知识库未找到相关内容: {knowledge_search_result[:100] if knowledge_search_result else 'empty'}")
+                        logger.info(
+                            f"[DeepAgent] 知识库未找到相关内容: {knowledge_search_result[:100] if knowledge_search_result else 'empty'}")
                 except Exception as e:
                     logger.warning(f"[DeepAgent] 知识库检索失败: {e}")
+
+                # 🎯 检测用户是否明确要求联网搜索
+                web_search_keywords = ["联网搜索", "网上搜索", "网络搜索", "搜索一下", "搜一下", "查一下", "百度", "谷歌", "搜索看看"]
+                user_wants_web_search = any(kw in content.lower() for kw in web_search_keywords)
                 
-                # 🎯 关键改进：如果知识库有检索结果，直接用 LLM 回答，不走 Agent
-                if knowledge_context and not attachment_context:
+                # 🎯 关键改进：如果知识库有检索结果，且用户未明确要求联网搜索，直接用 LLM 回答
+                if knowledge_context and not attachment_context and not user_wants_web_search:
                     logger.info(f"[DeepAgent] 知识库有结果，直接 LLM 回答（跳过 Agent 工具调用）")
-                    
+
                     # 构建消息
                     llm_messages = []
                     if incoming_history:
                         for msg in incoming_history:
                             if msg["role"] == "user":
-                                llm_messages.append({"role": "user", "content": msg["content"]})
+                                llm_messages.append(
+                                    {"role": "user", "content": msg["content"]})
                             elif msg["role"] == "assistant":
-                                llm_messages.append({"role": "assistant", "content": msg["content"]})
-                    
+                                llm_messages.append(
+                                    {"role": "assistant", "content": msg["content"]})
+
                     # 添加知识库上下文和用户问题
                     user_message = f"""{knowledge_context}
 
 请基于以上知识库内容回答用户问题：{content}"""
-                    llm_messages.append({"role": "user", "content": user_message})
-                    
+                    llm_messages.append(
+                        {"role": "user", "content": user_message})
+
                     # 直接用 LLM 流式回答
                     full_content = ""
                     try:
@@ -637,7 +646,7 @@ file_read(file_path="{attachments[0].get('path', '')}")
                                 "content": chunk,
                                 "chunkIndex": 0,
                             })
-                        
+
                         # 发送结束消息
                         await self.send_callback({
                             "type": "chat_stream_end",
@@ -646,12 +655,14 @@ file_read(file_path="{attachments[0].get('path', '')}")
                             "conversationId": conversation_id,
                             "fullContent": full_content,
                         })
-                        logger.info(f"[DeepAgent] LLM 直接回答完成，内容长度: {len(full_content)}")
+                        logger.info(
+                            f"[DeepAgent] LLM 直接回答完成，内容长度: {len(full_content)}")
                         return {"completed": True}
                     except Exception as e:
-                        logger.error(f"[DeepAgent] LLM 直接回答失败: {e}，降级到 Agent 流程")
+                        logger.error(
+                            f"[DeepAgent] LLM 直接回答失败: {e}，降级到 Agent 流程")
                         # 继续走 Agent 流程作为降级
-                
+
                 # 使用系统提示格式，避免输出给用户
                 if attachment_context:
                     # 有附件时，优先处理附件
@@ -663,7 +674,17 @@ file_read(file_path="{attachments[0].get('path', '')}")
 [注意] 用户上传了文件，请优先使用 file_read 工具读取并分析文件内容。"""
                 elif knowledge_context:
                     # 有知识库检索结果
-                    enhanced_content = f"""{knowledge_context}
+                    if user_wants_web_search:
+                        # 用户明确要求联网搜索，Agent 需要调用 web_search
+                        enhanced_content = f"""{knowledge_context}
+
+[用户问题]
+{content}
+
+[用户要求] 用户明确要求联网搜索，请调用 web_search 工具搜索网络信息，并结合知识库内容回答。"""
+                        logger.info(f"[DeepAgent] 用户要求联网搜索，走 Agent 流程")
+                    else:
+                        enhanced_content = f"""{knowledge_context}
 
 [用户问题]
 {content}"""
@@ -823,7 +844,7 @@ file_read(file_path="{attachments[0].get('path', '')}")
             kb_info = knowledge_metadata.get(default_knowledge_id, {})
             kb_name = kb_info.get("name", "未知知识库")
             kb_desc = kb_info.get("description", "")
-            
+
             # 先自动检索知识库，获取相关内容
             knowledge_context = ""
             try:
@@ -846,12 +867,13 @@ file_read(file_path="{attachments[0].get('path', '')}")
 2. 如果知识库内容已足够回答问题，直接回答即可
 3. 如果知识库内容不完整或无法完全回答，可以调用 web_search 等工具补充信息
 4. 回答时明确标注信息来源（知识库/网络搜索/自身知识）"""
-                    logger.info(f"[ReActAgent] 知识库检索成功，结果长度: {len(search_result)}")
+                    logger.info(
+                        f"[ReActAgent] 知识库检索成功，结果长度: {len(search_result)}")
                 else:
                     logger.info(f"[ReActAgent] 知识库未找到相关内容")
             except Exception as e:
                 logger.warning(f"[ReActAgent] 知识库检索失败: {e}")
-            
+
             # 在用户消息前添加上下文提示
             if knowledge_context:
                 enhanced_content = f"""{knowledge_context}

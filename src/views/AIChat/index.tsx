@@ -112,9 +112,9 @@ const AIChatComponent: React.FC = () => {
   // 创建知识库弹窗
   const [createKnowledgeModalVisible, setCreateKnowledgeModalVisible] =
     useState(false);
-  const [embeddingModels, setEmbeddingModels] = useState<
-    ModelConfigListItem[]
-  >([]);
+  const [embeddingModels, setEmbeddingModels] = useState<ModelConfigListItem[]>(
+    []
+  );
   const [embeddingModelsLoading, setEmbeddingModelsLoading] = useState(false);
   const [pendingAttachmentIdForCreate, setPendingAttachmentIdForCreate] =
     useState<string | null>(null);
@@ -210,8 +210,7 @@ const AIChatComponent: React.FC = () => {
         if (models && models.length > 0) {
           // 只筛选嵌入模型且已启用的
           const embedding = models.filter(
-            (m: ModelConfigListItem) =>
-              m.usageType === "embedding" && m.enabled
+            (m: ModelConfigListItem) => m.usageType === "embedding" && m.enabled
           );
           setEmbeddingModels(embedding);
         }
@@ -982,11 +981,7 @@ const AIChatComponent: React.FC = () => {
         message.error("创建知识库失败");
       }
     },
-    [
-      embeddingModels,
-      pendingAttachmentIdForCreate,
-      handleSelectKnowledgeForAdd,
-    ]
+    [embeddingModels, pendingAttachmentIdForCreate, handleSelectKnowledgeForAdd]
   );
 
   return (

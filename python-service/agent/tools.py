@@ -639,7 +639,7 @@ class FileReadTool(BaseTool):
             return f"读取文本文件失败: {str(e)}"
 
     def _read_pdf(self, file_path: str, max_length: int) -> str:
-        """读取PDF文件"""
+        """读取PDF文件，支持扫描版PDF的OCR识别"""
         try:
             import fitz  # PyMuPDF
 
@@ -648,6 +648,7 @@ class FileReadTool(BaseTool):
             content_parts = []
             total_length = 0
 
+            # 先尝试提取文本
             for page_num, page in enumerate(doc):
                 if total_length >= max_length:
                     content_parts.append(f"\n[...已截断，共{total_pages}页...]")
@@ -659,12 +660,80 @@ class FileReadTool(BaseTool):
 
             doc.close()
 
+            # 检查是否提取到有效内容（如果大部分页面为空，说明是扫描版PDF）
+            non_empty_pages = sum(1 for part in content_parts if len(part.strip()) > 30)
+            
+            if non_empty_pages < total_pages * 0.3:  # 如果少于30%的页面有内容
+                logger.info(f"[FileReadTool] 检测到扫描版PDF，尝试OCR识别...")
+                return self._read_pdf_with_ocr(file_path, max_length)
+
             full_content = "\n\n".join(content_parts)
             return f"PDF文件，共{total_pages}页\n\n{full_content[:max_length]}"
 
         except ImportError:
             return "错误：PDF读取需要安装 PyMuPDF 库 (pip install pymupdf)"
         except Exception as e:
+            return f"读取PDF失败: {str(e)}"
+
+    def _read_pdf_with_ocr(self, file_path: str, max_length: int) -> str:
+        """使用OCR读取扫描版PDF"""
+        try:
+            import fitz  # PyMuPDF
+            from ocr_service import OcrService
+
+            doc = fitz.open(file_path)
+            total_pages = len(doc)
+            content_parts = []
+            total_length = 0
+
+            # 获取OCR服务实例
+            ocr_service = OcrService.get_instance()
+
+            # 检查OCR是否可用
+            if not ocr_service.is_available():
+                doc.close()
+                return f"PDF文件，共{total_pages}页\n\n[提示] 这是扫描版PDF，需要安装 PaddleOCR 才能识别内容。\n请运行: pip install paddlepaddle paddleocr"
+
+            logger.info(f"[FileReadTool] 开始OCR识别PDF，共{total_pages}页...")
+
+            for page_num in range(total_pages):
+                if total_length >= max_length:
+                    content_parts.append(f"\n[...已截断，共{total_pages}页...]")
+                    break
+
+                page = doc[page_num]
+                
+                # 将页面渲染为图片（2x缩放以获得更好的OCR效果）
+                mat = fitz.Matrix(2, 2)
+                pix = page.get_pixmap(matrix=mat)
+                
+                # 转换为PNG字节
+                img_bytes = pix.tobytes("png")
+                
+                # 使用OCR识别
+                try:
+                    ocr_result = ocr_service.recognize_bytes(img_bytes)
+                    if ocr_result.success and ocr_result.text:
+                        page_text = ocr_result.text
+                        logger.info(f"[FileReadTool] 第{page_num + 1}页OCR识别完成，{len(page_text)}字符")
+                    else:
+                        page_text = "[此页无法识别文字]"
+                except Exception as e:
+                    logger.warning(f"[FileReadTool] 第{page_num + 1}页OCR失败: {e}")
+                    page_text = f"[OCR识别失败: {str(e)}]"
+
+                content_parts.append(f"=== 第{page_num + 1}页 ===\n{page_text}")
+                total_length += len(page_text)
+
+            doc.close()
+
+            full_content = "\n\n".join(content_parts)
+            return f"PDF文件（OCR识别），共{total_pages}页\n\n{full_content[:max_length]}"
+
+        except ImportError as e:
+            return f"错误：OCR识别需要安装 PaddleOCR 库: {e}\n请运行: pip install paddlepaddle paddleocr"
+        except Exception as e:
+            logger.error(f"[FileReadTool] PDF OCR失败: {e}")
             return f"读取PDF失败: {str(e)}"
 
     def _read_docx(self, file_path: str, max_length: int) -> str:

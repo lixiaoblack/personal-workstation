@@ -96,9 +96,9 @@ class WebSearchTool(BaseTool):
 
             results = []
             with DDGS() as ddgs:
-                # 执行搜索
+                # 执行搜索 - 新版 ddgs 使用 query 参数
                 search_results = list(ddgs.text(
-                    keywords=query,
+                    query=query,
                     region=region,
                     max_results=max_results
                 ))

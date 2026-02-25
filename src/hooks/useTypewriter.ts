@@ -91,7 +91,8 @@ export function useTypewriter(
 
     // 如果新文本以当前显示开头，继续追加
     if (text.startsWith(displayText) && currentLength < newLength) {
-      // 保持当前进度，继续打字
+      // 关键修复：同步 indexRef 到当前显示的长度
+      indexRef.current = currentLength;
       setIsTyping(true);
       setIsComplete(false);
     } else if (newLength < currentLength) {
@@ -114,6 +115,7 @@ export function useTypewriter(
 
       if (commonPrefixLength > 0 && commonPrefixLength === currentLength) {
         // 当前显示是新文本的前缀，继续追加
+        indexRef.current = currentLength;
         setIsTyping(true);
         setIsComplete(false);
       } else {

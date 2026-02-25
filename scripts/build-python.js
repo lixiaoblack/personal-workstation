@@ -35,9 +35,21 @@ function getPlatform() {
 
 /**
  * 检查 Python 环境
+ * 优先使用 conda base 环境，避免打包系统 Python 中不必要的大型库
  */
 function checkPython() {
   console.log("检查 Python 环境...");
+
+  // 优先使用 conda base 环境
+  const condaPython = "/opt/anaconda3/bin/python";
+  try {
+    const version = execSync(`"${condaPython}" --version`, { encoding: "utf-8" });
+    console.log(`  找到 Conda Python: ${version.trim()}`);
+    console.log(`  路径: ${condaPython}`);
+    return condaPython;
+  } catch {
+    console.log("  Conda Python 未找到，尝试其他选项...");
+  }
 
   try {
     // 尝试 python3

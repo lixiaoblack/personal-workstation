@@ -584,12 +584,12 @@ file_read(file_path="{attachments[0].get('path', '')}")
                 try:
                     from agent.knowledge_tool import KnowledgeRetrieverTool
                     retriever = KnowledgeRetrieverTool()
-                    # 执行检索
-                    search_result = retriever._run(
+                    # 执行检索（使用异步方法）
+                    search_result = await retriever._call_async(
                         query=content,
                         knowledge_id=default_knowledge_id
                     )
-                    if search_result and "未找到" not in search_result and "没有找到" not in search_result:
+                    if search_result and "未找到" not in search_result and "没有找到" not in search_result and "错误" not in search_result:
                         knowledge_context = f"""
 [知识库检索结果]
 以下是从「{kb_name}」知识库中检索到的相关内容：
@@ -780,11 +780,12 @@ file_read(file_path="{attachments[0].get('path', '')}")
             try:
                 from agent.knowledge_tool import KnowledgeRetrieverTool
                 retriever = KnowledgeRetrieverTool()
-                search_result = retriever._run(
+                # 执行检索（使用异步方法）
+                search_result = await retriever._call_async(
                     query=content,
                     knowledge_id=default_knowledge_id
                 )
-                if search_result and "未找到" not in search_result and "没有找到" not in search_result:
+                if search_result and "未找到" not in search_result and "没有找到" not in search_result and "错误" not in search_result:
                     knowledge_context = f"""
 【知识库检索结果】
 以下是从「{kb_name}」知识库中检索到的相关内容：

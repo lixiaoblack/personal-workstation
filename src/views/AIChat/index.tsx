@@ -503,20 +503,64 @@ const AIChatComponent: React.FC = () => {
     // Agent 步骤消息
     if (lastMessage.type === MessageType.AGENT_STEP) {
       const agentStep = lastMessage as AgentStepMessage;
-      setAgentSteps((prev) => {
-        const newSteps = [
-          ...prev,
-          {
-            type: agentStep.stepType,
-            content: agentStep.content,
-            toolCall: agentStep.toolCall,
-            iteration: agentStep.iteration,
-            timestamp: agentStep.timestamp,
-          },
-        ];
-        agentStepsRef.current = newSteps;
-        return newSteps;
-      });
+      
+      // 对于 progress 类型，更新最后一个进度步骤而不是添加新步骤
+      if (agentStep.stepType === "progress") {
+        setAgentSteps((prev) => {
+          // 查找最后一个 progress 步骤
+          const lastProgressIndex = [...prev].reverse().findIndex(
+            (s) => s.type === "progress" && s.toolName === agentStep.toolName
+          );
+          
+          if (lastProgressIndex !== -1) {
+            // 更新现有进度
+            const actualIndex = prev.length - 1 - lastProgressIndex;
+            const newSteps = [...prev];
+            newSteps[actualIndex] = {
+              ...newSteps[actualIndex],
+              content: agentStep.content,
+              progress: agentStep.progress,
+              stage: agentStep.stage,
+              timestamp: agentStep.timestamp,
+            };
+            agentStepsRef.current = newSteps;
+            return newSteps;
+          } else {
+            // 添加新进度步骤
+            const newSteps = [
+              ...prev,
+              {
+                type: agentStep.stepType,
+                content: agentStep.content,
+                toolCall: agentStep.toolCall,
+                iteration: agentStep.iteration,
+                timestamp: agentStep.timestamp,
+                progress: agentStep.progress,
+                stage: agentStep.stage,
+                toolName: agentStep.toolName,
+              },
+            ];
+            agentStepsRef.current = newSteps;
+            return newSteps;
+          }
+        });
+      } else {
+        // 非 progress 类型，正常添加
+        setAgentSteps((prev) => {
+          const newSteps = [
+            ...prev,
+            {
+              type: agentStep.stepType,
+              content: agentStep.content,
+              toolCall: agentStep.toolCall,
+              iteration: agentStep.iteration,
+              timestamp: agentStep.timestamp,
+            },
+          ];
+          agentStepsRef.current = newSteps;
+          return newSteps;
+        });
+      }
     }
 
     // 知识库添加询问消息

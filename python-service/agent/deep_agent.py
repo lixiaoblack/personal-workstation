@@ -525,15 +525,36 @@ class DeepAgentWrapper:
 
         # 创建异步包装函数
         async def async_tool_wrapper(**kwargs):
-            # 如果是 file_read 工具，修正文件路径
-            if tool_name == "file_read" and "file_path" in kwargs:
-                original_path = kwargs["file_path"]
-                corrected_path = DeepAgentWrapper.get_correct_file_path(
-                    original_path)
-                if corrected_path != original_path:
-                    logger.info(
-                        f"[DeepAgent] 文件路径修正: {original_path} -> {corrected_path}")
-                    kwargs["file_path"] = corrected_path
+            # 如果是 file_read 工具，设置进度回调
+            if tool_name == "file_read":
+                from .tools import set_file_read_progress_callback
+                
+                # 创建进度回调函数
+                async def progress_callback(progress_info):
+                    if self.send_callback:
+                        await self.send_callback({
+                            "type": "agent_step",
+                            "id": f"agent_step_{int(time.time() * 1000)}_{tool_name}",
+                            "content": progress_info.get("message", ""),
+                            "step_type": "progress",
+                            "tool_name": tool_name,
+                            "progress": progress_info.get("progress"),
+                            "stage": progress_info.get("stage"),
+                            "timestamp": int(time.time() * 1000)
+                        })
+                
+                # 设置进度回调
+                set_file_read_progress_callback(progress_callback)
+                
+                # 修正文件路径
+                if "file_path" in kwargs:
+                    original_path = kwargs["file_path"]
+                    corrected_path = DeepAgentWrapper.get_correct_file_path(
+                        original_path)
+                    if corrected_path != original_path:
+                        logger.info(
+                            f"[DeepAgent] 文件路径修正: {original_path} -> {corrected_path}")
+                        kwargs["file_path"] = corrected_path
 
             logger.info(f"[DeepAgent] 异步调用工具: {tool_name}, 参数: {kwargs}")
 

@@ -36,6 +36,7 @@ export const AGENT_STEP_ICONS: Record<AgentStepType, string> = {
   tool_call: "🔧", // 调用工具
   tool_result: "📊", // 工具结果
   answer: "💬", // 最终答案
+  progress: "⏳", // 进度
 };
 
 export const AGENT_STEP_LABELS: Record<AgentStepType, string> = {
@@ -43,6 +44,7 @@ export const AGENT_STEP_LABELS: Record<AgentStepType, string> = {
   tool_call: "调用工具",
   tool_result: "工具结果",
   answer: "回答",
+  progress: "处理中",
 };
 
 // ==================== 类型定义 ====================
@@ -68,6 +70,12 @@ export interface AgentStepItem {
   };
   iteration?: number;
   timestamp: number;
+  /** 进度信息（仅 progress 类型） */
+  progress?: number;
+  /** 进度阶段（仅 progress 类型） */
+  stage?: string;
+  /** 工具名称（仅 progress 类型） */
+  toolName?: string;
 }
 
 /**
@@ -107,6 +115,34 @@ export interface ThoughtChainItem {
 }
 
 /**
+ * 格式化工具参数，处理长路径
+ */
+function formatToolArguments(args: Record<string, unknown>): string {
+  const formatted: string[] = [];
+  
+  for (const [key, value] of Object.entries(args)) {
+    if (key === "file_path" && typeof value === "string") {
+      // 文件路径特殊处理：显示文件名，完整路径可折叠
+      const pathStr = value as string;
+      const fileName = pathStr.split("/").pop() || pathStr;
+      if (pathStr.length > 50) {
+        formatted.push(`${key}: ${fileName}`);
+        formatted.push(`  (完整路径: ${pathStr})`);
+      } else {
+        formatted.push(`${key}: ${pathStr}`);
+      }
+    } else if (typeof value === "string" && value.length > 100) {
+      // 其他长字符串截断
+      formatted.push(`${key}: ${value.substring(0, 100)}...`);
+    } else {
+      formatted.push(`${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  
+  return formatted.join("\n");
+}
+
+/**
  * 将 AgentStepItem 转换为 ThoughtChainItem
  */
 export function convertToThoughtChainItems(
@@ -122,14 +158,25 @@ export function convertToThoughtChainItems(
     }
 
     // 根据步骤类型确定标题
-    let title = AGENT_STEP_LABELS[step.type] || step.type;
-    let description = "";
-    const content = step.content || "";
+    let title: React.ReactNode = AGENT_STEP_LABELS[step.type] || step.type;
+    let description: React.ReactNode = "";
+    let content: React.ReactNode = step.content || "";
 
+    // 进度类型特殊处理
+    if (step.type === "progress") {
+      status = step.stage === "ocr_complete" ? "success" : "loading";
+      title = step.toolName ? `${step.toolName}: ${step.content}` : step.content;
+      
+      // 如果有进度，存储进度值供组件使用
+      if (step.progress !== undefined && step.progress !== null) {
+        // 使用 extra 字段存储进度信息
+        content = JSON.stringify({ progress: step.progress, content: step.content });
+      }
+    }
     // 工具调用特殊处理
-    if (step.type === "tool_call" && step.toolCall) {
+    else if (step.type === "tool_call" && step.toolCall) {
       title = `${AGENT_STEP_LABELS[step.type]}: ${step.toolCall.name}`;
-      description = `参数: ${JSON.stringify(step.toolCall.arguments)}`;
+      description = formatToolArguments(step.toolCall.arguments);
     }
 
     return {

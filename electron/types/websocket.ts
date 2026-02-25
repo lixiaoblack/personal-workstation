@@ -666,6 +666,12 @@ export interface AgentStepMessage extends BaseMessage {
   toolCall?: AgentToolCallInfo;
   /** 当前迭代次数 */
   iteration?: number;
+  /** 进度信息（仅 progress 类型） */
+  progress?: number;
+  /** 进度阶段（仅 progress 类型，如 ocr_start, ocr_page, ocr_complete） */
+  stage?: string;
+  /** 工具名称（仅 progress 类型） */
+  toolName?: string;
 }
 
 /**

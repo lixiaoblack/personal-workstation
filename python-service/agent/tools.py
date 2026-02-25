@@ -551,6 +551,46 @@ global_tool_registry = ToolRegistry()
 
 # ==================== 文件读取工具 ====================
 
+# 全局进度回调函数，由 Agent 设置
+_progress_callback = None
+
+
+def set_file_read_progress_callback(callback):
+    """设置文件读取进度回调函数"""
+    global _progress_callback
+    _progress_callback = callback
+
+
+def _report_progress(stage: str, message: str, progress: float = None):
+    """报告进度"""
+    global _progress_callback
+    if _progress_callback:
+        import asyncio
+        try:
+            # 如果是异步回调，需要特殊处理
+            if asyncio.iscoroutinefunction(_progress_callback):
+                # 在同步上下文中无法直接调用异步函数
+                # 使用 asyncio.run 或创建新事件循环
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(_progress_callback({
+                        "stage": stage,
+                        "message": message,
+                        "progress": progress
+                    }))
+                except RuntimeError:
+                    # 没有运行中的事件循环
+                    pass
+            else:
+                _progress_callback({
+                    "stage": stage,
+                    "message": message,
+                    "progress": progress
+                })
+        except Exception as e:
+            logger.warning(f"[FileReadTool] 进度回调失败: {e}")
+
+
 class FileReadTool(BaseTool):
     """
     文件读取工具
@@ -661,8 +701,9 @@ class FileReadTool(BaseTool):
             doc.close()
 
             # 检查是否提取到有效内容（如果大部分页面为空，说明是扫描版PDF）
-            non_empty_pages = sum(1 for part in content_parts if len(part.strip()) > 30)
-            
+            non_empty_pages = sum(
+                1 for part in content_parts if len(part.strip()) > 30)
+
             if non_empty_pages < total_pages * 0.3:  # 如果少于30%的页面有内容
                 logger.info(f"[FileReadTool] 检测到扫描版PDF，尝试OCR识别...")
                 return self._read_pdf_with_ocr(file_path, max_length)
@@ -695,6 +736,7 @@ class FileReadTool(BaseTool):
                 return f"PDF文件，共{total_pages}页\n\n[提示] 这是扫描版PDF，需要安装 PaddleOCR 才能识别内容。\n请运行: pip install paddlepaddle paddleocr"
 
             logger.info(f"[FileReadTool] 开始OCR识别PDF，共{total_pages}页...")
+            _report_progress("ocr_start", f"开始OCR识别，共{total_pages}页", 0)
 
             for page_num in range(total_pages):
                 if total_length >= max_length:
@@ -702,24 +744,34 @@ class FileReadTool(BaseTool):
                     break
 
                 page = doc[page_num]
-                
+
+                # 报告当前页进度
+                progress = (page_num + 1) / total_pages
+                _report_progress(
+                    "ocr_page",
+                    f"正在识别第 {page_num + 1}/{total_pages} 页",
+                    progress
+                )
+
                 # 将页面渲染为图片（2x缩放以获得更好的OCR效果）
                 mat = fitz.Matrix(2, 2)
                 pix = page.get_pixmap(matrix=mat)
-                
+
                 # 转换为PNG字节
                 img_bytes = pix.tobytes("png")
-                
+
                 # 使用OCR识别
                 try:
                     ocr_result = ocr_service.recognize_bytes(img_bytes)
                     if ocr_result.success and ocr_result.text:
                         page_text = ocr_result.text
-                        logger.info(f"[FileReadTool] 第{page_num + 1}页OCR识别完成，{len(page_text)}字符")
+                        logger.info(
+                            f"[FileReadTool] 第{page_num + 1}页OCR识别完成，{len(page_text)}字符")
                     else:
                         page_text = "[此页无法识别文字]"
                 except Exception as e:
-                    logger.warning(f"[FileReadTool] 第{page_num + 1}页OCR失败: {e}")
+                    logger.warning(
+                        f"[FileReadTool] 第{page_num + 1}页OCR失败: {e}")
                     page_text = f"[OCR识别失败: {str(e)}]"
 
                 content_parts.append(f"=== 第{page_num + 1}页 ===\n{page_text}")
@@ -727,13 +779,17 @@ class FileReadTool(BaseTool):
 
             doc.close()
 
+            _report_progress("ocr_complete", f"OCR识别完成，共{total_pages}页", 1.0)
+
             full_content = "\n\n".join(content_parts)
             return f"PDF文件（OCR识别），共{total_pages}页\n\n{full_content[:max_length]}"
 
         except ImportError as e:
+            _report_progress("ocr_error", f"OCR识别失败: {e}", None)
             return f"错误：OCR识别需要安装 PaddleOCR 库: {e}\n请运行: pip install paddlepaddle paddleocr"
         except Exception as e:
             logger.error(f"[FileReadTool] PDF OCR失败: {e}")
+            _report_progress("ocr_error", f"OCR识别失败: {e}", None)
             return f"读取PDF失败: {str(e)}"
 
     def _read_docx(self, file_path: str, max_length: int) -> str:

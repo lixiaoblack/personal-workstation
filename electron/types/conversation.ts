@@ -6,7 +6,7 @@
 export type MessageRole = "user" | "assistant" | "system";
 
 // Agent 步骤类型
-export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer";
+export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer" | "progress";
 
 // Agent 工具调用信息
 export interface AgentToolCallInfo {
@@ -23,6 +23,12 @@ export interface AgentStepData {
   toolCall?: AgentToolCallInfo;
   iteration?: number;
   timestamp: number;
+  /** 进度信息（仅 progress 类型） */
+  progress?: number;
+  /** 进度阶段（仅 progress 类型） */
+  stage?: string;
+  /** 工具名称（仅 progress 类型） */
+  toolName?: string;
 }
 
 // 消息元数据

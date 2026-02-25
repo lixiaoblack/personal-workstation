@@ -125,9 +125,7 @@ const components: Components = {
   ),
   // li 内部可能包裹 p 标签，需要处理样式
   li: ({ children }) => (
-    <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">
-      {children}
-    </li>
+    <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">{children}</li>
   ),
   // 引用
   blockquote: ({ children }) => (

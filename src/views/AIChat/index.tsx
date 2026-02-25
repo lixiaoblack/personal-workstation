@@ -1096,6 +1096,8 @@ const AIChatComponent: React.FC = () => {
                 Object.entries(knowledgeAskAddState).map(
                   ([attachmentId, state]) => (
                     <div key={attachmentId} className="flex justify-start mb-6">
+                      {/* 占位：与 AI 消息头像对齐 (size-8 + gap-3 = 44px) */}
+                      <div className="w-11 shrink-0" />
                       <KnowledgeSelectCard
                         attachment={state.attachment}
                         knowledgeList={knowledgeOptions}

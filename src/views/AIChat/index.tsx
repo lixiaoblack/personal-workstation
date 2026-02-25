@@ -20,6 +20,9 @@ import type {
   Conversation,
   Message,
   KnowledgeInfo,
+  KnowledgeAskAddMessage,
+  AttachmentInfo,
+  KnowledgeOption,
 } from "@/types/electron";
 
 // 配置和类型
@@ -33,6 +36,7 @@ import AIChatMessage from "./components/AIChatMessage";
 import AIChatStreamingMessage from "./components/AIChatStreamingMessage";
 import AIChatEmptyState from "./components/AIChatEmptyState";
 import AIChatInput, { TagItem, AttachmentFile } from "./components/AIChatInput";
+import KnowledgeSelectCard from "./components/KnowledgeSelectCard";
 
 const AIChatComponent: React.FC = () => {
   const { connectionState, sendChat, sendAgentChat, lastMessage } =
@@ -79,6 +83,17 @@ const AIChatComponent: React.FC = () => {
 
   // 附件文件列表
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+
+  // 知识库添加询问状态
+  const [knowledgeAskAddState, setKnowledgeAskAddState] = useState<{
+    [attachmentId: string]: {
+      attachment: AttachmentInfo;
+      selected: boolean;
+      selectedKnowledge?: { id: string; name: string; selectedAt: number };
+      processing: boolean;
+      addResult?: { success: boolean; documentName?: string; chunkCount?: number; error?: string };
+    };
+  }>({});
 
   // 编辑对话标题弹窗
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -456,6 +471,20 @@ const AIChatComponent: React.FC = () => {
         return newSteps;
       });
     }
+
+    // 知识库添加询问消息
+    if (lastMessage.type === MessageType.KNOWLEDGE_ASK_ADD) {
+      const askAddMsg = lastMessage as KnowledgeAskAddMessage;
+      console.log("[AIChat] 收到 knowledge_ask_add 消息:", askAddMsg);
+      setKnowledgeAskAddState((prev) => ({
+        ...prev,
+        [askAddMsg.attachment.id]: {
+          attachment: askAddMsg.attachment,
+          selected: false,
+          processing: false,
+        },
+      }));
+    }
   }, [
     lastMessage,
     loadMessages,
@@ -756,6 +785,109 @@ const AIChatComponent: React.FC = () => {
     attachments,
   ]);
 
+  // 知识库添加询问相关回调
+  const handleAskAddToKnowledge = useCallback((attachmentId: string) => {
+    // 用户点击添加到知识库，显示知识库列表（组件内部处理）
+    console.log("[AIChat] 用户请求添加附件到知识库:", attachmentId);
+  }, []);
+
+  const handleSkipAddToKnowledge = useCallback((attachmentId: string) => {
+    // 用户跳过添加
+    setKnowledgeAskAddState((prev) => {
+      const newState = { ...prev };
+      delete newState[attachmentId];
+      return newState;
+    });
+  }, []);
+
+  const handleSelectKnowledgeForAdd = useCallback(
+    async (attachmentId: string, knowledgeId: string) => {
+      const state = knowledgeAskAddState[attachmentId];
+      if (!state) return;
+
+      const kb = knowledgeList.find((k) => k.id === knowledgeId);
+      if (!kb) return;
+
+      // 更新状态为处理中
+      setKnowledgeAskAddState((prev) => ({
+        ...prev,
+        [attachmentId]: {
+          ...prev[attachmentId],
+          processing: true,
+          selected: true,
+          selectedKnowledge: {
+            id: knowledgeId,
+            name: kb.name,
+            selectedAt: Date.now(),
+          },
+        },
+      }));
+
+      try {
+        // 调用 API 添加文档到知识库
+        const result = await window.electronAPI.addKnowledgeDocument(
+          knowledgeId,
+          state.attachment.path || "",
+          state.attachment.name
+        );
+
+        if (result.success) {
+          setKnowledgeAskAddState((prev) => ({
+            ...prev,
+            [attachmentId]: {
+              ...prev[attachmentId],
+              processing: false,
+              addResult: {
+                success: true,
+                documentName: result.document?.fileName,
+                chunkCount: result.document?.chunkCount,
+              },
+            },
+          }));
+          message.success(
+            `文件已添加到「${kb.name}」知识库`
+          );
+        } else {
+          setKnowledgeAskAddState((prev) => ({
+            ...prev,
+            [attachmentId]: {
+              ...prev[attachmentId],
+              processing: false,
+              addResult: {
+                success: false,
+                error: result.error || "添加失败",
+              },
+            },
+          }));
+          message.error(result.error || "添加到知识库失败");
+        }
+      } catch (error) {
+        console.error("添加文档到知识库失败:", error);
+        setKnowledgeAskAddState((prev) => ({
+          ...prev,
+          [attachmentId]: {
+            ...prev[attachmentId],
+            processing: false,
+            addResult: {
+              success: false,
+              error: "添加失败，请重试",
+            },
+          },
+        }));
+        message.error("添加到知识库失败");
+      }
+    },
+    [knowledgeAskAddState, knowledgeList]
+  );
+
+  // 将知识库列表转换为 KnowledgeOption 格式
+  const knowledgeOptions: KnowledgeOption[] = knowledgeList.map((kb) => ({
+    id: kb.id,
+    name: kb.name,
+    description: kb.description,
+    documentCount: kb.documentCount || 0,
+  }));
+
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* 对话历史侧边栏 */}
@@ -796,6 +928,26 @@ const AIChatComponent: React.FC = () => {
                   currentModel={currentModel}
                 />
               ))}
+
+              {/* 知识库添加询问卡片 */}
+              {Object.entries(knowledgeAskAddState).map(([attachmentId, state]) => (
+                <div key={attachmentId} className="flex justify-start mb-6">
+                  <KnowledgeSelectCard
+                    attachment={state.attachment}
+                    knowledgeList={knowledgeOptions}
+                    selected={state.selected}
+                    selectedKnowledge={state.selectedKnowledge}
+                    addResult={state.addResult}
+                    processing={state.processing}
+                    onAskAdd={() => handleAskAddToKnowledge(attachmentId)}
+                    onSkip={() => handleSkipAddToKnowledge(attachmentId)}
+                    onSelectKnowledge={(knowledgeId) =>
+                      handleSelectKnowledgeForAdd(attachmentId, knowledgeId)
+                    }
+                  />
+                </div>
+              ))}
+
               {streamState.status === "streaming" && (
                 <AIChatStreamingMessage
                   content={streamState.content}

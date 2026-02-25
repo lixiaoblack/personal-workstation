@@ -666,6 +666,27 @@ Description: {kb_desc or 'None'}
                     "fullContent": full_content,
                 })
 
+            # 如果有附件，发送 knowledge_ask_add 消息询问用户是否添加到知识库
+            if attachments:
+                import uuid
+                for att in attachments:
+                    await self.send_callback({
+                        "type": "knowledge_ask_add",
+                        "id": f"{msg_id}_ask_{uuid.uuid4().hex[:8]}",
+                        "timestamp": int(time.time() * 1000),
+                        "conversationId": conversation_id,
+                        "content": f"已分析文件「{att.get('name', '未知文件')}」，是否需要将其添加到知识库？",
+                        "attachment": {
+                            "id": str(uuid.uuid4()),
+                            "name": att.get("name", "未知文件"),
+                            "path": att.get("path", ""),
+                            "size": att.get("size", 0),
+                            "type": att.get("type", "file"),
+                            "mimeType": att.get("mimeType", ""),
+                        },
+                    })
+                    logger.info(f"[DeepAgent] 发送 knowledge_ask_add 消息，附件: {att.get('name')}")
+
             logger.info(f"[DeepAgent] 执行完成")
             return {"completed": True}  # 返回标记表示 Deep Agent 已完成执行
 

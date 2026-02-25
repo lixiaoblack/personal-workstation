@@ -43,7 +43,9 @@ function checkPython() {
   // 优先使用 conda base 环境
   const condaPython = "/opt/anaconda3/bin/python";
   try {
-    const version = execSync(`"${condaPython}" --version`, { encoding: "utf-8" });
+    const version = execSync(`"${condaPython}" --version`, {
+      encoding: "utf-8",
+    });
     console.log(`  找到 Conda Python: ${version.trim()}`);
     console.log(`  路径: ${condaPython}`);
     return condaPython;

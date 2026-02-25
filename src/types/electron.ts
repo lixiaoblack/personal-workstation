@@ -76,6 +76,10 @@ export type {
   AttachmentInfo,
   AttachmentType,
   KnowledgeOption,
+  KnowledgeAskAddMessage,
+  KnowledgeSelectRequestMessage,
+  KnowledgeSelectResponseMessage,
+  KnowledgeAddResultMessage,
   // Ask 通用交互模块类型
   AskType,
   AskOption,

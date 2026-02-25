@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install pnpm
         run: npm install -g pnpm@9
@@ -27,7 +27,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Python dependencies
         run: |
@@ -60,12 +60,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Python dependencies
         run: |
@@ -118,11 +118,11 @@ jobs:
           name: Personal Workstation ${{ steps.get_version.outputs.VERSION }}
           body: |
             ## 更新内容
-            
+
             请查看 [CHANGELOG.md](./md/changelog.md) 了解详细更新内容。
-            
+
             ## 下载
-            
+
             | 平台 | 文件 |
             |------|------|
             | macOS (Apple Silicon) | 下方 `.dmg` 文件 |

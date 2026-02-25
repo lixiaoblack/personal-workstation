@@ -391,11 +391,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
         const kw = keyword?.startsWith("/")
           ? keyword.slice(1).toLowerCase()
           : keyword?.toLowerCase() || "";
-        console.log("[AIChatInput] getKnowledgeItems:", {
-          keyword,
-          kw,
-          knowledgeListCount: knowledgeList.length,
-        });
+
         const items = knowledgeList
           .filter(
             (kb) =>
@@ -411,11 +407,7 @@ const AIChatInput: React.FC<AIChatInputProps> = memo(
               kb.description ? ` · ${kb.description}` : ""
             }`,
           }));
-        console.log(
-          "[AIChatInput] getKnowledgeItems result:",
-          items.length,
-          items
-        );
+
         return items;
       },
       [knowledgeList]

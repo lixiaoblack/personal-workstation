@@ -37,6 +37,8 @@ import AIChatStreamingMessage from "./components/AIChatStreamingMessage";
 import AIChatEmptyState from "./components/AIChatEmptyState";
 import AIChatInput, { TagItem, AttachmentFile } from "./components/AIChatInput";
 import KnowledgeSelectCard from "./components/KnowledgeSelectCard";
+import CreateKnowledgeModal from "../Knowledge/components/CreateKnowledgeModal";
+import type { ModelConfigListItem } from "@/types/electron";
 
 const AIChatComponent: React.FC = () => {
   const { connectionState, sendChat, sendAgentChat, lastMessage } =
@@ -106,6 +108,16 @@ const AIChatComponent: React.FC = () => {
   const [editingConversationId, setEditingConversationId] = useState<
     number | null
   >(null);
+
+  // 创建知识库弹窗
+  const [createKnowledgeModalVisible, setCreateKnowledgeModalVisible] =
+    useState(false);
+  const [embeddingModels, setEmbeddingModels] = useState<
+    ModelConfigListItem[]
+  >([]);
+  const [embeddingModelsLoading, setEmbeddingModelsLoading] = useState(false);
+  const [pendingAttachmentIdForCreate, setPendingAttachmentIdForCreate] =
+    useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
@@ -188,6 +200,25 @@ const AIChatComponent: React.FC = () => {
         }
       } catch (error) {
         console.error("加载知识库列表失败:", error);
+      }
+    })();
+    // 加载嵌入模型列表
+    (async () => {
+      try {
+        setEmbeddingModelsLoading(true);
+        const models = await window.electronAPI.getModelConfigs();
+        if (models && models.length > 0) {
+          // 只筛选嵌入模型且已启用的
+          const embedding = models.filter(
+            (m: ModelConfigListItem) =>
+              m.usageType === "embedding" && m.enabled
+          );
+          setEmbeddingModels(embedding);
+        }
+      } catch (error) {
+        console.error("加载嵌入模型失败:", error);
+      } finally {
+        setEmbeddingModelsLoading(false);
       }
     })();
   }, [loadConversations]);
@@ -891,6 +922,73 @@ const AIChatComponent: React.FC = () => {
     documentCount: kb.documentCount || 0,
   }));
 
+  // 处理点击新建知识库
+  const handleCreateKnowledgeClick = useCallback((attachmentId: string) => {
+    setPendingAttachmentIdForCreate(attachmentId);
+    setCreateKnowledgeModalVisible(true);
+  }, []);
+
+  // 处理创建知识库
+  const handleCreateKnowledge = useCallback(
+    async (values: {
+      name: string;
+      description?: string;
+      embeddingModelConfigId: number;
+    }) => {
+      const selectedModel = embeddingModels.find(
+        (m) => m.id === values.embeddingModelConfigId
+      );
+      if (!selectedModel) {
+        message.error("请选择有效的嵌入模型");
+        return;
+      }
+
+      try {
+        const result = await window.electronAPI.createKnowledge({
+          name: values.name,
+          description: values.description,
+          embeddingModel:
+            selectedModel.provider === "ollama" ? "ollama" : "openai",
+          embeddingModelName: selectedModel.modelId,
+        });
+
+        if (result.success) {
+          message.success("知识库创建成功");
+          setCreateKnowledgeModalVisible(false);
+
+          // 重新加载知识库列表
+          const listResult = await window.electronAPI.listKnowledge();
+          if (listResult.success && listResult.knowledge) {
+            setKnowledgeList(listResult.knowledge);
+          }
+
+          // 如果有待处理的附件，自动选择新创建的知识库
+          if (
+            pendingAttachmentIdForCreate &&
+            result.knowledge &&
+            result.knowledge.length > 0
+          ) {
+            handleSelectKnowledgeForAdd(
+              pendingAttachmentIdForCreate,
+              result.knowledge[0].id
+            );
+            setPendingAttachmentIdForCreate(null);
+          }
+        } else {
+          message.error(result.error || "创建知识库失败");
+        }
+      } catch (error) {
+        console.error("创建知识库失败:", error);
+        message.error("创建知识库失败");
+      }
+    },
+    [
+      embeddingModels,
+      pendingAttachmentIdForCreate,
+      handleSelectKnowledgeForAdd,
+    ]
+  );
+
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* 对话历史侧边栏 */}
@@ -948,6 +1046,9 @@ const AIChatComponent: React.FC = () => {
                       onSelectKnowledge={(knowledgeId) =>
                         handleSelectKnowledgeForAdd(attachmentId, knowledgeId)
                       }
+                      onCreateKnowledge={() =>
+                        handleCreateKnowledgeClick(attachmentId)
+                      }
                     />
                   </div>
                 )
@@ -1000,6 +1101,15 @@ const AIChatComponent: React.FC = () => {
           onPressEnter={handleSaveTitle}
         />
       </Modal>
+
+      {/* 创建知识库弹窗 */}
+      <CreateKnowledgeModal
+        visible={createKnowledgeModalVisible}
+        embeddingModels={embeddingModels}
+        embeddingModelsLoading={embeddingModelsLoading}
+        onCancel={() => setCreateKnowledgeModalVisible(false)}
+        onSubmit={handleCreateKnowledge}
+      />
     </div>
   );
 };

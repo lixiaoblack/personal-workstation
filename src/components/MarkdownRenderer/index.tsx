@@ -123,7 +123,12 @@ const components: Components = {
   ol: ({ children }) => (
     <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>
   ),
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  // li 内部可能包裹 p 标签，需要处理样式
+  li: ({ children }) => (
+    <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">
+      {children}
+    </li>
+  ),
   // 引用
   blockquote: ({ children }) => (
     <blockquote className="border-l-4 border-primary/50 pl-4 py-2 my-3 bg-bg-tertiary/50 rounded-r">

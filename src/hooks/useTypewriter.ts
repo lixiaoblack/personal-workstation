@@ -91,26 +91,50 @@ export function useTypewriter(
 
     // 如果新文本以当前显示开头，继续追加
     if (text.startsWith(displayText) && currentLength < newLength) {
-      indexRef.current = currentLength;
+      // 保持当前进度，继续打字
       setIsTyping(true);
       setIsComplete(false);
-    } else {
-      // 否则重置并重新开始
+    } else if (newLength < currentLength) {
+      // 新文本比当前显示短，说明是重置（不应该在流式中发生）
       setDisplayText("");
       indexRef.current = 0;
       setIsTyping(true);
       setIsComplete(false);
+    } else {
+      // 新文本不是以当前显示开头，但更长
+      // 尝试找到共同前缀
+      let commonPrefixLength = 0;
+      for (let i = 0; i < Math.min(currentLength, newLength); i++) {
+        if (displayText[i] === text[i]) {
+          commonPrefixLength++;
+        } else {
+          break;
+        }
+      }
+
+      if (commonPrefixLength > 0 && commonPrefixLength === currentLength) {
+        // 当前显示是新文本的前缀，继续追加
+        setIsTyping(true);
+        setIsComplete(false);
+      } else {
+        // 否则重置并重新开始
+        setDisplayText("");
+        indexRef.current = 0;
+        setIsTyping(true);
+        setIsComplete(false);
+      }
     }
 
     const typeNextChar = () => {
-      if (indexRef.current < textRef.current.length) {
+      // 使用最新的 textRef 和 indexRef
+      const currentText = textRef.current;
+      const currentIndex = indexRef.current;
+
+      if (currentIndex < currentText.length) {
         // 每次添加多个字符，加速效果
-        const charsToAdd = Math.min(
-          3,
-          textRef.current.length - indexRef.current
-        );
-        const nextIndex = indexRef.current + charsToAdd;
-        const newText = textRef.current.slice(0, nextIndex);
+        const charsToAdd = Math.min(3, currentText.length - currentIndex);
+        const nextIndex = currentIndex + charsToAdd;
+        const newText = currentText.slice(0, nextIndex);
 
         setDisplayText(newText);
         indexRef.current = nextIndex;

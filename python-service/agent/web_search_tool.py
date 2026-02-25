@@ -91,7 +91,8 @@ class WebSearchTool(BaseTool):
             return "错误：未安装 ddgs 库，请运行 pip install ddgs"
 
         try:
-            logger.info(f"[WebSearch] 搜索: {query}, 区域: {region}, 数量: {max_results}")
+            logger.info(
+                f"[WebSearch] 搜索: {query}, 区域: {region}, 数量: {max_results}")
 
             results = []
             with DDGS() as ddgs:

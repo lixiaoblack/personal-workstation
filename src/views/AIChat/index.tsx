@@ -325,6 +325,22 @@ const AIChatComponent: React.FC = () => {
       currentAgentSteps: agentStepsRef.current.length,
     });
 
+    // 流式内容块 - 不使用去重逻辑，因为所有 chunk 可能有相同的 ID
+    // 直接处理，避免被去重跳过
+    if (lastMessage.type === MessageType.CHAT_STREAM_CHUNK) {
+      const chunk = lastMessage as ChatStreamChunkMessage;
+      console.log("[AIChat] CHAT_STREAM_CHUNK:", {
+        contentLength: chunk.content?.length || 0,
+        contentPreview: chunk.content?.substring(0, 50),
+        currentStreamContent: streamStateRef.current.content?.length || 0,
+      });
+      setStreamState((prev) => ({
+        ...prev,
+        content: prev.content + chunk.content,
+      }));
+      return;
+    }
+
     // 防止重复处理同一消息
     const messageId = (lastMessage as { id?: string }).id;
     if (messageId) {
@@ -362,21 +378,6 @@ const AIChatComponent: React.FC = () => {
       setAgentSteps([]);
       agentStepsRef.current = [];
       console.log("[AIChat] 状态已重置，开始新的流式传输");
-      return;
-    }
-
-    // 流式内容块
-    if (lastMessage.type === MessageType.CHAT_STREAM_CHUNK) {
-      const chunk = lastMessage as ChatStreamChunkMessage;
-      console.log("[AIChat] CHAT_STREAM_CHUNK:", {
-        contentLength: chunk.content?.length || 0,
-        contentPreview: chunk.content?.substring(0, 50),
-        currentStreamContent: streamStateRef.current.content?.length || 0,
-      });
-      setStreamState((prev) => ({
-        ...prev,
-        content: prev.content + chunk.content,
-      }));
       return;
     }
 

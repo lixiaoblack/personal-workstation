@@ -605,9 +605,11 @@ file_read(file_path="{attachments[0].get('path', '')}")
                     logger.warning(f"[DeepAgent] 知识库检索失败: {e}")
 
                 # 🎯 检测用户是否明确要求联网搜索
-                web_search_keywords = ["联网搜索", "网上搜索", "网络搜索", "搜索一下", "搜一下", "查一下", "百度", "谷歌", "搜索看看"]
-                user_wants_web_search = any(kw in content.lower() for kw in web_search_keywords)
-                
+                web_search_keywords = ["联网搜索", "网上搜索", "网络搜索",
+                                       "搜索一下", "搜一下", "查一下", "百度", "谷歌", "搜索看看"]
+                user_wants_web_search = any(
+                    kw in content.lower() for kw in web_search_keywords)
+
                 # 🎯 关键改进：如果知识库有检索结果，且用户未明确要求联网搜索，直接用 LLM 回答
                 if knowledge_context and not attachment_context and not user_wants_web_search:
                     logger.info(f"[DeepAgent] 知识库有结果，直接 LLM 回答（跳过 Agent 工具调用）")
@@ -632,19 +634,23 @@ file_read(file_path="{attachments[0].get('path', '')}")
 
                     # 直接用 LLM 流式回答
                     full_content = ""
+                    chunk_count = 0
                     try:
                         async for chunk in model_router.chat_stream_async(
                             messages=llm_messages,
                             model_id=model_id
                         ):
+                            chunk_count += 1
                             full_content += chunk
+                            logger.debug(
+                                f"[DeepAgent] LLM 流式块 #{chunk_count}: {len(chunk)} 字符, 累计: {len(full_content)}")
                             await self.send_callback({
                                 "type": "chat_stream_chunk",
                                 "id": f"{msg_id}_chunk",
                                 "timestamp": int(time.time() * 1000),
                                 "conversationId": conversation_id,
                                 "content": chunk,
-                                "chunkIndex": 0,
+                                "chunkIndex": chunk_count,
                             })
 
                         # 发送结束消息

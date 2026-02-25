@@ -308,11 +308,15 @@ class ModelRouter:
 
             # 执行每个工具调用
             for tool_call in tool_calls:
-                tool_name = tool_call.get("name") if isinstance(tool_call, dict) else tool_call.name
-                tool_args = tool_call.get("args") if isinstance(tool_call, dict) else tool_call.args
-                tool_id = tool_call.get("id") if isinstance(tool_call, dict) else tool_call.id
+                tool_name = tool_call.get("name") if isinstance(
+                    tool_call, dict) else tool_call.name
+                tool_args = tool_call.get("args") if isinstance(
+                    tool_call, dict) else tool_call.args
+                tool_id = tool_call.get("id") if isinstance(
+                    tool_call, dict) else tool_call.id
 
-                logger.info(f"[FunctionCalling] 执行工具: {tool_name}({tool_args})")
+                logger.info(
+                    f"[FunctionCalling] 执行工具: {tool_name}({tool_args})")
 
                 # 执行工具
                 if tool_executor:
@@ -361,9 +365,14 @@ class ModelRouter:
                 lc_messages.append(HumanMessage(content=content))
 
         # 异步流式调用
+        chunk_count = 0
         async for chunk in model.astream(lc_messages):
             if chunk.content:
+                chunk_count += 1
+                logger.debug(
+                    f"[ModelRouter] 流式块 #{chunk_count}: {len(chunk.content)} 字符")
                 yield chunk.content
+        logger.info(f"[ModelRouter] 流式完成，共 {chunk_count} 个块")
 
     async def test_connection(self, model_id: int) -> Dict[str, Any]:
         """测试模型连接"""

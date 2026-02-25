@@ -503,15 +503,17 @@ const AIChatComponent: React.FC = () => {
     // Agent 步骤消息
     if (lastMessage.type === MessageType.AGENT_STEP) {
       const agentStep = lastMessage as AgentStepMessage;
-      
+
       // 对于 progress 类型，更新最后一个进度步骤而不是添加新步骤
       if (agentStep.stepType === "progress") {
         setAgentSteps((prev) => {
           // 查找最后一个 progress 步骤
-          const lastProgressIndex = [...prev].reverse().findIndex(
-            (s) => s.type === "progress" && s.toolName === agentStep.toolName
-          );
-          
+          const lastProgressIndex = [...prev]
+            .reverse()
+            .findIndex(
+              (s) => s.type === "progress" && s.toolName === agentStep.toolName
+            );
+
           if (lastProgressIndex !== -1) {
             // 更新现有进度
             const actualIndex = prev.length - 1 - lastProgressIndex;

@@ -119,7 +119,7 @@ export interface ThoughtChainItem {
  */
 function formatToolArguments(args: Record<string, unknown>): string {
   const formatted: string[] = [];
-  
+
   for (const [key, value] of Object.entries(args)) {
     if (key === "file_path" && typeof value === "string") {
       // 文件路径特殊处理：显示文件名，完整路径可折叠
@@ -138,7 +138,7 @@ function formatToolArguments(args: Record<string, unknown>): string {
       formatted.push(`${key}: ${JSON.stringify(value)}`);
     }
   }
-  
+
   return formatted.join("\n");
 }
 
@@ -165,12 +165,17 @@ export function convertToThoughtChainItems(
     // 进度类型特殊处理
     if (step.type === "progress") {
       status = step.stage === "ocr_complete" ? "success" : "loading";
-      title = step.toolName ? `${step.toolName}: ${step.content}` : step.content;
-      
+      title = step.toolName
+        ? `${step.toolName}: ${step.content}`
+        : step.content;
+
       // 如果有进度，存储进度值供组件使用
       if (step.progress !== undefined && step.progress !== null) {
         // 使用 extra 字段存储进度信息
-        content = JSON.stringify({ progress: step.progress, content: step.content });
+        content = JSON.stringify({
+          progress: step.progress,
+          content: step.content,
+        });
       }
     }
     // 工具调用特殊处理

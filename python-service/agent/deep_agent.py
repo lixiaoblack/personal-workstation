@@ -528,12 +528,12 @@ class DeepAgentWrapper:
             # 如果是 file_read 工具，设置进度回调
             if tool_name == "file_read":
                 from .tools import set_file_read_progress_callback
-                
+
                 # 获取 send_callback（从 message_sender 或直接使用）
                 send_cb = None
                 if self.message_sender and hasattr(self.message_sender, 'send_callback'):
                     send_cb = self.message_sender.send_callback
-                
+
                 # 创建进度回调函数
                 async def progress_callback(progress_info):
                     if send_cb:
@@ -547,10 +547,10 @@ class DeepAgentWrapper:
                             "stage": progress_info.get("stage"),
                             "timestamp": int(time.time() * 1000)
                         })
-                
+
                 # 设置进度回调
                 set_file_read_progress_callback(progress_callback)
-                
+
                 # 修正文件路径
                 if "file_path" in kwargs:
                     original_path = kwargs["file_path"]

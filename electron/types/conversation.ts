@@ -6,7 +6,12 @@
 export type MessageRole = "user" | "assistant" | "system";
 
 // Agent 步骤类型
-export type AgentStepType = "thought" | "tool_call" | "tool_result" | "answer" | "progress";
+export type AgentStepType =
+  | "thought"
+  | "tool_call"
+  | "tool_result"
+  | "answer"
+  | "progress";
 
 // Agent 工具调用信息
 export interface AgentToolCallInfo {

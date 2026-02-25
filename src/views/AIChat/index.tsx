@@ -91,7 +91,12 @@ const AIChatComponent: React.FC = () => {
       selected: boolean;
       selectedKnowledge?: { id: string; name: string; selectedAt: number };
       processing: boolean;
-      addResult?: { success: boolean; documentName?: string; chunkCount?: number; error?: string };
+      addResult?: {
+        success: boolean;
+        documentName?: string;
+        chunkCount?: number;
+        error?: string;
+      };
     };
   }>({});
 
@@ -844,9 +849,7 @@ const AIChatComponent: React.FC = () => {
               },
             },
           }));
-          message.success(
-            `文件已添加到「${kb.name}」知识库`
-          );
+          message.success(`文件已添加到「${kb.name}」知识库`);
         } else {
           setKnowledgeAskAddState((prev) => ({
             ...prev,
@@ -930,23 +933,25 @@ const AIChatComponent: React.FC = () => {
               ))}
 
               {/* 知识库添加询问卡片 */}
-              {Object.entries(knowledgeAskAddState).map(([attachmentId, state]) => (
-                <div key={attachmentId} className="flex justify-start mb-6">
-                  <KnowledgeSelectCard
-                    attachment={state.attachment}
-                    knowledgeList={knowledgeOptions}
-                    selected={state.selected}
-                    selectedKnowledge={state.selectedKnowledge}
-                    addResult={state.addResult}
-                    processing={state.processing}
-                    onAskAdd={() => handleAskAddToKnowledge(attachmentId)}
-                    onSkip={() => handleSkipAddToKnowledge(attachmentId)}
-                    onSelectKnowledge={(knowledgeId) =>
-                      handleSelectKnowledgeForAdd(attachmentId, knowledgeId)
-                    }
-                  />
-                </div>
-              ))}
+              {Object.entries(knowledgeAskAddState).map(
+                ([attachmentId, state]) => (
+                  <div key={attachmentId} className="flex justify-start mb-6">
+                    <KnowledgeSelectCard
+                      attachment={state.attachment}
+                      knowledgeList={knowledgeOptions}
+                      selected={state.selected}
+                      selectedKnowledge={state.selectedKnowledge}
+                      addResult={state.addResult}
+                      processing={state.processing}
+                      onAskAdd={() => handleAskAddToKnowledge(attachmentId)}
+                      onSkip={() => handleSkipAddToKnowledge(attachmentId)}
+                      onSelectKnowledge={(knowledgeId) =>
+                        handleSelectKnowledgeForAdd(attachmentId, knowledgeId)
+                      }
+                    />
+                  </div>
+                )
+              )}
 
               {streamState.status === "streaming" && (
                 <AIChatStreamingMessage

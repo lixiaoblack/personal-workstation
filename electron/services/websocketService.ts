@@ -452,7 +452,8 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
       message.type === MessageType.AGENT_STEP ||
       message.type === MessageType.AGENT_THOUGHT ||
       message.type === MessageType.AGENT_TOOL_CALL ||
-      message.type === MessageType.AGENT_TOOL_RESULT
+      message.type === MessageType.AGENT_TOOL_RESULT ||
+      message.type === MessageType.KNOWLEDGE_ASK_ADD
     ) {
       const clientInfo = clients.get(ws);
       // 确保消息来自 Python 客户端

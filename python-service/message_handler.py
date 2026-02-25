@@ -685,7 +685,8 @@ Description: {kb_desc or 'None'}
                             "mimeType": att.get("mimeType", ""),
                         },
                     })
-                    logger.info(f"[DeepAgent] 发送 knowledge_ask_add 消息，附件: {att.get('name')}")
+                    logger.info(
+                        f"[DeepAgent] 发送 knowledge_ask_add 消息，附件: {att.get('name')}")
 
             logger.info(f"[DeepAgent] 执行完成")
             return {"completed": True}  # 返回标记表示 Deep Agent 已完成执行

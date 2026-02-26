@@ -72,7 +72,8 @@ const MODULE_REGISTRY: Record<string, ModuleInfo> = {
     capabilities: ["chinese", "english", "mixed"],
     latestVersion: "1.0.0",
     // 使用 GitHub API 动态获取最新 release
-    downloadUrl: "https://api.github.com/repos/lixiaoblack/personal-workstation/releases/latest",
+    downloadUrl:
+      "https://api.github.com/repos/lixiaoblack/personal-workstation/releases/latest",
   },
 };
 
@@ -261,12 +262,16 @@ class ModuleManager {
       // 查找对应平台的资源
       const asset = releaseInfo.assets.find(
         (a: { name: string; browser_download_url: string }) =>
-          a.name === fileName || a.name.includes(`${moduleId}-module`) && a.name.includes(platform)
+          a.name === fileName ||
+          (a.name.includes(`${moduleId}-module`) && a.name.includes(platform))
       );
 
       if (!asset) {
         console.error(`[ModuleManager] 未找到资源: ${fileName}`);
-        console.error(`[ModuleManager] 可用资源:`, releaseInfo.assets.map((a: { name: string }) => a.name));
+        console.error(
+          `[ModuleManager] 可用资源:`,
+          releaseInfo.assets.map((a: { name: string }) => a.name)
+        );
         return { success: false, error: `未找到 ${platform} 平台的模块资源` };
       }
 
@@ -304,7 +309,8 @@ class ModuleManager {
     assets: Array<{ name: string; browser_download_url: string }>;
   } | null> {
     return new Promise((resolve) => {
-      const url = "https://api.github.com/repos/lixiaoblack/personal-workstation/releases/latest";
+      const url =
+        "https://api.github.com/repos/lixiaoblack/personal-workstation/releases/latest";
 
       https
         .get(

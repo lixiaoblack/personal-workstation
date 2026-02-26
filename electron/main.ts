@@ -16,6 +16,7 @@ import path from "node:path";
 import { initDatabase, closeDatabase } from "./database/index";
 import * as websocketService from "./services/websocketService";
 import * as pythonProcessService from "./services/pythonProcessService";
+import { moduleManager } from "./services/moduleService";
 import { registerAllIpcHandlers } from "./ipc";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,6 +89,24 @@ async function startBackendServices(): Promise<void> {
     } catch (pythonError) {
       console.warn("[Main] Python 服务自动启动异常:", pythonError);
     }
+
+    // 自动启动 OCR 模块（如果已安装）
+    try {
+      const ocrStatus = moduleManager.getModuleStatus("ocr");
+      if (ocrStatus.installed) {
+        console.log("[Main] 检测到 OCR 模块已安装，正在自动启动...");
+        const ocrResult = await moduleManager.startOcrModule();
+        if (ocrResult.success) {
+          console.log(`[Main] OCR 模块已自动启动，端口: ${ocrResult.port}`);
+        } else {
+          console.warn(`[Main] OCR 模块自动启动失败: ${ocrResult.error}`);
+        }
+      } else {
+        console.log("[Main] OCR 模块未安装，跳过自动启动");
+      }
+    } catch (ocrError) {
+      console.warn("[Main] OCR 模块自动启动异常:", ocrError);
+    }
   } catch (error) {
     console.error("[Main] WebSocket 服务启动失败:", error);
   }
@@ -97,6 +116,14 @@ async function startBackendServices(): Promise<void> {
  * 停止后端服务
  */
 async function stopBackendServices(): Promise<void> {
+  // 停止 OCR 模块
+  try {
+    moduleManager.stopOcrModule();
+    console.log("[Main] OCR 模块已停止");
+  } catch (error) {
+    console.warn("[Main] OCR 模块停止异常:", error);
+  }
+
   // 停止 Python 服务
   pythonProcessService.cleanup();
 

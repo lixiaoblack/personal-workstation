@@ -80,12 +80,13 @@ except ImportError:
             if self._ocr is None and self._init_error is None:
                 try:
                     from paddleocr import PaddleOCR
+                    # 禁用模型源检查，加快启动速度
+                    os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
                     logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
                     self._ocr = PaddleOCR(
                         use_angle_cls=True,
                         lang='ch',
-                        show_log=False,
-                        use_gpu=False
+                        show_log=False
                     )
                     logger.info("[OcrService] PaddleOCR 模型初始化完成")
                 except ImportError as e:

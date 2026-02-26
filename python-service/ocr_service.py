@@ -107,15 +107,18 @@ class OcrService:
 
                 logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
 
+                # 禁用模型源检查，加快启动速度
+                os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
+
                 # 初始化 PaddleOCR
                 # use_angle_cls=True: 支持倾斜文字识别
                 # lang='ch': 中英文混合模型
                 # show_log=False: 不显示详细日志
+                # 注意：新版 PaddleOCR 不再支持 use_gpu 参数，默认使用 CPU
                 self._ocr = PaddleOCR(
                     use_angle_cls=True,
                     lang='ch',
-                    show_log=False,
-                    use_gpu=False  # 使用 CPU 推理，兼容性更好
+                    show_log=False
                 )
 
                 logger.info("[OcrService] PaddleOCR 模型初始化完成")

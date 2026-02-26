@@ -145,30 +145,41 @@ const SimplePostman: React.FC = () => {
         setFolders((prev) => [...prev, newFolder]);
 
         // 创建请求
-        const newRequests = parseResult.endpoints.map((endpoint, index) => ({
-          id: `req-${Date.now()}-${index}`,
-          name: endpoint.summary || endpoint.path,
-          method: endpoint.method.toUpperCase() as HttpMethod,
-          url: endpoint.path,
-          params:
-            endpoint.parameters?.map((p) => ({
-              id: `param-${Date.now()}-${Math.random()}`,
-              key: p.name,
-              value: "",
-              description: p.description,
-              enabled: p.required ?? false,
-            })) || [],
-          headers: [...DEFAULT_HEADERS],
-          bodyType: "json" as const,
-          body: endpoint.requestBody
-            ? JSON.stringify(endpoint.requestBody, null, 2)
-            : "",
-          authType: "none" as const,
-          authConfig: {},
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          folderId: newFolder.id,
-        }));
+        const newRequests = parseResult.endpoints.map((endpoint, index) => {
+          // 从 requestBody 中提取生成的示例
+          let bodyContent = "";
+          if (endpoint.requestBody?.content?.length) {
+            const firstContent = endpoint.requestBody.content[0];
+            if (firstContent.generatedExample) {
+              bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+            } else if (firstContent.example) {
+              bodyContent = JSON.stringify(firstContent.example, null, 2);
+            }
+          }
+          
+          return {
+            id: `req-${Date.now()}-${index}`,
+            name: endpoint.summary || endpoint.path,
+            method: endpoint.method.toUpperCase() as HttpMethod,
+            url: endpoint.path,
+            params:
+              endpoint.parameters?.map((p) => ({
+                id: `param-${Date.now()}-${Math.random()}`,
+                key: p.name,
+                value: "",
+                description: p.description,
+                enabled: p.required ?? false,
+              })) || [],
+            headers: [...DEFAULT_HEADERS],
+            bodyType: "json" as const,
+            body: bodyContent,
+            authType: "none" as const,
+            authConfig: {},
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            folderId: newFolder.id,
+          };
+        });
         setRequests((prev) => [...prev, ...newRequests]);
 
         antdMessage.success(`成功导入 ${parseResult.endpoints.length} 个接口`);
@@ -208,28 +219,41 @@ const SimplePostman: React.FC = () => {
           };
           setFolders((prev) => [...prev, newFolder]);
 
-          const newRequests = parseResult.endpoints.map((endpoint, index) => ({
-            id: `req-${Date.now()}-${index}`,
-            name: endpoint.summary || endpoint.path,
-            method: endpoint.method.toUpperCase() as HttpMethod,
-            url: endpoint.path,
-            params:
-              endpoint.parameters?.map((p) => ({
-                id: `param-${Date.now()}-${Math.random()}`,
-                key: p.name,
-                value: "",
-                description: p.description,
-                enabled: p.required ?? false,
-              })) || [],
-            headers: [...DEFAULT_HEADERS],
-            bodyType: "json" as const,
-            body: "",
-            authType: "none" as const,
-            authConfig: {},
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            folderId: newFolder.id,
-          }));
+          const newRequests = parseResult.endpoints.map((endpoint, index) => {
+            // 从 requestBody 中提取生成的示例
+            let bodyContent = "";
+            if (endpoint.requestBody?.content?.length) {
+              const firstContent = endpoint.requestBody.content[0];
+              if (firstContent.generatedExample) {
+                bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+              } else if (firstContent.example) {
+                bodyContent = JSON.stringify(firstContent.example, null, 2);
+              }
+            }
+            
+            return {
+              id: `req-${Date.now()}-${index}`,
+              name: endpoint.summary || endpoint.path,
+              method: endpoint.method.toUpperCase() as HttpMethod,
+              url: endpoint.path,
+              params:
+                endpoint.parameters?.map((p) => ({
+                  id: `param-${Date.now()}-${Math.random()}`,
+                  key: p.name,
+                  value: "",
+                  description: p.description,
+                  enabled: p.required ?? false,
+                })) || [],
+              headers: [...DEFAULT_HEADERS],
+              bodyType: "json" as const,
+              body: bodyContent,
+              authType: "none" as const,
+              authConfig: {},
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              folderId: newFolder.id,
+            };
+          });
           setRequests((prev) => [...prev, ...newRequests]);
 
           antdMessage.success(
@@ -283,28 +307,41 @@ const SimplePostman: React.FC = () => {
               setFolders((prev) => [...prev, newFolder]);
 
               const newRequests = parseResult.endpoints.map(
-                (endpoint, index) => ({
-                  id: `req-${Date.now()}-${index}`,
-                  name: endpoint.summary || endpoint.path,
-                  method: endpoint.method.toUpperCase() as HttpMethod,
-                  url: endpoint.path,
-                  params:
-                    endpoint.parameters?.map((p) => ({
-                      id: `param-${Date.now()}-${Math.random()}`,
-                      key: p.name,
-                      value: "",
-                      description: p.description,
-                      enabled: p.required ?? false,
-                    })) || [],
-                  headers: [...DEFAULT_HEADERS],
-                  bodyType: "json" as const,
-                  body: "",
-                  authType: "none" as const,
-                  authConfig: {},
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                  folderId: newFolder.id,
-                })
+                (endpoint, index) => {
+                  // 从 requestBody 中提取生成的示例
+                  let bodyContent = "";
+                  if (endpoint.requestBody?.content?.length) {
+                    const firstContent = endpoint.requestBody.content[0];
+                    if (firstContent.generatedExample) {
+                      bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+                    } else if (firstContent.example) {
+                      bodyContent = JSON.stringify(firstContent.example, null, 2);
+                    }
+                  }
+                  
+                  return {
+                    id: `req-${Date.now()}-${index}`,
+                    name: endpoint.summary || endpoint.path,
+                    method: endpoint.method.toUpperCase() as HttpMethod,
+                    url: endpoint.path,
+                    params:
+                      endpoint.parameters?.map((p) => ({
+                        id: `param-${Date.now()}-${Math.random()}`,
+                        key: p.name,
+                        value: "",
+                        description: p.description,
+                        enabled: p.required ?? false,
+                      })) || [],
+                    headers: [...DEFAULT_HEADERS],
+                    bodyType: "json" as const,
+                    body: bodyContent,
+                    authType: "none" as const,
+                    authConfig: {},
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    folderId: newFolder.id,
+                  };
+                }
               );
               setRequests((prev) => [...prev, ...newRequests]);
 

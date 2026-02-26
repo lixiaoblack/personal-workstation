@@ -15,6 +15,12 @@
   - 支持从内容字符串解析
   - 解析结果包含：API 信息、端点列表、参数、请求体、响应、安全定义、标签等
 
+- `$ref` 引用解析和示例生成
+  - 自动解析 components/schemas 中的 `$ref` 引用
+  - 根据 schema 自动生成请求体示例数据
+  - 支持多种数据类型：string、number、boolean、array、object
+  - 支持格式化输出：date、email、uri、uuid 等
+
 ### 修复 (Fixed)
 
 - 修复 swagger-parser ESM 模块兼容性问题

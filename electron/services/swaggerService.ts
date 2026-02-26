@@ -59,6 +59,7 @@ export interface ParsedRequestBody {
     contentType: string;
     schema?: Record<string, unknown>;
     example?: unknown;
+    generatedExample?: Record<string, unknown>; // 根据 schema 生成的示例
   }>;
 }
 
@@ -293,7 +294,8 @@ function parseApiDocument(
         // OpenAPI 3.x requestBody
         if (isOpenAPI3 && operation.requestBody) {
           endpoint.requestBody = parseRequestBody(
-            operation.requestBody as Record<string, unknown>
+            operation.requestBody as Record<string, unknown>,
+            api
           );
         }
 
@@ -388,9 +390,151 @@ function parseParameters(
 }
 
 /**
+ * 解析 $ref 引用，获取实际定义
+ */
+function resolveRef(
+  ref: string,
+  api: ApiDocument
+): Record<string, unknown> | undefined {
+  if (!ref || !ref.startsWith("#/")) {
+    return undefined;
+  }
+
+  const parts = ref.slice(2).split("/");
+  let current: unknown = api;
+
+  for (const part of parts) {
+    if (current && typeof current === "object" && part in current) {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return undefined;
+    }
+  }
+
+  return current as Record<string, unknown>;
+}
+
+/**
+ * 根据 schema 生成示例数据
+ */
+function generateExampleFromSchema(
+  schema: Record<string, unknown>,
+  api: ApiDocument,
+  depth = 0
+): unknown {
+  // 防止循环引用导致的无限递归
+  if (depth > 10) {
+    return {};
+  }
+
+  // 如果有 $ref，先解析引用
+  if (schema.$ref) {
+    const resolved = resolveRef(schema.$ref as string, api);
+    if (resolved) {
+      return generateExampleFromSchema(resolved, api, depth + 1);
+    }
+    return {};
+  }
+
+  // 如果有 example，直接使用
+  if (schema.example !== undefined) {
+    return schema.example;
+  }
+
+  // 如果有 default，使用默认值
+  if (schema.default !== undefined) {
+    return schema.default;
+  }
+
+  const type = schema.type as string;
+
+  switch (type) {
+    case "string":
+      if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+        return schema.enum[0];
+      }
+      if (schema.format === "date") return "2024-01-01";
+      if (schema.format === "date-time") return "2024-01-01T00:00:00Z";
+      if (schema.format === "email") return "user@example.com";
+      if (schema.format === "uri" || schema.format === "url") return "https://example.com";
+      if (schema.format === "uuid") return "00000000-0000-0000-0000-000000000000";
+      if (schema.format === "password") return "********";
+      return schema.description ? `示例: ${schema.description}` : "string";
+
+    case "number":
+    case "integer":
+      if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+        return schema.enum[0];
+      }
+      if (schema.minimum !== undefined) {
+        return schema.maximum !== undefined
+          ? Math.min((schema.minimum as number) + 1, schema.maximum as number)
+          : (schema.minimum as number) + 1;
+      }
+      return 0;
+
+    case "boolean":
+      return false;
+
+    case "array": {
+      const items = schema.items as Record<string, unknown> | undefined;
+      if (items) {
+        const exampleItem = generateExampleFromSchema(items, api, depth + 1);
+        return [exampleItem];
+      }
+      return [];
+    }
+
+    case "object": {
+      const result: Record<string, unknown> = {};
+      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+      
+      if (properties) {
+        for (const [propName, propSchema] of Object.entries(properties)) {
+          // 检查是否是必填字段
+          const required = Array.isArray(schema.required) && schema.required.includes(propName);
+          // 只为必填字段生成示例，可选字段可以留空
+          if (required || depth < 2) {
+            result[propName] = generateExampleFromSchema(propSchema, api, depth + 1);
+          }
+        }
+      }
+      
+      // 处理 additionalProperties
+      if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+        // 如果对象没有固定属性，添加一个示例属性
+        if (Object.keys(result).length === 0) {
+          result["additionalProperty"] = generateExampleFromSchema(
+            schema.additionalProperties as Record<string, unknown>,
+            api,
+            depth + 1
+          );
+        }
+      }
+      
+      return result;
+    }
+
+    default:
+      // 如果没有 type，但有 properties，当作 object 处理
+      if (schema.properties) {
+        return generateExampleFromSchema(
+          { ...schema, type: "object" },
+          api,
+          depth
+        );
+      }
+      return null;
+  }
+}
+
+/**
  * 解析请求体 (OpenAPI 3.x)
  */
-function parseRequestBody(reqBody: Record<string, unknown>): ParsedRequestBody {
+function parseRequestBody(
+  reqBody: Record<string, unknown>,
+  api: ApiDocument
+): ParsedRequestBody {
   const content: ParsedRequestBody["content"] = [];
 
   if (reqBody.content) {
@@ -398,10 +542,20 @@ function parseRequestBody(reqBody: Record<string, unknown>): ParsedRequestBody {
       reqBody.content as Record<string, unknown>
     )) {
       const mt = mediaType as Record<string, unknown>;
+      const schema = mt.schema as Record<string, unknown> | undefined;
+      
+      // 生成示例数据
+      let generatedExample: Record<string, unknown> | undefined;
+      if (schema) {
+        const example = generateExampleFromSchema(schema, api);
+        generatedExample = example as Record<string, unknown>;
+      }
+      
       content.push({
         contentType,
-        schema: mt.schema as Record<string, unknown>,
+        schema,
         example: mt.example,
+        generatedExample,
       });
     }
   }

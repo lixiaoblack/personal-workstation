@@ -541,6 +541,7 @@ export interface SwaggerParseResult {
         contentType: string;
         schema?: Record<string, unknown>;
         example?: unknown;
+        generatedExample?: Record<string, unknown>;
       }>;
     };
     responses: Array<{

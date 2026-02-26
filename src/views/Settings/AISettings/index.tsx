@@ -101,17 +101,19 @@ const AISettings: React.FC = () => {
 
     // 定时刷新服务状态
     const interval = setInterval(loadServiceInfo, 5000);
-    
+
     // 监听模块下载进度
-    const unsubscribe = window.electronAPI.onModuleDownloadProgress((progress) => {
-      if (progress.moduleId === "ocr") {
-        setOcrDownloadProgress({
-          downloaded: progress.downloaded,
-          total: progress.total,
-          percent: progress.percent,
-        });
+    const unsubscribe = window.electronAPI.onModuleDownloadProgress(
+      (progress) => {
+        if (progress.moduleId === "ocr") {
+          setOcrDownloadProgress({
+            downloaded: progress.downloaded,
+            total: progress.total,
+            percent: progress.percent,
+          });
+        }
       }
-    });
+    );
 
     return () => {
       clearInterval(interval);
@@ -848,9 +850,7 @@ const AISettings: React.FC = () => {
   const renderModulesSection = () => (
     <div>
       <div className="flex items-center gap-2 mb-6">
-        <span className="material-symbols-outlined text-primary">
-          puzzle
-        </span>
+        <span className="material-symbols-outlined text-primary">puzzle</span>
         <h2 className="text-xl font-bold text-text-primary">可选模块</h2>
       </div>
 
@@ -872,7 +872,8 @@ const AISettings: React.FC = () => {
           </div>
           {ocrModuleStatus?.installed && (
             <span className="px-2 py-1 rounded text-xs font-medium bg-success/10 text-success">
-              已安装 {ocrModuleStatus.version ? `v${ocrModuleStatus.version}` : ""}
+              已安装{" "}
+              {ocrModuleStatus.version ? `v${ocrModuleStatus.version}` : ""}
             </span>
           )}
         </div>
@@ -882,14 +883,18 @@ const AISettings: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
               <span className="text-sm text-text-secondary">模块大小</span>
-              <span className="text-sm font-medium text-text-primary">约 150MB</span>
+              <span className="text-sm font-medium text-text-primary">
+                约 150MB
+              </span>
             </div>
 
             {ocrDownloading && ocrDownloadProgress && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-text-secondary">下载中...</span>
-                  <span className="text-text-primary">{ocrDownloadProgress.percent}%</span>
+                  <span className="text-text-primary">
+                    {ocrDownloadProgress.percent}%
+                  </span>
                 </div>
                 <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden">
                   <div
@@ -898,7 +903,8 @@ const AISettings: React.FC = () => {
                   />
                 </div>
                 <p className="text-xs text-text-tertiary text-right">
-                  {(ocrDownloadProgress.downloaded / 1024 / 1024).toFixed(1)}MB / {(ocrDownloadProgress.total / 1024 / 1024).toFixed(1)}MB
+                  {(ocrDownloadProgress.downloaded / 1024 / 1024).toFixed(1)}MB
+                  / {(ocrDownloadProgress.total / 1024 / 1024).toFixed(1)}MB
                 </p>
               </div>
             )}
@@ -915,7 +921,9 @@ const AISettings: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-base">download</span>
+                  <span className="material-symbols-outlined text-base">
+                    download
+                  </span>
                   下载并安装
                 </>
               )}
@@ -935,7 +943,9 @@ const AISettings: React.FC = () => {
                   }`}
                 />
                 <span className="text-sm font-medium text-text-primary">
-                  {ocrModuleStatus.running ? `运行中 (端口: ${ocrModuleStatus.port})` : "已停止"}
+                  {ocrModuleStatus.running
+                    ? `运行中 (端口: ${ocrModuleStatus.port})`
+                    : "已停止"}
                 </span>
               </div>
             </div>
@@ -946,7 +956,9 @@ const AISettings: React.FC = () => {
                   className="flex-1 py-3 bg-error hover:bg-error/80 text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
                   onClick={handleStopOcrModule}
                 >
-                  <span className="material-symbols-outlined text-base">stop</span>
+                  <span className="material-symbols-outlined text-base">
+                    stop
+                  </span>
                   停止服务
                 </button>
               ) : (
@@ -954,7 +966,9 @@ const AISettings: React.FC = () => {
                   className="flex-1 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
                   onClick={handleStartOcrModule}
                 >
-                  <span className="material-symbols-outlined text-base">play_arrow</span>
+                  <span className="material-symbols-outlined text-base">
+                    play_arrow
+                  </span>
                   启动服务
                 </button>
               )}
@@ -962,7 +976,9 @@ const AISettings: React.FC = () => {
                 className="py-3 px-4 bg-bg-tertiary hover:bg-bg-hover text-text-primary rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
                 onClick={handleUninstallOcrModule}
               >
-                <span className="material-symbols-outlined text-base">delete</span>
+                <span className="material-symbols-outlined text-base">
+                  delete
+                </span>
                 卸载
               </button>
             </div>

@@ -38,14 +38,17 @@ export function registerModuleIpc(): void {
   /**
    * 获取所有模块状态
    */
-  ipcMain.handle("module:getAllStatus", async (): Promise<Record<string, ModuleStatus>> => {
-    const modules = moduleManager.getAvailableModules();
-    const status: Record<string, ModuleStatus> = {};
-    for (const module of modules) {
-      status[module.id] = moduleManager.getModuleStatus(module.id);
+  ipcMain.handle(
+    "module:getAllStatus",
+    async (): Promise<Record<string, ModuleStatus>> => {
+      const modules = moduleManager.getAvailableModules();
+      const status: Record<string, ModuleStatus> = {};
+      for (const module of modules) {
+        status[module.id] = moduleManager.getModuleStatus(module.id);
+      }
+      return status;
     }
-    return status;
-  });
+  );
 
   // ========== 模块安装/卸载 ==========
 
@@ -54,14 +57,20 @@ export function registerModuleIpc(): void {
    */
   ipcMain.handle(
     "module:install",
-    async (event, moduleId: string): Promise<{ success: boolean; error?: string }> => {
+    async (
+      event,
+      moduleId: string
+    ): Promise<{ success: boolean; error?: string }> => {
       // 获取当前窗口用于发送进度
       const win = BrowserWindow.fromWebContents(event.sender);
 
-      const result = await moduleManager.downloadModule(moduleId, (progress: DownloadProgress) => {
-        // 发送下载进度到渲染进程
-        win?.webContents.send("module:downloadProgress", progress);
-      });
+      const result = await moduleManager.downloadModule(
+        moduleId,
+        (progress: DownloadProgress) => {
+          // 发送下载进度到渲染进程
+          win?.webContents.send("module:downloadProgress", progress);
+        }
+      );
 
       return result;
     }
@@ -72,7 +81,10 @@ export function registerModuleIpc(): void {
    */
   ipcMain.handle(
     "module:uninstall",
-    async (_event, moduleId: string): Promise<{ success: boolean; error?: string }> => {
+    async (
+      _event,
+      moduleId: string
+    ): Promise<{ success: boolean; error?: string }> => {
       return moduleManager.uninstallModule(moduleId);
     }
   );

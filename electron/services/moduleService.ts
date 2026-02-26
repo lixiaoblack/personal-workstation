@@ -1,7 +1,7 @@
 /**
  * 模块管理服务
  * 管理可选功能模块的下载、安装、卸载和更新
- * 
+ *
  * 支持的模块:
  * - ocr: OCR 文字识别模块 (PaddleOCR)
  */
@@ -33,7 +33,12 @@ export interface ModuleStatus {
   version?: string;
   size?: number;
   downloadProgress?: number;
-  status: "not_installed" | "downloading" | "installing" | "installed" | "error";
+  status:
+    | "not_installed"
+    | "downloading"
+    | "installing"
+    | "installed"
+    | "error";
   error?: string;
 }
 
@@ -66,7 +71,8 @@ const MODULE_REGISTRY: Record<string, ModuleInfo> = {
     size: 150 * 1024 * 1024, // 约 150MB
     capabilities: ["chinese", "english", "mixed"],
     latestVersion: "1.0.0",
-    downloadUrl: "https://github.com/lixiaoblack/personal-workstation/releases/download/ocr-v1.0.0",
+    // 使用 GitHub API 动态获取最新 release
+    downloadUrl: "https://api.github.com/repos/lixiaoblack/personal-workstation/releases/latest",
   },
 };
 
@@ -156,7 +162,7 @@ class ModuleManager {
     }
 
     const modulePath = this.getModulePath(moduleId);
-    
+
     // 检查是否正在下载
     if (this.downloadingModules.has(moduleId)) {
       return {
@@ -179,7 +185,7 @@ class ModuleManager {
         const latestVersion = versions.sort().pop()!;
         const versionPath = this.getModuleVersionPath(moduleId, latestVersion);
         const manifestPath = path.join(versionPath, "manifest.json");
-        
+
         let version = latestVersion;
         let size = info.size;
 
@@ -230,8 +236,7 @@ class ModuleManager {
     }
 
     const platform = this.getPlatform();
-    const fileName = `${moduleId}-v${info.latestVersion}-${platform}.zip`;
-    const downloadUrl = `${info.downloadUrl}/${fileName}`;
+    const fileName = `${moduleId}-module-v${info.latestVersion}-${platform}.zip`;
     const downloadPath = path.join(this.modulesDir, "downloads", fileName);
 
     // 确保下载目录存在
@@ -241,19 +246,34 @@ class ModuleManager {
     }
 
     console.log(`[ModuleManager] 开始下载模块: ${moduleId}`);
-    console.log(`[ModuleManager] 下载地址: ${downloadUrl}`);
 
     // 创建 AbortController 用于取消下载
     const abortController = new AbortController();
     this.downloadingModules.set(moduleId, abortController);
 
     try {
-      await this.downloadFile(
-        downloadUrl,
-        downloadPath,
-        info.size,
-        onProgress
+      // 获取最新 release 信息
+      const releaseInfo = await this.getLatestReleaseInfo();
+      if (!releaseInfo) {
+        return { success: false, error: "无法获取版本信息，请检查网络连接" };
+      }
+
+      // 查找对应平台的资源
+      const asset = releaseInfo.assets.find(
+        (a: { name: string; browser_download_url: string }) =>
+          a.name === fileName || a.name.includes(`${moduleId}-module`) && a.name.includes(platform)
       );
+
+      if (!asset) {
+        console.error(`[ModuleManager] 未找到资源: ${fileName}`);
+        console.error(`[ModuleManager] 可用资源:`, releaseInfo.assets.map((a: { name: string }) => a.name));
+        return { success: false, error: `未找到 ${platform} 平台的模块资源` };
+      }
+
+      const downloadUrl = asset.browser_download_url;
+      console.log(`[ModuleManager] 下载地址: ${downloadUrl}`);
+
+      await this.downloadFile(downloadUrl, downloadPath, info.size, onProgress);
 
       console.log(`[ModuleManager] 下载完成: ${downloadPath}`);
 
@@ -267,12 +287,55 @@ class ModuleManager {
 
       return installResult;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[ModuleManager] 下载失败:`, errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       this.downloadingModules.delete(moduleId);
     }
+  }
+
+  /**
+   * 获取最新 Release 信息
+   */
+  private async getLatestReleaseInfo(): Promise<{
+    tag_name: string;
+    assets: Array<{ name: string; browser_download_url: string }>;
+  } | null> {
+    return new Promise((resolve) => {
+      const url = "https://api.github.com/repos/lixiaoblack/personal-workstation/releases/latest";
+
+      https
+        .get(
+          url,
+          {
+            headers: {
+              "User-Agent": "PersonalWorkstation/1.0",
+              Accept: "application/vnd.github.v3+json",
+            },
+          },
+          (response) => {
+            let data = "";
+            response.on("data", (chunk) => {
+              data += chunk;
+            });
+            response.on("end", () => {
+              try {
+                const release = JSON.parse(data);
+                resolve(release);
+              } catch {
+                console.error("[ModuleManager] 解析 Release 信息失败");
+                resolve(null);
+              }
+            });
+          }
+        )
+        .on("error", (err) => {
+          console.error("[ModuleManager] 获取 Release 信息失败:", err.message);
+          resolve(null);
+        });
+    });
   }
 
   /**
@@ -318,7 +381,9 @@ class ModuleManager {
             return;
           }
 
-          const totalSize = parseInt(response.headers["content-length"] || "0", 10) || expectedSize;
+          const totalSize =
+            parseInt(response.headers["content-length"] || "0", 10) ||
+            expectedSize;
 
           response.on("data", (chunk: Buffer) => {
             downloaded += chunk.length;
@@ -366,8 +431,11 @@ class ModuleManager {
     console.log(`[ModuleManager] 开始安装模块: ${moduleId}`);
 
     try {
-      const versionPath = this.getModuleVersionPath(moduleId, info.latestVersion);
-      
+      const versionPath = this.getModuleVersionPath(
+        moduleId,
+        info.latestVersion
+      );
+
       // 确保目标目录存在
       if (!fs.existsSync(versionPath)) {
         fs.mkdirSync(versionPath, { recursive: true });
@@ -395,7 +463,10 @@ class ModuleManager {
 
       // 设置可执行权限 (macOS/Linux)
       if (process.platform !== "win32") {
-        const exePath = path.join(versionPath, this.getModuleExecutable(moduleId));
+        const exePath = path.join(
+          versionPath,
+          this.getModuleExecutable(moduleId)
+        );
         if (fs.existsSync(exePath)) {
           fs.chmodSync(exePath, 0o755);
         }
@@ -405,7 +476,8 @@ class ModuleManager {
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[ModuleManager] 安装失败:`, errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -414,7 +486,9 @@ class ModuleManager {
   /**
    * 卸载模块
    */
-  async uninstallModule(moduleId: string): Promise<{ success: boolean; error?: string }> {
+  async uninstallModule(
+    moduleId: string
+  ): Promise<{ success: boolean; error?: string }> {
     const modulePath = this.getModulePath(moduleId);
 
     if (!fs.existsSync(modulePath)) {
@@ -432,7 +506,8 @@ class ModuleManager {
       console.log(`[ModuleManager] 模块已卸载: ${moduleId}`);
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[ModuleManager] 卸载失败:`, errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -456,7 +531,11 @@ class ModuleManager {
   /**
    * 启动 OCR 模块
    */
-  async startOcrModule(): Promise<{ success: boolean; port?: number; error?: string }> {
+  async startOcrModule(): Promise<{
+    success: boolean;
+    port?: number;
+    error?: string;
+  }> {
     const status = this.getModuleStatus("ocr");
     if (!status.installed) {
       return { success: false, error: "OCR 模块未安装" };
@@ -466,7 +545,10 @@ class ModuleManager {
       return { success: true, port: this.ocrPort };
     }
 
-    const versionPath = this.getModuleVersionPath("ocr", status.version || "1.0.0");
+    const versionPath = this.getModuleVersionPath(
+      "ocr",
+      status.version || "1.0.0"
+    );
     const exePath = path.join(versionPath, this.getModuleExecutable("ocr"));
 
     if (!fs.existsSync(exePath)) {
@@ -501,7 +583,8 @@ class ModuleManager {
 
       return { success: true, port: this.ocrPort };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[ModuleManager] 启动 OCR 模块失败:`, errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -541,7 +624,8 @@ class ModuleManager {
 
       server.listen(startPort, () => {
         const address = server.address();
-        const port = typeof address === "object" && address ? address.port : startPort;
+        const port =
+          typeof address === "object" && address ? address.port : startPort;
         server.close(() => resolve(port));
       });
 
@@ -565,13 +649,16 @@ class ModuleManager {
           return;
         }
 
-        const req = http.get(`http://127.0.0.1:${this.ocrPort}/health`, (res) => {
-          if (res.statusCode === 200) {
-            resolve();
-          } else {
-            setTimeout(check, 500);
+        const req = http.get(
+          `http://127.0.0.1:${this.ocrPort}/health`,
+          (res) => {
+            if (res.statusCode === 200) {
+              resolve();
+            } else {
+              setTimeout(check, 500);
+            }
           }
-        });
+        );
 
         req.on("error", () => {
           setTimeout(check, 500);

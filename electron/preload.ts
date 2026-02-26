@@ -843,7 +843,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       }
     ) => callback(progress);
     ipcRenderer.on("module:downloadProgress", listener);
-    return () => ipcRenderer.removeListener("module:downloadProgress", listener);
+    return () =>
+      ipcRenderer.removeListener("module:downloadProgress", listener);
   },
 });
 
@@ -1163,7 +1164,12 @@ export interface ElectronAPI {
     version?: string;
     size?: number;
     downloadProgress?: number;
-    status: "not_installed" | "downloading" | "installing" | "installed" | "error";
+    status:
+      | "not_installed"
+      | "downloading"
+      | "installing"
+      | "installed"
+      | "error";
     error?: string;
   }>;
   moduleGetAllStatus: () => Promise<
@@ -1174,17 +1180,30 @@ export interface ElectronAPI {
         installed: boolean;
         version?: string;
         size?: number;
-        status: "not_installed" | "downloading" | "installing" | "installed" | "error";
+        status:
+          | "not_installed"
+          | "downloading"
+          | "installing"
+          | "installed"
+          | "error";
         error?: string;
       }
     >
   >;
-  moduleInstall: (moduleId: string) => Promise<{ success: boolean; error?: string }>;
-  moduleUninstall: (moduleId: string) => Promise<{ success: boolean; error?: string }>;
+  moduleInstall: (
+    moduleId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  moduleUninstall: (
+    moduleId: string
+  ) => Promise<{ success: boolean; error?: string }>;
   moduleCancelDownload: (moduleId: string) => Promise<boolean>;
 
   // OCR 模块管理
-  moduleStartOcr: () => Promise<{ success: boolean; port?: number; error?: string }>;
+  moduleStartOcr: () => Promise<{
+    success: boolean;
+    port?: number;
+    error?: string;
+  }>;
   moduleStopOcr: () => Promise<void>;
   moduleOcrStatus: () => Promise<{
     installed: boolean;

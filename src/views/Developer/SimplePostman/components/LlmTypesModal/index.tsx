@@ -42,6 +42,7 @@ const LlmTypesModal: React.FC<Props> = ({
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const themesInitializedRef = useRef(false);
+  const hasGeneratedRef = useRef(false); // 防止重复生成
 
   // 模型状态
   const { models, currentModel, setCurrentModel } = modelStore;
@@ -82,10 +83,15 @@ const LlmTypesModal: React.FC<Props> = ({
     }
   }, [currentModel, llmModels, jsonData]);
 
-  // 弹窗打开时自动生成
+  // 弹窗打开时自动生成（只执行一次）
   useEffect(() => {
-    if (visible && jsonData) {
+    if (visible && jsonData && !hasGeneratedRef.current) {
+      hasGeneratedRef.current = true;
       handleGenerate();
+    }
+    if (!visible) {
+      // 弹窗关闭时重置标记
+      hasGeneratedRef.current = false;
     }
   }, [visible, jsonData, handleGenerate]);
 

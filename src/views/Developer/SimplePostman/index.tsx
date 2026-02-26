@@ -7,7 +7,7 @@
  * 3. 多环境配置支持
  * 4. 全局配置和文件夹级别配置
  */
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { App, Modal, Upload, Button, Input, Select, Form } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 
@@ -28,6 +28,14 @@ import {
   type AuthConfig,
   type SwaggerRequestInfo,
 } from "./config";
+
+// Postman 持久化类型
+import type {
+  PostmanProject,
+  PostmanGroup,
+  PostmanRequest,
+  PostmanRequestInput,
+} from "@/types/electron";
 
 // Swagger 解析结果类型（来自后端）
 interface SwaggerEndpointFromBackend {
@@ -84,145 +92,6 @@ interface SwaggerParseResultFromBackend {
   definitions?: Record<string, unknown>;
 }
 
-/**
- * 处理 Swagger 解析结果，按 tags 分组创建文件夹和请求
- */
-function processSwaggerResult(
-  parseResult: SwaggerParseResultFromBackend,
-  swaggerSourceUrl?: string
-): {
-  newFolders: ApiFolder[];
-  newRequests: RequestConfig[];
-} {
-  if (!parseResult.success || !parseResult.endpoints) {
-    return { newFolders: [], newRequests: [] };
-  }
-
-  const apiTitle = parseResult.info?.title || "导入的 API";
-  const apiDescription = parseResult.info?.description;
-  const timestamp = Date.now();
-
-  // 创建 tag 信息映射 (name -> {description, displayName})
-  const tagInfoMap = new Map<
-    string,
-    { description: string; displayName: string }
-  >();
-  if (parseResult.tags) {
-    parseResult.tags.forEach((tag) => {
-      tagInfoMap.set(tag.name, {
-        description: tag.description || "",
-        displayName: tag.description || tag.name,
-      });
-    });
-  }
-
-  // 收集所有 tags
-  const tagSet = new Set<string>();
-  parseResult.endpoints.forEach((endpoint) => {
-    if (endpoint.tags && endpoint.tags.length > 0) {
-      endpoint.tags.forEach((tag) => tagSet.add(tag));
-    } else {
-      tagSet.add("默认分组");
-    }
-  });
-
-  // 创建 tag 到文件夹的映射
-  const tagToFolderMap = new Map<string, ApiFolder>();
-  const newFolders: ApiFolder[] = [];
-
-  // 创建主文件夹（API 文件）
-  const mainFolder: ApiFolder = {
-    id: `folder-${timestamp}`,
-    name: apiTitle,
-    description: apiDescription,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    swaggerUrl: swaggerSourceUrl,
-  };
-  newFolders.push(mainFolder);
-
-  // 为每个 tag 创建子文件夹（使用 description 作为显示名称）
-  Array.from(tagSet).forEach((tag, index) => {
-    const tagInfo = tagInfoMap.get(tag);
-    const tagFolder: ApiFolder = {
-      id: `folder-${timestamp}-tag-${index}`,
-      name: tagInfo?.displayName || tag,
-      description: tagInfo?.description || "",
-      parentId: mainFolder.id,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-    tagToFolderMap.set(tag, tagFolder);
-    newFolders.push(tagFolder);
-  });
-
-  // 创建请求
-  const newRequests: RequestConfig[] = parseResult.endpoints.map(
-    (endpoint, index) => {
-      let bodyContent = "";
-      if (endpoint.requestBody?.content?.length) {
-        const firstContent = endpoint.requestBody.content[0];
-        if (firstContent.generatedExample) {
-          bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
-        } else if (firstContent.example) {
-          bodyContent = JSON.stringify(firstContent.example, null, 2);
-        }
-      }
-
-      // 确定文件夹 ID
-      const tagName =
-        endpoint.tags && endpoint.tags.length > 0
-          ? endpoint.tags[0]
-          : "默认分组";
-      const targetFolder = tagToFolderMap.get(tagName);
-
-      // 构建 swaggerInfo - 每个接口独立的类型信息
-      const swaggerInfo: SwaggerRequestInfo = {
-        tags: endpoint.tags,
-        parameters: endpoint.parameters?.map((p) => ({
-          name: p.name,
-          in: p.in,
-          description: p.description,
-          required: p.required,
-          type: p.type,
-          format: p.format,
-          schema: p.schema,
-        })),
-        requestBody: endpoint.requestBody,
-        responses: endpoint.responses,
-        components: parseResult.components,
-        definitions: parseResult.definitions,
-      };
-
-      return {
-        id: `req-${timestamp}-${index}`,
-        name: endpoint.summary || endpoint.path,
-        method: endpoint.method.toUpperCase() as HttpMethod,
-        url: endpoint.path,
-        params:
-          endpoint.parameters?.map((p) => ({
-            id: `param-${timestamp}-${Math.random()}`,
-            key: p.name,
-            value: "",
-            description: p.description,
-            enabled: p.required ?? false,
-          })) || [],
-        headers: [...DEFAULT_HEADERS],
-        bodyType: "json" as const,
-        body: bodyContent,
-        authType: "none" as const,
-        authConfig: {},
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        folderId: targetFolder?.id || mainFolder.id,
-        swaggerInfo,
-      };
-    }
-  );
-
-  return { newFolders, newRequests };
-}
-
 const SimplePostman: React.FC = () => {
   const { message: antdMessage } = App.useApp();
 
@@ -238,12 +107,35 @@ const SimplePostman: React.FC = () => {
   const [swaggerLoading, setSwaggerLoading] = useState(false);
 
   // 侧边栏状态
-  const [activeRequestId, setActiveRequestId] = useState<string | undefined>();
-  const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
+  const [activeRequestId, setActiveRequestId] = useState<number | undefined>();
+  const [activeProjectId, setActiveProjectId] = useState<number | undefined>();
 
-  // 文件夹和请求列表（模拟数据，后续接入数据库）
+  // 数据加载状态
+  const [, setDataLoading] = useState(true);
+
+  // 兼容旧代码的 folders（由 projects 和 groups 转换）
   const [folders, setFolders] = useState<ApiFolder[]>([]);
-  const [requests, setRequests] = useState<RequestConfig[]>([]);
+
+  // 请求列表（从数据库加载）
+  const [requests, setRequests] = useState<PostmanRequest[]>([]);
+
+  // 转换后的请求列表（用于 PostmanSidebar）
+  const requestsForSidebar: RequestConfig[] = requests.map((r) => ({
+    id: String(r.id),
+    name: r.name || "",
+    method: r.method as HttpMethod,
+    url: r.url,
+    params: r.params || [],
+    headers: r.headers || [],
+    bodyType: r.bodyType as RequestConfig["bodyType"],
+    body: r.body || "",
+    authType: r.authType as RequestConfig["authType"],
+    authConfig: (r.authConfig as Record<string, string>) || {},
+    folderId: r.groupId ? String(r.groupId) : undefined,
+    swaggerInfo: r.swaggerInfo as SwaggerRequestInfo,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }));
 
   // 当前请求配置
   const [currentRequest, setCurrentRequest] = useState<Partial<RequestConfig>>({
@@ -276,6 +168,104 @@ const SimplePostman: React.FC = () => {
   const [globalConfigModalVisible, setGlobalConfigModalVisible] =
     useState(false);
   const [globalConfigForm] = Form.useForm();
+
+  // ==================== 数据加载 ====================
+
+  // 加载所有数据
+  const loadAllData = useCallback(async () => {
+    setDataLoading(true);
+    try {
+      // 加载项目列表
+      const projectList = await window.electronAPI.postmanGetProjects();
+
+      // 加载所有项目的分组和请求
+      const allGroups: PostmanGroup[] = [];
+      const allRequests: PostmanRequest[] = [];
+
+      for (const project of projectList) {
+        const projectGroups =
+          await window.electronAPI.postmanGetGroupsByProjectId(project.id);
+        allGroups.push(...projectGroups);
+
+        const projectRequests =
+          await window.electronAPI.postmanGetRequestsByProjectId(project.id);
+        allRequests.push(...projectRequests);
+      }
+
+      setRequests(allRequests);
+
+      // 转换为 folders 格式（兼容旧代码）
+      const convertedFolders: ApiFolder[] = [];
+
+      // 添加项目作为顶层文件夹
+      for (const project of projectList) {
+        convertedFolders.push({
+          id: String(project.id),
+          name: project.name,
+          description: project.description,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
+          baseUrl: project.baseUrl,
+          swaggerUrl: project.swaggerUrl,
+          auth: project.authConfig as AuthConfig | undefined,
+        });
+      }
+
+      // 添加分组作为子文件夹
+      for (const group of allGroups) {
+        convertedFolders.push({
+          id: String(group.id),
+          name: group.name,
+          description: group.description,
+          parentId: String(group.projectId),
+          createdAt: group.createdAt,
+          updatedAt: group.updatedAt,
+          baseUrl: group.baseUrl,
+          auth: group.authConfig as AuthConfig | undefined,
+          overrideGlobalBaseUrl: group.overrideGlobal,
+          overrideGlobalAuth: group.overrideGlobal,
+        });
+      }
+
+      setFolders(convertedFolders);
+
+      // 加载全局设置
+      const settings = await window.electronAPI.postmanGetSetting("global");
+      if (settings?.value) {
+        setGlobalConfig((prev) => ({
+          ...prev,
+          ...(settings.value as Partial<GlobalConfig>),
+        }));
+      }
+    } catch (error) {
+      console.error("加载数据失败:", error);
+      antdMessage.error("加载数据失败");
+    } finally {
+      setDataLoading(false);
+    }
+  }, [antdMessage]);
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  // 保存全局设置
+  const saveGlobalConfig = useCallback(
+    async (config: GlobalConfig) => {
+      try {
+        await window.electronAPI.postmanSaveSetting("global", {
+          currentEnvironment: config.currentEnvironment,
+          environments: config.environments,
+          globalAuth: config.globalAuth,
+          timeout: config.timeout,
+        });
+      } catch (error) {
+        console.error("保存全局设置失败:", error);
+      }
+    },
+    []
+  );
 
   // ==================== 辅助函数 ====================
 
@@ -358,6 +348,133 @@ const SimplePostman: React.FC = () => {
 
   // ==================== 事件处理 ====================
 
+  // 处理 Swagger 解析结果并持久化到数据库
+  const processAndPersistSwagger = useCallback(
+    async (
+      parseResult: SwaggerParseResultFromBackend,
+      swaggerSourceUrl?: string
+    ): Promise<{ success: boolean; project?: PostmanProject }> => {
+      if (!parseResult.success || !parseResult.endpoints) {
+        return { success: false };
+      }
+
+      const apiTitle = parseResult.info?.title || "导入的 API";
+      const apiDescription = parseResult.info?.description;
+
+      // 创建 tag 信息映射
+      const tagInfoMap = new Map<
+        string,
+        { description: string; displayName: string }
+      >();
+      if (parseResult.tags) {
+        parseResult.tags.forEach((tag) => {
+          tagInfoMap.set(tag.name, {
+            description: tag.description || "",
+            displayName: tag.description || tag.name,
+          });
+        });
+      }
+
+      // 收集所有 tags
+      const tagSet = new Set<string>();
+      parseResult.endpoints.forEach((endpoint) => {
+        if (endpoint.tags && endpoint.tags.length > 0) {
+          endpoint.tags.forEach((tag) => tagSet.add(tag));
+        } else {
+          tagSet.add("默认分组");
+        }
+      });
+
+      // 创建项目
+      const project = await window.electronAPI.postmanCreateProject({
+        name: apiTitle,
+        description: apiDescription,
+        swaggerUrl: swaggerSourceUrl,
+      });
+
+      // 创建分组
+      const tagNameToGroupId = new Map<string, number>();
+      let sortOrder = 0;
+      for (const tag of Array.from(tagSet)) {
+        const tagInfo = tagInfoMap.get(tag);
+        const group = await window.electronAPI.postmanCreateGroup({
+          projectId: project.id,
+          name: tagInfo?.displayName || tag,
+          description: tagInfo?.description || "",
+          sortOrder: sortOrder++,
+        });
+        tagNameToGroupId.set(tag, group.id);
+      }
+
+      // 创建请求
+      const requestInputs: PostmanRequestInput[] = parseResult.endpoints.map(
+        (endpoint, index) => {
+          let bodyContent = "";
+          if (endpoint.requestBody?.content?.length) {
+            const firstContent = endpoint.requestBody.content[0];
+            if (firstContent.generatedExample) {
+              bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+            } else if (firstContent.example) {
+              bodyContent = JSON.stringify(firstContent.example, null, 2);
+            }
+          }
+
+          const tagName =
+            endpoint.tags && endpoint.tags.length > 0
+              ? endpoint.tags[0]
+              : "默认分组";
+          const groupId = tagNameToGroupId.get(tagName);
+
+          // 构建 swaggerInfo
+          const swaggerInfo: SwaggerRequestInfo = {
+            tags: endpoint.tags,
+            parameters: endpoint.parameters?.map((p) => ({
+              name: p.name,
+              in: p.in,
+              description: p.description,
+              required: p.required,
+              type: p.type,
+              format: p.format,
+              schema: p.schema,
+            })),
+            requestBody: endpoint.requestBody,
+            responses: endpoint.responses,
+            components: parseResult.components,
+            definitions: parseResult.definitions,
+          };
+
+          return {
+            projectId: project.id,
+            groupId: groupId,
+            name: endpoint.summary || endpoint.path,
+            method: endpoint.method.toUpperCase(),
+            url: endpoint.path,
+            params:
+              endpoint.parameters?.map((p) => ({
+                id: `param-${Date.now()}-${Math.random()}`,
+                key: p.name,
+                value: "",
+                description: p.description,
+                enabled: p.required ?? false,
+              })) || [],
+            headers: DEFAULT_HEADERS.map((h) => ({ ...h })),
+            bodyType: "json",
+            body: bodyContent,
+            authType: "none",
+            swaggerInfo: swaggerInfo as unknown as Record<string, unknown>,
+            sortOrder: index,
+          };
+        }
+      );
+
+      // 批量创建请求
+      await window.electronAPI.postmanBatchCreateRequests(requestInputs);
+
+      return { success: true, project };
+    },
+    []
+  );
+
   // 解析 Swagger URL
   const handleParseSwagger = useCallback(async () => {
     if (!swaggerUrl.trim()) {
@@ -373,21 +490,22 @@ const SimplePostman: React.FC = () => {
       const parseResult = await window.electronAPI.swaggerParseUrl(swaggerUrl);
 
       if (parseResult.success && parseResult.endpoints) {
-        const { newFolders, newRequests } = processSwaggerResult(
+        setSyncStatus("正在保存到数据库...");
+        const result = await processAndPersistSwagger(
           parseResult as SwaggerParseResultFromBackend,
           swaggerUrl
         );
-        setFolders((prev) => [...prev, ...newFolders]);
-        setRequests((prev) => [...prev, ...newRequests]);
-        // 设置新导入的项目为当前项目
-        if (newFolders.length > 0) {
-          setActiveProjectId(newFolders[0].id);
+
+        if (result.success && result.project) {
+          // 重新加载数据
+          await loadAllData();
+          setActiveProjectId(result.project.id);
+          antdMessage.success(
+            `成功导入 ${parseResult.endpoints.length} 个接口`
+          );
+        } else {
+          antdMessage.error("保存失败");
         }
-        antdMessage.success(
-          `成功导入 ${newRequests.length} 个接口，共 ${
-            newFolders.length - 1
-          } 个分组`
-        );
       } else {
         antdMessage.error(parseResult.error || "解析失败");
       }
@@ -400,7 +518,7 @@ const SimplePostman: React.FC = () => {
       setSyncing(false);
       setSyncStatus("");
     }
-  }, [swaggerUrl, antdMessage]);
+  }, [swaggerUrl, antdMessage, processAndPersistSwagger, loadAllData]);
 
   // 上传 Swagger 文件
   const handleUploadSwagger = useCallback(async () => {
@@ -414,21 +532,21 @@ const SimplePostman: React.FC = () => {
         const parseResult = await window.electronAPI.swaggerParseFile(filePath);
 
         if (parseResult.success && parseResult.endpoints) {
-          const { newFolders, newRequests } = processSwaggerResult(
+          setSyncStatus("正在保存到数据库...");
+          const persistResult = await processAndPersistSwagger(
             parseResult as SwaggerParseResultFromBackend,
-            undefined // 文件上传没有 URL
+            undefined
           );
-          setFolders((prev) => [...prev, ...newFolders]);
-          setRequests((prev) => [...prev, ...newRequests]);
-          // 设置新导入的项目为当前项目
-          if (newFolders.length > 0) {
-            setActiveProjectId(newFolders[0].id);
+
+          if (persistResult.success && persistResult.project) {
+            await loadAllData();
+            setActiveProjectId(persistResult.project.id);
+            antdMessage.success(
+              `成功导入 ${parseResult.endpoints.length} 个接口`
+            );
+          } else {
+            antdMessage.error("保存失败");
           }
-          antdMessage.success(
-            `成功导入 ${newRequests.length} 个接口，共 ${
-              newFolders.length - 1
-            } 个分组`
-          );
         } else {
           antdMessage.error(parseResult.error || "解析失败");
         }
@@ -441,7 +559,7 @@ const SimplePostman: React.FC = () => {
         setSyncStatus("");
       }
     }
-  }, [antdMessage]);
+  }, [antdMessage, processAndPersistSwagger, loadAllData]);
 
   // 处理文件上传
   const handleUploadChange = useCallback(
@@ -466,19 +584,23 @@ const SimplePostman: React.FC = () => {
             );
 
             if (parseResult.success && parseResult.endpoints) {
-              const { newFolders, newRequests } = processSwaggerResult(
+              setSyncStatus("正在保存到数据库...");
+              const persistResult = await processAndPersistSwagger(
                 parseResult as SwaggerParseResultFromBackend,
-                undefined // 文件上传没有 URL
+                undefined
               );
-              setFolders((prev) => [...prev, ...newFolders]);
-              setRequests((prev) => [...prev, ...newRequests]);
-              antdMessage.success(
-                `成功导入 ${newRequests.length} 个接口，共 ${
-                  newFolders.length - 1
-                } 个分组`
-              );
-              setUploadModalVisible(false);
-              setFileList([]);
+
+              if (persistResult.success && persistResult.project) {
+                await loadAllData();
+                setActiveProjectId(persistResult.project.id);
+                antdMessage.success(
+                  `成功导入 ${parseResult.endpoints.length} 个接口`
+                );
+                setUploadModalVisible(false);
+                setFileList([]);
+              } else {
+                antdMessage.error("保存失败");
+              }
             } else {
               antdMessage.error(parseResult.error || "解析失败");
             }
@@ -495,15 +617,31 @@ const SimplePostman: React.FC = () => {
         }
       }
     },
-    [antdMessage]
+    [antdMessage, processAndPersistSwagger, loadAllData]
   );
 
   // 选择请求
   const handleRequestSelect = useCallback(
-    (id: string) => {
+    (id: number) => {
       const request = requests.find((r) => r.id === id);
       if (request) {
-        setCurrentRequest(request);
+        // 转换为 RequestConfig 格式
+        setCurrentRequest({
+          id: String(request.id),
+          name: request.name || "",
+          method: request.method as HttpMethod,
+          url: request.url,
+          params: request.params || [],
+          headers: request.headers || [],
+          bodyType: request.bodyType as RequestConfig["bodyType"],
+          body: request.body || "",
+          authType: request.authType as RequestConfig["authType"],
+          authConfig: (request.authConfig as Record<string, string>) || {},
+          folderId: request.groupId ? String(request.groupId) : undefined,
+          swaggerInfo: request.swaggerInfo as SwaggerRequestInfo,
+          createdAt: request.createdAt,
+          updatedAt: request.updatedAt,
+        });
         setActiveRequestId(id);
         setResponse(null);
       }
@@ -652,49 +790,86 @@ const SimplePostman: React.FC = () => {
   );
 
   const handleDeleteFolder = useCallback(
-    (folderId: string) => {
-      setFolders((prev) => prev.filter((f) => f.id !== folderId));
-      setRequests((prev) => prev.filter((r) => r.folderId !== folderId));
-      antdMessage.success("文件夹已删除");
+    async (folderId: string) => {
+      try {
+        const numericId = Number(folderId);
+        const folder = folders.find((f) => f.id === folderId);
+
+        if (folder) {
+          if (!folder.parentId) {
+            // 顶层文件夹 = 项目
+            await window.electronAPI.postmanDeleteProject(numericId);
+          } else {
+            // 子文件夹 = 分组
+            await window.electronAPI.postmanDeleteGroup(numericId);
+          }
+          // 重新加载数据
+          await loadAllData();
+          antdMessage.success("已删除");
+        }
+      } catch (error) {
+        antdMessage.error(
+          `删除失败: ${error instanceof Error ? error.message : "未知错误"}`
+        );
+      }
     },
-    [antdMessage]
+    [folders, antdMessage, loadAllData]
   );
 
   const handleSaveFolder = useCallback(async () => {
     try {
       const values = await folderForm.validateFields();
       if (editingFolder) {
-        setFolders((prev) =>
-          prev.map((f) =>
-            f.id === editingFolder.id
-              ? {
-                  ...f,
-                  ...values,
-                  updatedAt: Date.now(),
-                }
-              : f
-          )
-        );
-        antdMessage.success("文件夹已更新");
+        const numericId = Number(editingFolder.id);
+
+        if (!editingFolder.parentId) {
+          // 顶层文件夹 = 项目
+          await window.electronAPI.postmanUpdateProject(numericId, {
+            name: values.name,
+            description: values.description,
+            baseUrl: values.baseUrl,
+          });
+        } else {
+          // 子文件夹 = 分组
+          await window.electronAPI.postmanUpdateGroup(numericId, {
+            name: values.name,
+            description: values.description,
+            baseUrl: values.baseUrl,
+            overrideGlobal: values.overrideGlobalBaseUrl,
+          });
+        }
+
+        await loadAllData();
+        antdMessage.success("已更新");
       }
       setFolderEditModalVisible(false);
       setEditingFolder(null);
     } catch {
       // 表单验证失败
     }
-  }, [editingFolder, folderForm, antdMessage]);
+  }, [editingFolder, folderForm, antdMessage, loadAllData]);
 
   // 更新项目信息
   const handleUpdateProject = useCallback(
-    (project: ApiFolder) => {
-      setFolders((prev) =>
-        prev.map((f) =>
-          f.id === project.id ? { ...project, updatedAt: Date.now() } : f
-        )
-      );
-      antdMessage.success("项目已更新");
+    async (project: ApiFolder) => {
+      try {
+        const projectId = Number(project.id);
+        await window.electronAPI.postmanUpdateProject(projectId, {
+          name: project.name,
+          description: project.description,
+          baseUrl: project.baseUrl,
+          swaggerUrl: project.swaggerUrl,
+        });
+        // 重新加载数据
+        await loadAllData();
+        antdMessage.success("项目已更新");
+      } catch (error) {
+        antdMessage.error(
+          `更新失败: ${error instanceof Error ? error.message : "未知错误"}`
+        );
+      }
     },
-    [antdMessage]
+    [antdMessage, loadAllData]
   );
 
   // 重新解析项目
@@ -710,39 +885,32 @@ const SimplePostman: React.FC = () => {
       setSyncStatus("正在重新解析 Swagger 文档...");
 
       try {
+        const projectId = Number(project.id);
+
+        // 先删除旧项目（会级联删除分组和请求）
+        await window.electronAPI.postmanDeleteProject(projectId);
+
+        // 解析并创建新项目
         const parseResult = await window.electronAPI.swaggerParseUrl(
           project.swaggerUrl
         );
 
         if (parseResult.success && parseResult.endpoints) {
-          const { newFolders, newRequests } = processSwaggerResult(
+          setSyncStatus("正在保存到数据库...");
+          const result = await processAndPersistSwagger(
             parseResult as SwaggerParseResultFromBackend,
             project.swaggerUrl
           );
 
-          // 删除旧的项目及其子文件夹和请求
-          const oldFolderIds = folders
-            .filter((f) => f.id === project.id || f.parentId === project.id)
-            .map((f) => f.id);
-          setFolders((prev) =>
-            prev.filter((f) => !oldFolderIds.includes(f.id))
-          );
-          setRequests((prev) =>
-            prev.filter((r) => !oldFolderIds.includes(r.folderId || ""))
-          );
-
-          // 添加新的文件夹和请求
-          setFolders((prev) => [...prev, ...newFolders]);
-          setRequests((prev) => [...prev, ...newRequests]);
-
-          // 设置新项目为当前项目
-          if (newFolders.length > 0) {
-            setActiveProjectId(newFolders[0].id);
+          if (result.success && result.project) {
+            await loadAllData();
+            setActiveProjectId(result.project.id);
+            antdMessage.success(
+              `重新解析成功，导入 ${parseResult.endpoints.length} 个接口`
+            );
+          } else {
+            antdMessage.error("保存失败");
           }
-
-          antdMessage.success(
-            `重新解析成功，导入 ${newRequests.length} 个接口`
-          );
         } else {
           antdMessage.error(parseResult.error || "解析失败");
         }
@@ -756,7 +924,7 @@ const SimplePostman: React.FC = () => {
         setSyncStatus("");
       }
     },
-    [folders, antdMessage]
+    [antdMessage, processAndPersistSwagger, loadAllData]
   );
 
   // 环境切换
@@ -785,16 +953,18 @@ const SimplePostman: React.FC = () => {
   const handleSaveGlobalConfig = useCallback(async () => {
     try {
       const values = await globalConfigForm.validateFields();
-      setGlobalConfig((prev) => ({
-        ...prev,
+      const newConfig: GlobalConfig = {
+        ...globalConfig,
         ...values,
-      }));
+      };
+      setGlobalConfig(newConfig);
+      await saveGlobalConfig(newConfig);
       setGlobalConfigModalVisible(false);
       antdMessage.success("全局配置已保存");
     } catch {
       // 表单验证失败
     }
-  }, [globalConfigForm, antdMessage]);
+  }, [globalConfig, globalConfigForm, antdMessage, saveGlobalConfig]);
 
   // 更新全局授权配置的辅助函数
   const updateGlobalAuth = useCallback((update: Partial<AuthConfig>) => {
@@ -823,9 +993,9 @@ const SimplePostman: React.FC = () => {
           onParseSwagger={handleParseSwagger}
           onUploadSwagger={handleUploadSwagger}
           folders={folders}
-          requests={requests}
-          activeRequestId={activeRequestId}
-          onRequestSelect={handleRequestSelect}
+          requests={requestsForSidebar}
+          activeRequestId={activeRequestId !== undefined ? String(activeRequestId) : undefined}
+          onRequestSelect={(id) => handleRequestSelect(Number(id))}
           syncing={syncing}
           syncStatus={syncStatus}
           onEditFolder={handleEditFolder}
@@ -834,8 +1004,8 @@ const SimplePostman: React.FC = () => {
           currentEnvironment={globalConfig.currentEnvironment}
           onEnvironmentChange={handleEnvironmentChange}
           onOpenGlobalConfig={handleOpenGlobalConfig}
-          activeProjectId={activeProjectId}
-          onProjectChange={setActiveProjectId}
+          activeProjectId={activeProjectId !== undefined ? String(activeProjectId) : undefined}
+          onProjectChange={(id) => setActiveProjectId(Number(id))}
           onUpdateProject={handleUpdateProject}
           onReparseProject={handleReparseProject}
         />

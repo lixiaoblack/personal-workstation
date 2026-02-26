@@ -191,14 +191,18 @@ export async function generateApiDoc(
   if (apiData.params && apiData.params.length > 0) {
     parts.push(`\n## 请求参数`);
     apiData.params.forEach((p) => {
-      parts.push(`- ${p.key}: ${p.value}${p.description ? ` (${p.description})` : ""}`);
+      parts.push(
+        `- ${p.key}: ${p.value}${p.description ? ` (${p.description})` : ""}`
+      );
     });
   }
 
   if (apiData.headers && apiData.headers.length > 0) {
     parts.push(`\n## 请求头`);
     apiData.headers.forEach((h) => {
-      parts.push(`- ${h.key}: ${h.value}${h.description ? ` (${h.description})` : ""}`);
+      parts.push(
+        `- ${h.key}: ${h.value}${h.description ? ` (${h.description})` : ""}`
+      );
     });
   }
 

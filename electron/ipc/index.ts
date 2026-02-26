@@ -17,6 +17,7 @@ import { registerMemoryIpc } from "./registerMemoryIpc";
 import { registerOcrIpc } from "./registerOcrIpc";
 import { registerPythonIpc } from "./registerPythonIpc";
 import { registerSwaggerIpc } from "./registerSwaggerIpc";
+import { registerPostmanIpc } from "./registerPostmanIpc";
 
 // 导出用户认证相关函数
 export { getCurrentToken, setCurrentToken, getCurrentUser };
@@ -47,6 +48,9 @@ export function registerAllIpcHandlers(mainWindow: BrowserWindow | null): void {
 
   // Swagger 解析
   registerSwaggerIpc();
+
+  // SimplePostman 数据管理
+  registerPostmanIpc();
 
   console.log("[IPC] 所有 IPC 处理器已注册");
 }

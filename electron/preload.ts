@@ -181,6 +181,139 @@ export interface OcrSaveToKnowledgeResult {
   error?: string;
 }
 
+// SimplePostman 相关类型
+export interface PostmanProject {
+  id: number;
+  name: string;
+  description?: string;
+  baseUrl?: string;
+  swaggerUrl?: string;
+  authConfig?: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PostmanProjectInput {
+  name: string;
+  description?: string;
+  baseUrl?: string;
+  swaggerUrl?: string;
+  authConfig?: Record<string, unknown>;
+}
+
+export interface PostmanGroup {
+  id: number;
+  projectId: number;
+  name: string;
+  description?: string;
+  baseUrl?: string;
+  authConfig?: Record<string, unknown>;
+  overrideGlobal: boolean;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PostmanGroupInput {
+  projectId: number;
+  name: string;
+  description?: string;
+  baseUrl?: string;
+  authConfig?: Record<string, unknown>;
+  overrideGlobal?: boolean;
+  sortOrder?: number;
+}
+
+export interface PostmanRequestParam {
+  id: string;
+  key: string;
+  value: string;
+  description?: string;
+  enabled: boolean;
+}
+
+export interface PostmanRequestHeader {
+  id: string;
+  key: string;
+  value: string;
+  description?: string;
+  enabled: boolean;
+}
+
+export interface PostmanRequest {
+  id: number;
+  groupId?: number;
+  projectId: number;
+  name?: string;
+  method: string;
+  url: string;
+  params?: PostmanRequestParam[];
+  headers?: PostmanRequestHeader[];
+  bodyType: string;
+  body?: string;
+  authType: string;
+  authConfig?: Record<string, unknown>;
+  swaggerInfo?: Record<string, unknown>;
+  isFavorite: boolean;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PostmanRequestInput {
+  groupId?: number;
+  projectId: number;
+  name?: string;
+  method: string;
+  url: string;
+  params?: PostmanRequestParam[];
+  headers?: PostmanRequestHeader[];
+  bodyType?: string;
+  body?: string;
+  authType?: string;
+  authConfig?: Record<string, unknown>;
+  swaggerInfo?: Record<string, unknown>;
+  isFavorite?: boolean;
+  sortOrder?: number;
+}
+
+export interface PostmanHistory {
+  id: number;
+  requestId?: number;
+  method: string;
+  url: string;
+  requestHeaders?: Record<string, string>;
+  requestBody?: string;
+  responseStatus: number;
+  responseStatusText?: string;
+  responseHeaders?: Record<string, string>;
+  responseBody?: string;
+  responseTime: number;
+  responseSize: number;
+  createdAt: number;
+}
+
+export interface PostmanHistoryInput {
+  requestId?: number;
+  method: string;
+  url: string;
+  requestHeaders?: Record<string, string>;
+  requestBody?: string;
+  responseStatus: number;
+  responseStatusText?: string;
+  responseHeaders?: Record<string, string>;
+  responseBody?: string;
+  responseTime: number;
+  responseSize: number;
+}
+
+export interface PostmanSetting {
+  id: number;
+  key: string;
+  value: Record<string, unknown>;
+  updatedAt: number;
+}
+
 // Swagger 解析相关类型
 export interface SwaggerParseResult {
   success: boolean;
@@ -617,6 +750,58 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("swagger:parseContent", content, format),
   swaggerSelectFile: (): Promise<{ canceled: boolean; filePaths: string[] }> =>
     ipcRenderer.invoke("swagger:selectFile"),
+
+  // SimplePostman 项目管理
+  postmanGetProjects: () =>
+    ipcRenderer.invoke("postman:getProjects"),
+  postmanGetProjectById: (id: number) =>
+    ipcRenderer.invoke("postman:getProjectById", id),
+  postmanCreateProject: (input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:createProject", input),
+  postmanUpdateProject: (id: number, input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:updateProject", id, input),
+  postmanDeleteProject: (id: number) =>
+    ipcRenderer.invoke("postman:deleteProject", id),
+
+  // SimplePostman 分组管理
+  postmanGetGroupsByProjectId: (projectId: number) =>
+    ipcRenderer.invoke("postman:getGroupsByProjectId", projectId),
+  postmanCreateGroup: (input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:createGroup", input),
+  postmanUpdateGroup: (id: number, input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:updateGroup", id, input),
+  postmanDeleteGroup: (id: number) =>
+    ipcRenderer.invoke("postman:deleteGroup", id),
+
+  // SimplePostman 请求管理
+  postmanGetRequestsByProjectId: (projectId: number) =>
+    ipcRenderer.invoke("postman:getRequestsByProjectId", projectId),
+  postmanGetRequestsByGroupId: (groupId: number) =>
+    ipcRenderer.invoke("postman:getRequestsByGroupId", groupId),
+  postmanGetRequestById: (id: number) =>
+    ipcRenderer.invoke("postman:getRequestById", id),
+  postmanCreateRequest: (input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:createRequest", input),
+  postmanUpdateRequest: (id: number, input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:updateRequest", id, input),
+  postmanDeleteRequest: (id: number) =>
+    ipcRenderer.invoke("postman:deleteRequest", id),
+  postmanBatchCreateRequests: (requests: Array<Record<string, unknown>>) =>
+    ipcRenderer.invoke("postman:batchCreateRequests", requests),
+
+  // SimplePostman 历史记录
+  postmanAddHistory: (input: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:addHistory", input),
+  postmanGetHistoryList: (limit?: number) =>
+    ipcRenderer.invoke("postman:getHistoryList", limit),
+  postmanClearHistory: () =>
+    ipcRenderer.invoke("postman:clearHistory"),
+
+  // SimplePostman 设置管理
+  postmanGetSetting: (key: string) =>
+    ipcRenderer.invoke("postman:getSetting", key),
+  postmanSaveSetting: (key: string, value: Record<string, unknown>) =>
+    ipcRenderer.invoke("postman:saveSetting", key, value),
 });
 
 // 类型声明
@@ -861,6 +1046,37 @@ export interface ElectronAPI {
     format?: "json" | "yaml"
   ) => Promise<SwaggerParseResult>;
   swaggerSelectFile: () => Promise<{ canceled: boolean; filePaths: string[] }>;
+
+  // SimplePostman 项目管理
+  postmanGetProjects: () => Promise<PostmanProject[]>;
+  postmanGetProjectById: (id: number) => Promise<PostmanProject | null>;
+  postmanCreateProject: (input: PostmanProjectInput) => Promise<PostmanProject>;
+  postmanUpdateProject: (id: number, input: Partial<PostmanProjectInput>) => Promise<PostmanProject | null>;
+  postmanDeleteProject: (id: number) => Promise<boolean>;
+
+  // SimplePostman 分组管理
+  postmanGetGroupsByProjectId: (projectId: number) => Promise<PostmanGroup[]>;
+  postmanCreateGroup: (input: PostmanGroupInput) => Promise<PostmanGroup>;
+  postmanUpdateGroup: (id: number, input: Partial<PostmanGroupInput>) => Promise<PostmanGroup | null>;
+  postmanDeleteGroup: (id: number) => Promise<boolean>;
+
+  // SimplePostman 请求管理
+  postmanGetRequestsByProjectId: (projectId: number) => Promise<PostmanRequest[]>;
+  postmanGetRequestsByGroupId: (groupId: number) => Promise<PostmanRequest[]>;
+  postmanGetRequestById: (id: number) => Promise<PostmanRequest | null>;
+  postmanCreateRequest: (input: PostmanRequestInput) => Promise<PostmanRequest>;
+  postmanUpdateRequest: (id: number, input: Partial<PostmanRequestInput>) => Promise<PostmanRequest | null>;
+  postmanDeleteRequest: (id: number) => Promise<boolean>;
+  postmanBatchCreateRequests: (requests: PostmanRequestInput[]) => Promise<PostmanRequest[]>;
+
+  // SimplePostman 历史记录
+  postmanAddHistory: (input: PostmanHistoryInput) => Promise<PostmanHistory>;
+  postmanGetHistoryList: (limit?: number) => Promise<PostmanHistory[]>;
+  postmanClearHistory: () => Promise<boolean>;
+
+  // SimplePostman 设置管理
+  postmanGetSetting: (key: string) => Promise<PostmanSetting | null>;
+  postmanSaveSetting: (key: string, value: Record<string, unknown>) => Promise<PostmanSetting>;
 }
 
 declare global {

@@ -345,6 +345,103 @@ function runMigrations(database: Database.Database): void {
   database.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_user_memory_type_key ON user_memory(memory_type, memory_key);
   `);
+
+  // ========== SimplePostman 数据表 ==========
+
+  // API 项目表（顶层文件夹）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS postman_projects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      base_url TEXT,
+      swagger_url TEXT,
+      auth_config TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  // API 分组表（子文件夹）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS postman_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      base_url TEXT,
+      auth_config TEXT,
+      override_global INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES postman_projects(id) ON DELETE CASCADE
+    );
+  `);
+
+  // API 请求配置表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS postman_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER,
+      project_id INTEGER NOT NULL,
+      name TEXT,
+      method TEXT NOT NULL DEFAULT 'GET',
+      url TEXT NOT NULL,
+      params TEXT,
+      headers TEXT,
+      body_type TEXT DEFAULT 'json',
+      body TEXT,
+      auth_type TEXT DEFAULT 'none',
+      auth_config TEXT,
+      swagger_info TEXT,
+      is_favorite INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (group_id) REFERENCES postman_groups(id) ON DELETE SET NULL,
+      FOREIGN KEY (project_id) REFERENCES postman_projects(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 全局配置表（环境、授权等）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS postman_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  // 请求历史记录表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS postman_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id INTEGER,
+      method TEXT NOT NULL,
+      url TEXT NOT NULL,
+      request_headers TEXT,
+      request_body TEXT,
+      response_status INTEGER,
+      response_status_text TEXT,
+      response_headers TEXT,
+      response_body TEXT,
+      response_time INTEGER,
+      response_size INTEGER,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (request_id) REFERENCES postman_requests(id) ON DELETE SET NULL
+    );
+  `);
+
+  // SimplePostman 索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_postman_groups_project_id ON postman_groups(project_id);
+    CREATE INDEX IF NOT EXISTS idx_postman_requests_project_id ON postman_requests(project_id);
+    CREATE INDEX IF NOT EXISTS idx_postman_requests_group_id ON postman_requests(group_id);
+    CREATE INDEX IF NOT EXISTS idx_postman_history_created_at ON postman_history(created_at);
+    CREATE INDEX IF NOT EXISTS idx_postman_history_request_id ON postman_history(request_id);
+  `);
 }
 
 export default {

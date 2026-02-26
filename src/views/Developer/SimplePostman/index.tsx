@@ -35,7 +35,9 @@ const SimplePostman: React.FC = () => {
   // ==================== 状态管理 ====================
 
   // 全局配置
-  const [globalConfig, setGlobalConfig] = useState<GlobalConfig>(DEFAULT_GLOBAL_CONFIG);
+  const [globalConfig, setGlobalConfig] = useState<GlobalConfig>(
+    DEFAULT_GLOBAL_CONFIG
+  );
 
   // Swagger 解析相关
   const [swaggerUrl, setSwaggerUrl] = useState("");
@@ -77,55 +79,76 @@ const SimplePostman: React.FC = () => {
   const [folderForm] = Form.useForm();
 
   // 全局配置弹窗
-  const [globalConfigModalVisible, setGlobalConfigModalVisible] = useState(false);
+  const [globalConfigModalVisible, setGlobalConfigModalVisible] =
+    useState(false);
   const [globalConfigForm] = Form.useForm();
 
   // ==================== 辅助函数 ====================
 
   // 获取当前环境配置
-  const getCurrentEnvironment = useCallback((): EnvironmentConfig | undefined => {
-    return globalConfig.environments.find(e => e.key === globalConfig.currentEnvironment);
+  const getCurrentEnvironment = useCallback(():
+    | EnvironmentConfig
+    | undefined => {
+    return globalConfig.environments.find(
+      (e) => e.key === globalConfig.currentEnvironment
+    );
   }, [globalConfig]);
 
   // 获取文件夹的有效 baseUrl（继承逻辑）
-  const getEffectiveBaseUrl = useCallback((folderId?: string): string => {
-    if (folderId) {
-      const folder = folders.find(f => f.id === folderId);
-      if (folder?.overrideGlobalBaseUrl && folder.baseUrl) {
-        return folder.baseUrl;
+  const getEffectiveBaseUrl = useCallback(
+    (folderId?: string): string => {
+      if (folderId) {
+        const folder = folders.find((f) => f.id === folderId);
+        if (folder?.overrideGlobalBaseUrl && folder.baseUrl) {
+          return folder.baseUrl;
+        }
       }
-    }
-    // 使用当前环境的 baseUrl
-    const currentEnv = getCurrentEnvironment();
-    return currentEnv?.baseUrl || "";
-  }, [folders, getCurrentEnvironment]);
+      // 使用当前环境的 baseUrl
+      const currentEnv = getCurrentEnvironment();
+      return currentEnv?.baseUrl || "";
+    },
+    [folders, getCurrentEnvironment]
+  );
 
   // 获取文件夹的有效授权配置（继承逻辑）
-  const getEffectiveAuth = useCallback((folderId?: string): GlobalConfig['globalAuth'] => {
-    if (folderId) {
-      const folder = folders.find(f => f.id === folderId);
-      if (folder?.overrideGlobalAuth && folder.auth) {
-        return folder.auth;
+  const getEffectiveAuth = useCallback(
+    (folderId?: string): GlobalConfig["globalAuth"] => {
+      if (folderId) {
+        const folder = folders.find((f) => f.id === folderId);
+        if (folder?.overrideGlobalAuth && folder.auth) {
+          return folder.auth;
+        }
       }
-    }
-    return globalConfig.globalAuth;
-  }, [folders, globalConfig.globalAuth]);
+      return globalConfig.globalAuth;
+    },
+    [folders, globalConfig.globalAuth]
+  );
 
   // 构建完整的请求 URL
-  const buildFullUrl = useCallback((requestUrl: string, folderId?: string): string => {
-    const baseUrl = getEffectiveBaseUrl(folderId);
-    // 如果请求 URL 已经是完整 URL，直接返回
-    if (requestUrl.startsWith("http://") || requestUrl.startsWith("https://")) {
+  const buildFullUrl = useCallback(
+    (requestUrl: string, folderId?: string): string => {
+      const baseUrl = getEffectiveBaseUrl(folderId);
+      // 如果请求 URL 已经是完整 URL，直接返回
+      if (
+        requestUrl.startsWith("http://") ||
+        requestUrl.startsWith("https://")
+      ) {
+        return requestUrl;
+      }
+      // 拼接 baseUrl 和请求路径
+      if (baseUrl) {
+        const normalizedBase = baseUrl.endsWith("/")
+          ? baseUrl.slice(0, -1)
+          : baseUrl;
+        const normalizedPath = requestUrl.startsWith("/")
+          ? requestUrl
+          : `/${requestUrl}`;
+        return `${normalizedBase}${normalizedPath}`;
+      }
       return requestUrl;
-    }
-    // 拼接 baseUrl 和请求路径
-    if (baseUrl) {
-      const normalizedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-      const normalizedPath = requestUrl.startsWith("/") ? requestUrl : `/${requestUrl}`;
-      return `${normalizedBase}${normalizedPath}`;
-    }
-    return requestUrl;
-  }, [getEffectiveBaseUrl]);
+    },
+    [getEffectiveBaseUrl]
+  );
 
   // ==================== 事件处理 ====================
 
@@ -158,7 +181,11 @@ const SimplePostman: React.FC = () => {
           if (endpoint.requestBody?.content?.length) {
             const firstContent = endpoint.requestBody.content[0];
             if (firstContent.generatedExample) {
-              bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+              bodyContent = JSON.stringify(
+                firstContent.generatedExample,
+                null,
+                2
+              );
             } else if (firstContent.example) {
               bodyContent = JSON.stringify(firstContent.example, null, 2);
             }
@@ -230,7 +257,11 @@ const SimplePostman: React.FC = () => {
             if (endpoint.requestBody?.content?.length) {
               const firstContent = endpoint.requestBody.content[0];
               if (firstContent.generatedExample) {
-                bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+                bodyContent = JSON.stringify(
+                  firstContent.generatedExample,
+                  null,
+                  2
+                );
               } else if (firstContent.example) {
                 bodyContent = JSON.stringify(firstContent.example, null, 2);
               }
@@ -261,7 +292,9 @@ const SimplePostman: React.FC = () => {
           });
           setRequests((prev) => [...prev, ...newRequests]);
 
-          antdMessage.success(`成功导入 ${parseResult.endpoints.length} 个接口`);
+          antdMessage.success(
+            `成功导入 ${parseResult.endpoints.length} 个接口`
+          );
         } else {
           antdMessage.error(parseResult.error || "解析失败");
         }
@@ -308,43 +341,55 @@ const SimplePostman: React.FC = () => {
               };
               setFolders((prev) => [...prev, newFolder]);
 
-              const newRequests = parseResult.endpoints.map((endpoint, index) => {
-                let bodyContent = "";
-                if (endpoint.requestBody?.content?.length) {
-                  const firstContent = endpoint.requestBody.content[0];
-                  if (firstContent.generatedExample) {
-                    bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
-                  } else if (firstContent.example) {
-                    bodyContent = JSON.stringify(firstContent.example, null, 2);
+              const newRequests = parseResult.endpoints.map(
+                (endpoint, index) => {
+                  let bodyContent = "";
+                  if (endpoint.requestBody?.content?.length) {
+                    const firstContent = endpoint.requestBody.content[0];
+                    if (firstContent.generatedExample) {
+                      bodyContent = JSON.stringify(
+                        firstContent.generatedExample,
+                        null,
+                        2
+                      );
+                    } else if (firstContent.example) {
+                      bodyContent = JSON.stringify(
+                        firstContent.example,
+                        null,
+                        2
+                      );
+                    }
                   }
-                }
 
-                return {
-                  id: `req-${Date.now()}-${index}`,
-                  name: endpoint.summary || endpoint.path,
-                  method: endpoint.method.toUpperCase() as HttpMethod,
-                  url: endpoint.path,
-                  params:
-                    endpoint.parameters?.map((p) => ({
-                      id: `param-${Date.now()}-${Math.random()}`,
-                      key: p.name,
-                      value: "",
-                      description: p.description,
-                      enabled: p.required ?? false,
-                    })) || [],
-                  headers: [...DEFAULT_HEADERS],
-                  bodyType: "json" as const,
-                  body: bodyContent,
-                  authType: "none" as const,
-                  authConfig: {},
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                  folderId: newFolder.id,
-                };
-              });
+                  return {
+                    id: `req-${Date.now()}-${index}`,
+                    name: endpoint.summary || endpoint.path,
+                    method: endpoint.method.toUpperCase() as HttpMethod,
+                    url: endpoint.path,
+                    params:
+                      endpoint.parameters?.map((p) => ({
+                        id: `param-${Date.now()}-${Math.random()}`,
+                        key: p.name,
+                        value: "",
+                        description: p.description,
+                        enabled: p.required ?? false,
+                      })) || [],
+                    headers: [...DEFAULT_HEADERS],
+                    bodyType: "json" as const,
+                    body: bodyContent,
+                    authType: "none" as const,
+                    authConfig: {},
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    folderId: newFolder.id,
+                  };
+                }
+              );
               setRequests((prev) => [...prev, ...newRequests]);
 
-              antdMessage.success(`成功导入 ${parseResult.endpoints.length} 个接口`);
+              antdMessage.success(
+                `成功导入 ${parseResult.endpoints.length} 个接口`
+              );
               setUploadModalVisible(false);
               setFileList([]);
             } else {
@@ -399,10 +444,16 @@ const SimplePostman: React.FC = () => {
 
       // 获取有效的授权配置
       const effectiveAuth = getEffectiveAuth(currentRequest.folderId);
-      
+
       // 添加 Auth（优先使用请求级别的授权，否则使用继承的授权）
-      const authType = currentRequest.authType !== "none" ? currentRequest.authType : effectiveAuth?.type;
-      const authConfig = currentRequest.authType !== "none" ? currentRequest.authConfig : effectiveAuth;
+      const authType =
+        currentRequest.authType !== "none"
+          ? currentRequest.authType
+          : effectiveAuth?.type;
+      const authConfig =
+        currentRequest.authType !== "none"
+          ? currentRequest.authConfig
+          : effectiveAuth;
 
       if (authType === "bearer" && authConfig?.bearerToken) {
         headers["Authorization"] = `Bearer ${authConfig.bearerToken}`;
@@ -425,12 +476,16 @@ const SimplePostman: React.FC = () => {
           params.append(p.key, p.value);
         }
       });
-      
+
       // API Key 添加到 query
-      if (authType === "api-key" && authConfig?.apiKeyName && authConfig.apiKeyAddTo === "query") {
+      if (
+        authType === "api-key" &&
+        authConfig?.apiKeyName &&
+        authConfig.apiKeyAddTo === "query"
+      ) {
         params.append(authConfig.apiKeyName, authConfig.apiKeyValue || "");
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
@@ -494,23 +549,29 @@ const SimplePostman: React.FC = () => {
   }, [currentRequest, antdMessage, getEffectiveAuth, buildFullUrl]);
 
   // 文件夹操作
-  const handleEditFolder = useCallback((folder: ApiFolder) => {
-    setEditingFolder(folder);
-    folderForm.setFieldsValue({
-      name: folder.name,
-      description: folder.description,
-      baseUrl: folder.baseUrl || "",
-      overrideGlobalBaseUrl: folder.overrideGlobalBaseUrl || false,
-      overrideGlobalAuth: folder.overrideGlobalAuth || false,
-    });
-    setFolderEditModalVisible(true);
-  }, [folderForm]);
+  const handleEditFolder = useCallback(
+    (folder: ApiFolder) => {
+      setEditingFolder(folder);
+      folderForm.setFieldsValue({
+        name: folder.name,
+        description: folder.description,
+        baseUrl: folder.baseUrl || "",
+        overrideGlobalBaseUrl: folder.overrideGlobalBaseUrl || false,
+        overrideGlobalAuth: folder.overrideGlobalAuth || false,
+      });
+      setFolderEditModalVisible(true);
+    },
+    [folderForm]
+  );
 
-  const handleDeleteFolder = useCallback((folderId: string) => {
-    setFolders((prev) => prev.filter((f) => f.id !== folderId));
-    setRequests((prev) => prev.filter((r) => r.folderId !== folderId));
-    antdMessage.success("文件夹已删除");
-  }, [antdMessage]);
+  const handleDeleteFolder = useCallback(
+    (folderId: string) => {
+      setFolders((prev) => prev.filter((f) => f.id !== folderId));
+      setRequests((prev) => prev.filter((r) => r.folderId !== folderId));
+      antdMessage.success("文件夹已删除");
+    },
+    [antdMessage]
+  );
 
   const handleSaveFolder = useCallback(async () => {
     try {
@@ -537,14 +598,17 @@ const SimplePostman: React.FC = () => {
   }, [editingFolder, folderForm, antdMessage]);
 
   // 环境切换
-  const handleEnvironmentChange = useCallback((envKey: string) => {
-    setGlobalConfig((prev) => ({
-      ...prev,
-      currentEnvironment: envKey,
-    }));
-    const env = globalConfig.environments.find(e => e.key === envKey);
-    antdMessage.success(`已切换到 ${env?.name || envKey}`);
-  }, [globalConfig.environments, antdMessage]);
+  const handleEnvironmentChange = useCallback(
+    (envKey: string) => {
+      setGlobalConfig((prev) => ({
+        ...prev,
+        currentEnvironment: envKey,
+      }));
+      const env = globalConfig.environments.find((e) => e.key === envKey);
+      antdMessage.success(`已切换到 ${env?.name || envKey}`);
+    },
+    [globalConfig.environments, antdMessage]
+  );
 
   // 打开全局配置弹窗
   const handleOpenGlobalConfig = useCallback(() => {
@@ -642,7 +706,8 @@ const SimplePostman: React.FC = () => {
         </div>
         <div className="flex items-center gap-4">
           <span>
-            环境: <span className="text-primary">{currentEnv?.name || "未设置"}</span>
+            环境:{" "}
+            <span className="text-primary">{currentEnv?.name || "未设置"}</span>
           </span>
           {currentEnv?.baseUrl && (
             <span className="text-text-tertiary">
@@ -749,7 +814,10 @@ const SimplePostman: React.FC = () => {
                     onChange={(e) => {
                       const newEnvs = [...globalConfig.environments];
                       newEnvs[index] = { ...env, baseUrl: e.target.value };
-                      setGlobalConfig((prev) => ({ ...prev, environments: newEnvs }));
+                      setGlobalConfig((prev) => ({
+                        ...prev,
+                        environments: newEnvs,
+                      }));
                     }}
                   />
                 </div>
@@ -773,7 +841,9 @@ const SimplePostman: React.FC = () => {
                 className="mt-2"
                 placeholder="Bearer Token"
                 value={globalConfig.globalAuth?.bearerToken || ""}
-                onChange={(e) => updateGlobalAuth({ bearerToken: e.target.value })}
+                onChange={(e) =>
+                  updateGlobalAuth({ bearerToken: e.target.value })
+                }
               />
             )}
             {globalConfig.globalAuth?.type === "basic" && (
@@ -781,12 +851,16 @@ const SimplePostman: React.FC = () => {
                 <Input
                   placeholder="用户名"
                   value={globalConfig.globalAuth?.basicUsername || ""}
-                  onChange={(e) => updateGlobalAuth({ basicUsername: e.target.value })}
+                  onChange={(e) =>
+                    updateGlobalAuth({ basicUsername: e.target.value })
+                  }
                 />
                 <Input.Password
                   placeholder="密码"
                   value={globalConfig.globalAuth?.basicPassword || ""}
-                  onChange={(e) => updateGlobalAuth({ basicPassword: e.target.value })}
+                  onChange={(e) =>
+                    updateGlobalAuth({ basicPassword: e.target.value })
+                  }
                 />
               </div>
             )}
@@ -795,12 +869,16 @@ const SimplePostman: React.FC = () => {
                 <Input
                   placeholder="Key 名称"
                   value={globalConfig.globalAuth?.apiKeyName || ""}
-                  onChange={(e) => updateGlobalAuth({ apiKeyName: e.target.value })}
+                  onChange={(e) =>
+                    updateGlobalAuth({ apiKeyName: e.target.value })
+                  }
                 />
                 <Input.Password
                   placeholder="Key 值"
                   value={globalConfig.globalAuth?.apiKeyValue || ""}
-                  onChange={(e) => updateGlobalAuth({ apiKeyValue: e.target.value })}
+                  onChange={(e) =>
+                    updateGlobalAuth({ apiKeyValue: e.target.value })
+                  }
                 />
                 <Select
                   placeholder="添加位置"

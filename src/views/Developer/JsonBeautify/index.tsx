@@ -7,9 +7,15 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { App } from "antd";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
+import { useTheme } from "@/contexts";
+import {
+  initMonacoThemes,
+  getMonacoThemeName,
+} from "@/styles/themes/monaco-theme";
 
 const JsonBeautify: React.FC = () => {
   const { message } = App.useApp();
+  const { resolvedTheme } = useTheme();
   const [leftJson, setLeftJson] = useState("");
   const [rightJson, setRightJson] = useState("");
   const [diffCount, setDiffCount] = useState(0);
@@ -21,15 +27,25 @@ const JsonBeautify: React.FC = () => {
     null
   );
   const monacoRef = useRef<typeof Monaco | null>(null);
+  const themesInitializedRef = useRef(false);
 
   // 存储差异装饰
   const leftDecorationsRef = useRef<string[]>([]);
   const rightDecorationsRef = useRef<string[]>([]);
 
+  // Monaco 主题名称
+  const monacoTheme = getMonacoThemeName(resolvedTheme);
+
   // 编辑器挂载处理
   const handleLeftEditorMount: OnMount = (editor, monaco) => {
     leftEditorRef.current = editor;
     monacoRef.current = monaco;
+
+    // 初始化主题（只执行一次）
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
+    }
 
     // 配置 JSON 语言特性
     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -45,6 +61,12 @@ const JsonBeautify: React.FC = () => {
     rightEditorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
+    }
+
+    // 初始化主题（只执行一次）
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
     }
   };
 
@@ -499,7 +521,7 @@ const JsonBeautify: React.FC = () => {
               value={leftJson}
               onChange={handleLeftChange}
               onMount={handleLeftEditorMount}
-              theme="vs-dark"
+              theme={monacoTheme}
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,
@@ -548,7 +570,7 @@ const JsonBeautify: React.FC = () => {
               value={rightJson}
               onChange={handleRightChange}
               onMount={handleRightEditorMount}
-              theme="vs-dark"
+              theme={monacoTheme}
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,

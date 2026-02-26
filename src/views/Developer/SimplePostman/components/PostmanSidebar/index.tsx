@@ -86,16 +86,16 @@ const PostmanSidebar: React.FC<Props> = ({
   };
 
   // 文件夹操作菜单
-  const getFolderMenuItems = (folder: ApiFolder): MenuProps['items'] => [
+  const getFolderMenuItems = (folder: ApiFolder): MenuProps["items"] => [
     {
-      key: 'edit',
-      label: '编辑文件夹',
+      key: "edit",
+      label: "编辑文件夹",
       icon: <span className="material-symbols-outlined text-sm">edit</span>,
       onClick: () => onEditFolder(folder),
     },
     {
-      key: 'delete',
-      label: '删除文件夹',
+      key: "delete",
+      label: "删除文件夹",
       icon: <span className="material-symbols-outlined text-sm">delete</span>,
       danger: true,
       onClick: () => onDeleteFolder(folder.id),
@@ -112,21 +112,31 @@ const PostmanSidebar: React.FC<Props> = ({
             onChange={onEnvironmentChange}
             className="flex-1"
             size="small"
-            options={globalConfig.environments.map(env => ({
+            options={globalConfig.environments.map((env) => ({
               value: env.key,
               label: env.name,
             }))}
           />
           <Button
             size="small"
-            icon={<span className="material-symbols-outlined text-sm">settings</span>}
+            icon={
+              <span className="material-symbols-outlined text-sm">
+                settings
+              </span>
+            }
             onClick={onOpenGlobalConfig}
             title="全局配置"
           />
         </div>
-        {globalConfig.environments.find(e => e.key === currentEnvironment)?.baseUrl && (
+        {globalConfig.environments.find((e) => e.key === currentEnvironment)
+          ?.baseUrl && (
           <div className="mt-2 text-[10px] text-text-tertiary truncate">
-            Base: {globalConfig.environments.find(e => e.key === currentEnvironment)?.baseUrl}
+            Base:{" "}
+            {
+              globalConfig.environments.find(
+                (e) => e.key === currentEnvironment
+              )?.baseUrl
+            }
           </div>
         )}
       </div>
@@ -248,7 +258,7 @@ const PostmanSidebar: React.FC<Props> = ({
                           <span className="truncate flex-1">{folder.name}</span>
                           <Dropdown
                             menu={{ items: getFolderMenuItems(folder) }}
-                            trigger={['click']}
+                            trigger={["click"]}
                           >
                             <span
                               className="material-symbols-outlined text-sm text-text-tertiary hover:text-primary cursor-pointer"

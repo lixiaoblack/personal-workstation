@@ -20,6 +20,11 @@ import {
   type ResponseData,
   type AuthConfig,
 } from "../../config";
+import { useTheme } from "@/contexts";
+import {
+  initMonacoThemes,
+  getMonacoThemeName,
+} from "@/styles/themes/monaco-theme";
 
 const { TextArea } = Input;
 
@@ -61,6 +66,7 @@ const PostmanWorkspace: React.FC<Props> = ({
   effectiveAuth,
 }) => {
   const { message } = App.useApp();
+  const { resolvedTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<RequestTabKey>("body");
   const responseEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(
     null
@@ -69,12 +75,22 @@ const PostmanWorkspace: React.FC<Props> = ({
     null
   );
   const monacoRef = useRef<typeof Monaco | null>(null);
+  const themesInitializedRef = useRef(false);
+
+  // Monaco 主题名称
+  const monacoTheme = getMonacoThemeName(resolvedTheme);
 
   // 响应编辑器挂载处理
   const handleResponseEditorMount: OnMount = (editor, monaco) => {
     responseEditorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
+    }
+
+    // 初始化主题（只执行一次）
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
     }
 
     // 配置 JSON 语言特性
@@ -92,6 +108,12 @@ const PostmanWorkspace: React.FC<Props> = ({
     bodyEditorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
+    }
+
+    // 初始化主题（只执行一次）
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
     }
 
     // 配置 JSON 语言特性
@@ -235,7 +257,10 @@ const PostmanWorkspace: React.FC<Props> = ({
           <Select
             value={request.bodyType || "json"}
             onChange={handleBodyTypeChange}
-            options={BODY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+            options={BODY_TYPES.map((t) => ({
+              value: t.value,
+              label: t.label,
+            }))}
             className="w-56"
             size="small"
           />
@@ -281,7 +306,7 @@ const PostmanWorkspace: React.FC<Props> = ({
               value={request.body || ""}
               onChange={handleBodyEditorChange}
               onMount={handleBodyEditorMount}
-              theme="vs-dark"
+              theme={monacoTheme}
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,
@@ -901,7 +926,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                   language={isJsonResponse ? "json" : "plaintext"}
                   value={beautifiedResponseBody}
                   onMount={handleResponseEditorMount}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                   options={{
                     readOnly: true,
                     minimap: { enabled: false },

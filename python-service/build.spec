@@ -37,8 +37,13 @@ hiddenimports = [
     'uvicorn.lifespan',
     'uvicorn.lifespan.on',
     
-    # LangChain 相关
+    # LangChain 相关（0.3.0+ 版本需要 langchain_core）
     'langchain',
+    'langchain_core',
+    'langchain_core.messages',
+    'langchain_core.tools',
+    'langchain_core.language_models',
+    'langchain_core.callbacks',
     'langchain_community',
     'langchain_openai',
     'langchain_ollama',
@@ -54,6 +59,16 @@ hiddenimports = [
     # 其他依赖
     'pydantic',
     'yaml',
+    
+    # OCR 相关（可选，如果打包失败会优雅降级）
+    'ocr_service',
+    'PIL',
+    'PIL.Image',
+    # PaddleOCR 相关（体积大，可能打包失败）
+    # 'paddle',
+    # 'paddleocr',
+    # 'paddle.fluid',
+    # 'paddle.dataset',
     
     # 自定义模块
     'db_service',
@@ -77,6 +92,15 @@ hiddenimports = [
     'rag.retriever',
     'rag.document_processor',
     'rag.text_splitter',
+    'api',
+    'api.routers',
+    'api.routers.knowledge',
+    'api.routers.conversation',
+    'api.routers.memory',
+    'api.routers.user',
+    'api.routers.ocr',
+    'api.database',
+    'api.models',
 ]
 
 # 分析入口文件

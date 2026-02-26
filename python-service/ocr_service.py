@@ -67,10 +67,12 @@ class OcrService:
     - 延迟加载模型（首次使用时加载）
     - 单例模式避免重复初始化
     - 中英文混合识别
+    - 打包环境下优雅降级（OCR 不可用但不影响其他功能）
     """
 
     _instance: Optional['OcrService'] = None
     _ocr: Optional[Any] = None
+    _init_error: Optional[str] = None  # 记录初始化错误
 
     def __new__(cls):
         """单例模式：确保全局只有一个实例"""
@@ -91,8 +93,10 @@ class OcrService:
 
         首次调用时加载模型，模型文件会自动下载到 ~/.paddleocr/
         模型大小约 100MB，首次加载可能需要几秒钟
+
+        注意：在打包环境下，PaddleOCR 可能不可用，此时返回 None
         """
-        if self._ocr is None:
+        if self._ocr is None and self._init_error is None:
             try:
                 # 抑制 PaddleOCR 的日志输出
                 import logging as paddle_logging
@@ -117,20 +121,21 @@ class OcrService:
                 logger.info("[OcrService] PaddleOCR 模型初始化完成")
 
             except ImportError as e:
-                logger.error(f"[OcrService] PaddleOCR 未安装: {e}")
-                raise RuntimeError(
-                    "PaddleOCR 未安装，请运行: pip install paddlepaddle paddleocr"
-                )
+                error_msg = f"PaddleOCR 未安装: {e}"
+                logger.warning(f"[OcrService] {error_msg}")
+                self._init_error = "OCR 功能不可用：PaddleOCR 未安装。打包版本不包含 OCR 功能。"
             except Exception as e:
                 error_msg = str(e)
                 # 检查是否是 langchain.docstore 缺失问题
                 if "langchain.docstore" in error_msg or "docstore" in error_msg:
-                    logger.error(f"[OcrService] langchain 版本兼容性问题: {e}")
-                    raise RuntimeError(
-                        "OCR 服务需要更新 langchain 依赖。请运行: pip install --upgrade langchain langchain-core langchain-community"
-                    )
-                logger.error(f"[OcrService] PaddleOCR 初始化失败: {e}")
-                raise
+                    logger.warning(f"[OcrService] langchain 版本兼容性问题: {e}")
+                    self._init_error = "OCR 功能不可用：依赖版本不兼容"
+                elif "No module named" in error_msg:
+                    logger.warning(f"[OcrService] 模块缺失: {e}")
+                    self._init_error = f"OCR 功能不可用：缺少依赖 - {error_msg}"
+                else:
+                    logger.error(f"[OcrService] PaddleOCR 初始化失败: {e}")
+                    self._init_error = f"OCR 初始化失败: {error_msg}"
 
         return self._ocr
 
@@ -144,6 +149,16 @@ class OcrService:
         Returns:
             OcrResult: 识别结果
         """
+        # 检查 OCR 是否可用
+        ocr = self._get_ocr()
+        if ocr is None:
+            error_msg = self._init_error or "OCR 服务不可用"
+            logger.warning(f"[OcrService] {error_msg}")
+            return OcrResult(
+                success=False,
+                error=error_msg
+            )
+
         # 检查文件是否存在
         if not os.path.exists(image_path):
             logger.error(f"[OcrService] 图片文件不存在: {image_path}")
@@ -163,8 +178,6 @@ class OcrService:
             )
 
         try:
-            ocr = self._get_ocr()
-
             logger.info(f"[OcrService] 正在识别图片: {image_path}")
 
             # 执行 OCR 识别
@@ -321,23 +334,17 @@ class OcrService:
         Returns:
             bool: True 表示可用
         """
-        try:
-            self._get_ocr()
-            return True
-        except RuntimeError as e:
-            logger.warning(f"[OcrService] OCR 不可用: {e}")
-            return False
-        except Exception as e:
-            error_msg = str(e)
-            # 检查是否是依赖缺失问题
-            if "langchain.docstore" in error_msg or "docstore" in error_msg:
-                logger.warning(
-                    "[OcrService] langchain 版本兼容性问题，OCR 功能暂时不可用。"
-                    "请运行: pip install --upgrade langchain langchain-core langchain-community"
-                )
-            else:
-                logger.warning(f"[OcrService] OCR 服务不可用: {e}")
-            return False
+        ocr = self._get_ocr()
+        return ocr is not None
+
+    def get_error_message(self) -> Optional[str]:
+        """
+        获取 OCR 初始化错误信息
+
+        Returns:
+            str: 错误信息，如果没有错误则返回 None
+        """
+        return self._init_error
 
 
 # ==================== 便捷函数 ====================

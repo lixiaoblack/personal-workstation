@@ -161,12 +161,20 @@ async def ocr_status():
 
         service = OcrService.get_instance()
         available = service.is_available()
+        error_message = service.get_error_message()
+
+        if available:
+            message = "OCR 服务可用"
+        elif error_message:
+            message = error_message
+        else:
+            message = "OCR 服务不可用，请检查 PaddleOCR 是否正确安装"
 
         return {
             "success": True,
             "data": {
                 "available": available,
-                "message": "OCR 服务可用" if available else "OCR 服务不可用，请检查 PaddleOCR 是否正确安装"
+                "message": message
             }
         }
     except Exception as e:

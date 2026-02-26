@@ -49,6 +49,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sign macOS app (ad-hoc)
+        run: |
+          # Find the app bundle
+          APP_PATH=$(find release -name "*.app" -type d | head -1)
+          if [ -n "$APP_PATH" ]; then
+            echo "Signing app: $APP_PATH"
+            # Remove quarantine attribute
+            xattr -cr "$APP_PATH"
+            # Ad-hoc sign the app
+            codesign --force --deep --sign - "$APP_PATH"
+            echo "Signing completed"
+          fi
+
       - name: Upload Mac artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -234,6 +247,13 @@ jobs:
             |------|------|
             | macOS (Apple Silicon) | 下方 `.dmg` 文件 |
             | Windows | 下方 `.exe` 文件 |
+
+            ## macOS 安装说明
+
+            如果打开时提示"已损坏"，请在终端执行：
+            ```bash
+            xattr -cr /Applications/个人工作站.app
+            ```
 
             ## 可选模块
 

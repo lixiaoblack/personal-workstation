@@ -1,7 +1,7 @@
 {
   "name": "personal-workstation",
   "private": true,
-  "version": "0.5.37",
+  "version": "0.5.42",
   "description": "个人工作站 - Electron 桌面应用",
   "author": "lixiaoblack",
   "main": "./dist-electron/main.js",
@@ -110,7 +110,8 @@
       ],
       "category": "public.app-category.productivity",
       "icon": "resources/icon.icns",
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
       "entitlements": "resources/entitlements.mac.plist",
       "entitlementsInherit": "resources/entitlements.mac.plist",
       "extendInfo": {

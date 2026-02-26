@@ -1,7 +1,7 @@
 {
   "name": "personal-workstation",
   "private": true,
-  "version": "0.5.43",
+  "version": "0.5.44",
   "description": "个人工作站 - Electron 桌面应用",
   "author": "lixiaoblack",
   "main": "./dist-electron/main.js",

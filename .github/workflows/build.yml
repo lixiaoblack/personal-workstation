@@ -43,6 +43,18 @@ jobs:
 
       - name: Install Node dependencies
         run: pnpm install --no-frozen-lockfile
+        env:
+          # 设置 Electron 版本，让 node-gyp 下载正确的 headers
+          npm_config_target: "29.4.6"
+          npm_config_arch: "arm64"
+          npm_config_disturl: "https://electronjs.org/headers"
+          npm_config_runtime: "electron"
+
+      - name: Rebuild native modules for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3,bcrypt
+        env:
+          # 使用官方源下载 Electron headers
+          npm_config_disturl: "https://electronjs.org/headers"
 
       - name: Build application
         run: pnpm run build
@@ -94,6 +106,17 @@ jobs:
 
       - name: Install Node dependencies
         run: npm install
+        env:
+          # 设置 Electron 版本，让 node-gyp 下载正确的 headers
+          npm_config_target: "29.4.6"
+          npm_config_arch: "x64"
+          npm_config_disturl: "https://electronjs.org/headers"
+          npm_config_runtime: "electron"
+
+      - name: Rebuild native modules for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3,bcrypt
+        env:
+          npm_config_disturl: "https://electronjs.org/headers"
 
       - name: Build application
         run: npm run build

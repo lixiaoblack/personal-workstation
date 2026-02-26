@@ -30,6 +30,8 @@ import {
   getMonacoThemeName,
 } from "@/styles/themes/monaco-theme";
 import LlmTypesModal from "../LlmTypesModal";
+import ApiDocModal from "../ApiDocModal";
+import type { ApiDocInput } from "../../services/llmService";
 
 const { TextArea } = Input;
 
@@ -94,6 +96,8 @@ const PostmanWorkspace: React.FC<Props> = ({
 
   // LLM 类型生成弹窗状态
   const [llmTypesModalVisible, setLlmTypesModalVisible] = useState(false);
+  // API 文档生成弹窗状态
+  const [apiDocModalVisible, setApiDocModalVisible] = useState(false);
 
   // Monaco 主题名称
   const monacoTheme = getMonacoThemeName(resolvedTheme);
@@ -305,7 +309,9 @@ const PostmanWorkspace: React.FC<Props> = ({
     if (!response?.body) return false;
     try {
       const parsed = JSON.parse(response.body);
-      return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
+      return (
+        typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      );
     } catch {
       return false;
     }
@@ -319,6 +325,57 @@ const PostmanWorkspace: React.FC<Props> = ({
     }
     setLlmTypesModalVisible(true);
   }, [response?.body, isJsonObjectResponse, message]);
+
+  // ==================== API 文档生成相关 ====================
+
+  // 构建 API 文档输入数据
+  const apiDocData: ApiDocInput = useMemo(() => {
+    const fullUrl = effectiveBaseUrl
+      ? `${effectiveBaseUrl}${request.url || ""}`
+      : request.url || "";
+
+    return {
+      method: request.method || "GET",
+      url: fullUrl,
+      name: request.name,
+      params: request.params
+        ?.filter((p) => p.enabled)
+        .map((p) => ({
+          key: p.key,
+          value: p.value,
+          description: p.description,
+        })),
+      headers: request.headers
+        ?.filter((h) => h.enabled)
+        .map((h) => ({
+          key: h.key,
+          value: h.value,
+          description: h.description,
+        })),
+      requestBody: request.body || undefined,
+      responseBody: response?.body || undefined,
+      responseStatus: response?.status,
+    };
+  }, [
+    effectiveBaseUrl,
+    request.url,
+    request.method,
+    request.name,
+    request.params,
+    request.headers,
+    request.body,
+    response?.body,
+    response?.status,
+  ]);
+
+  // 打开 API 文档生成弹窗
+  const handleOpenApiDocModal = useCallback(() => {
+    if (!request.url && !response?.body) {
+      message.warning("请先发送请求或填写请求信息");
+      return;
+    }
+    setApiDocModalVisible(true);
+  }, [request.url, response?.body, message]);
 
   // ==================== 渲染函数 ====================
   const renderBodyTab = () => {
@@ -355,7 +412,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                   type="text"
                   size="small"
                   icon={
-                    <span className="material-symbols-outlined text-sm">
+                    <span className="material-symbols-outlined !text-sm">
                       format_align_left
                     </span>
                   }
@@ -368,7 +425,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                 type="text"
                 size="small"
                 icon={
-                  <span className="material-symbols-outlined text-sm">
+                  <span className="material-symbols-outlined !text-sm">
                     content_copy
                   </span>
                 }
@@ -510,7 +567,7 @@ const PostmanWorkspace: React.FC<Props> = ({
             size="small"
             danger
             icon={
-              <span className="material-symbols-outlined text-sm">delete</span>
+              <span className="material-symbols-outlined !text-sm">delete</span>
             }
             onClick={() => {
               handleParamsChange(params.filter((p) => p.id !== record.id));
@@ -633,7 +690,7 @@ const PostmanWorkspace: React.FC<Props> = ({
             size="small"
             danger
             icon={
-              <span className="material-symbols-outlined text-sm">delete</span>
+              <span className="material-symbols-outlined !text-sm">delete</span>
             }
             onClick={() => {
               handleHeadersChange(headers.filter((h) => h.id !== record.id));
@@ -1161,9 +1218,14 @@ const PostmanWorkspace: React.FC<Props> = ({
 
   // 渲染类型定义标签页
   const renderTypesTab = () => {
-    // 优先使用 LLM 生成的类型定义，否则使用 Swagger 生成的
-    const typeDefinitions = llmTypes || generateTypeDefinitions();
+    // 默认类型定义（Swagger 生成）
+    const defaultTypes = generateTypeDefinitions();
+    // LLM 生成的类型定义
     const hasLlmTypes = !!llmTypes;
+    // 合并展示：LLM 类型在前，默认类型在后
+    const typeDefinitions = hasLlmTypes
+      ? `// ========== LLM 生成的类型定义 ==========\n${llmTypes}\n\n// ========== 默认请求体类型定义 ==========\n${defaultTypes}`
+      : defaultTypes;
 
     return (
       <div className="flex flex-col h-full">
@@ -1175,7 +1237,7 @@ const PostmanWorkspace: React.FC<Props> = ({
             </span>
             {hasLlmTypes && (
               <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary">
-                LLM 生成
+                含 LLM 生成
               </span>
             )}
           </div>
@@ -1185,7 +1247,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                 type="text"
                 size="small"
                 icon={
-                  <span className="material-symbols-outlined text-sm">
+                  <span className="material-symbols-outlined !text-sm">
                     format_align_left
                   </span>
                 }
@@ -1197,7 +1259,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                 type="text"
                 size="small"
                 icon={
-                  <span className="material-symbols-outlined text-sm">
+                  <span className="material-symbols-outlined !text-sm">
                     content_copy
                   </span>
                 }
@@ -1275,14 +1337,14 @@ const PostmanWorkspace: React.FC<Props> = ({
           <div className="flex items-center gap-4 text-xs text-text-tertiary">
             {effectiveBaseUrl && (
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">link</span>
+                <span className="material-symbols-outlined !text-sm">link</span>
                 Base URL:{" "}
                 <span className="text-primary">{effectiveBaseUrl}</span>
               </span>
             )}
             {effectiveAuth && effectiveAuth.type !== "none" && (
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">lock</span>
+                <span className="material-symbols-outlined !text-sm">lock</span>
                 授权: <span className="text-primary">{effectiveAuth.type}</span>
               </span>
             )}
@@ -1325,7 +1387,9 @@ const PostmanWorkspace: React.FC<Props> = ({
             className="h-10 px-6 font-bold"
           >
             发送
-            <span className="material-symbols-outlined text-sm ml-1">send</span>
+            <span className="material-symbols-outlined !text-sm ml-1">
+              send
+            </span>
           </Button>
         </div>
 
@@ -1407,7 +1471,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                         type="text"
                         size="small"
                         icon={
-                          <span className="material-symbols-outlined text-sm">
+                          <span className="material-symbols-outlined !text-sm">
                             format_align_left
                           </span>
                         }
@@ -1420,7 +1484,7 @@ const PostmanWorkspace: React.FC<Props> = ({
                       type="text"
                       size="small"
                       icon={
-                        <span className="material-symbols-outlined text-sm">
+                        <span className="material-symbols-outlined !text-sm">
                           content_copy
                         </span>
                       }
@@ -1434,13 +1498,30 @@ const PostmanWorkspace: React.FC<Props> = ({
                         type="text"
                         size="small"
                         icon={
-                          <span className="material-symbols-outlined text-sm">
+                          <span className="material-symbols-outlined !text-sm">
                             code_blocks
                           </span>
                         }
                         onClick={handleOpenLlmTypesModal}
                       >
                         生成类型
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {/* 生成 API 文档按钮 */}
+                  {response && (
+                    <Tooltip title="使用 AI 生成 API 文档">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={
+                          <span className="material-symbols-outlined !text-sm">
+                            description
+                          </span>
+                        }
+                        onClick={handleOpenApiDocModal}
+                      >
+                        生成文档
                       </Button>
                     </Tooltip>
                   )}
@@ -1502,6 +1583,13 @@ const PostmanWorkspace: React.FC<Props> = ({
         jsonData={beautifiedResponseBody}
         onClose={() => setLlmTypesModalVisible(false)}
         onSave={onSaveLlmTypes || (async () => {})}
+      />
+
+      {/* API 文档生成弹窗 */}
+      <ApiDocModal
+        visible={apiDocModalVisible}
+        apiData={apiDocData}
+        onClose={() => setApiDocModalVisible(false)}
       />
     </main>
   );

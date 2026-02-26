@@ -62,7 +62,8 @@ async def generate(request: LlmGenerateRequest):
             )
 
         # 转换消息格式
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        messages = [{"role": msg.role, "content": msg.content}
+                    for msg in request.messages]
 
         # 调用模型路由器
         content = await model_router.chat_async(

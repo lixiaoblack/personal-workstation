@@ -1,42 +1,32 @@
 /**
- * LLM 类型定义弹窗组件
- * 用于展示和编辑 LLM 生成的 TypeScript 类型定义
+ * API 文档生成弹窗组件
+ * 使用 LLM 根据请求/响应数据生成 Markdown 格式的 API 文档
  */
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Modal, Button, Select, Spin } from "antd";
+import { Modal, Button, Select, Spin, message } from "antd";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
-import * as prettier from "prettier/standalone";
-import * as parserEstree from "prettier/plugins/estree";
-import * as parserTypescript from "prettier/plugins/typescript";
 import { useTheme } from "@/contexts";
 import {
   initMonacoThemes,
   getMonacoThemeName,
 } from "@/styles/themes/monaco-theme";
 import { modelStore } from "@/stores";
-import { generateTypeScriptTypes } from "../../services/llmService";
+import { generateApiDoc, ApiDocInput } from "../../services/llmService";
 
 interface Props {
   visible: boolean;
-  jsonData: string;
+  apiData: ApiDocInput;
   onClose: () => void;
-  onSave: (types: string) => Promise<void>;
 }
 
-const LlmTypesModal: React.FC<Props> = ({
-  visible,
-  jsonData,
-  onClose,
-  onSave,
-}) => {
+const ApiDocModal: React.FC<Props> = ({ visible, apiData, onClose }) => {
   const { resolvedTheme } = useTheme();
   const monacoTheme = getMonacoThemeName(resolvedTheme);
 
   // 状态
-  const [generatedTypes, setGeneratedTypes] = useState("");
+  const [generatedDoc, setGeneratedDoc] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const themesInitializedRef = useRef(false);
@@ -53,35 +43,36 @@ const LlmTypesModal: React.FC<Props> = ({
     }
   }, [models.length]);
 
-  // 生成类型定义
+  // 生成文档
   const handleGenerate = useCallback(async () => {
     const modelToUse = currentModel || llmModels[0];
     if (!modelToUse) {
+      message.warning("请先配置 LLM 模型");
       return;
     }
 
     setIsGenerating(true);
-    setGeneratedTypes("");
+    setGeneratedDoc("");
 
     try {
-      const result = await generateTypeScriptTypes(modelToUse, jsonData);
+      const result = await generateApiDoc(modelToUse, apiData);
       if (result.success && result.content) {
-        setGeneratedTypes(result.content);
+        setGeneratedDoc(result.content);
       } else {
-        setGeneratedTypes(`// 生成失败: ${result.error || "未知错误"}`);
+        setGeneratedDoc(`生成失败: ${result.error || "未知错误"}`);
       }
     } catch (error) {
-      setGeneratedTypes(
-        `// 生成失败: ${error instanceof Error ? error.message : "未知错误"}`
+      setGeneratedDoc(
+        `生成失败: ${error instanceof Error ? error.message : "未知错误"}`
       );
     } finally {
       setIsGenerating(false);
     }
-  }, [currentModel, llmModels, jsonData]);
+  }, [currentModel, llmModels, apiData]);
 
   // 弹窗打开时自动生成（只执行一次）
   useEffect(() => {
-    if (visible && jsonData && !hasGeneratedRef.current) {
+    if (visible && apiData && !hasGeneratedRef.current) {
       hasGeneratedRef.current = true;
       handleGenerate();
     }
@@ -89,7 +80,7 @@ const LlmTypesModal: React.FC<Props> = ({
       // 弹窗关闭时重置标记
       hasGeneratedRef.current = false;
     }
-  }, [visible, jsonData, handleGenerate]);
+  }, [visible, apiData, handleGenerate]);
 
   // 编辑器挂载
   const handleEditorMount: OnMount = (editor, monaco) => {
@@ -106,59 +97,26 @@ const LlmTypesModal: React.FC<Props> = ({
 
   // 复制
   const handleCopy = useCallback(() => {
-    if (generatedTypes) {
-      navigator.clipboard.writeText(generatedTypes);
+    if (generatedDoc) {
+      navigator.clipboard.writeText(generatedDoc);
+      message.success("已复制到剪贴板");
     }
-  }, [generatedTypes]);
-
-  // 格式化
-  const handleFormat = useCallback(async () => {
-    if (editorRef.current) {
-      try {
-        const currentValue = editorRef.current.getValue();
-        const formatted = await prettier.format(currentValue, {
-          parser: "typescript",
-          plugins: [parserTypescript, parserEstree],
-          semi: true,
-          singleQuote: false,
-          tabWidth: 2,
-          printWidth: 80,
-        });
-        editorRef.current.setValue(formatted);
-        setGeneratedTypes(formatted);
-      } catch {
-        editorRef.current.getAction("editor.action.formatDocument")?.run();
-      }
-    }
-  }, []);
-
-  // 保存
-  const handleSave = useCallback(async () => {
-    if (!generatedTypes || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      await onSave(generatedTypes);
-      onClose();
-    } finally {
-      setIsSaving(false);
-    }
-  }, [generatedTypes, isSaving, onSave, onClose]);
+  }, [generatedDoc]);
 
   // 内容变化
   const handleEditorChange = useCallback((value: string | undefined) => {
     if (value !== undefined) {
-      setGeneratedTypes(value);
+      setGeneratedDoc(value);
     }
   }, []);
 
   return (
     <Modal
-      title="TypeScript 类型定义"
+      title="API 文档生成"
       open={visible}
       onCancel={onClose}
       footer={null}
-      width={800}
+      width={900}
       centered
     >
       <div className="space-y-4">
@@ -189,17 +147,17 @@ const LlmTypesModal: React.FC<Props> = ({
           </Button>
         </div>
 
-        {/* 类型定义编辑器 */}
-        <div className="h-[400px] rounded-lg overflow-hidden border border-border">
+        {/* 文档编辑器 */}
+        <div className="h-[450px] rounded-lg overflow-hidden border border-border">
           {isGenerating ? (
             <div className="flex items-center justify-center h-full">
-              <Spin tip="正在生成类型定义..." />
+              <Spin tip="正在生成 API 文档..." />
             </div>
           ) : (
             <Editor
               height="100%"
-              language="typescript"
-              value={generatedTypes}
+              language="markdown"
+              value={generatedDoc}
               onChange={handleEditorChange}
               onMount={handleEditorMount}
               theme={monacoTheme}
@@ -229,36 +187,17 @@ const LlmTypesModal: React.FC<Props> = ({
             <Button
               icon={
                 <span className="material-symbols-outlined !text-sm">
-                  format_align_left
-                </span>
-              }
-              onClick={handleFormat}
-              disabled={isGenerating || !generatedTypes}
-            >
-              格式化
-            </Button>
-            <Button
-              icon={
-                <span className="material-symbols-outlined !text-sm">
                   content_copy
                 </span>
               }
               onClick={handleCopy}
-              disabled={isGenerating || !generatedTypes}
+              disabled={isGenerating || !generatedDoc}
             >
-              复制
+              复制文档
             </Button>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={onClose}>取消</Button>
-            <Button
-              type="primary"
-              onClick={handleSave}
-              loading={isSaving}
-              disabled={isGenerating || !generatedTypes}
-            >
-              保存到数据库
-            </Button>
+            <Button onClick={onClose}>关闭</Button>
           </div>
         </div>
       </div>
@@ -266,4 +205,4 @@ const LlmTypesModal: React.FC<Props> = ({
   );
 };
 
-export default LlmTypesModal;
+export default ApiDocModal;

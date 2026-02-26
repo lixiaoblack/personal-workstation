@@ -37,7 +37,9 @@ export function extractTypeScriptFromMarkdown(text: string): string {
 
   // 如果内容以 interface、type、export 等开头，说明是纯代码
   if (
-    /^(export\s+)?(interface|type|class|enum|const|let|var)\s+/m.test(trimmedText)
+    /^(export\s+)?(interface|type|class|enum|const|let|var)\s+/m.test(
+      trimmedText
+    )
   ) {
     return trimmedText;
   }
@@ -120,6 +122,120 @@ export async function callLlm(
 }
 
 /**
+ * 从 Markdown 文本中提取纯 Markdown 内容
+ * 移除多余的代码块包裹
+ */
+export function extractMarkdownContent(text: string): string {
+  const trimmedText = text.trim();
+
+  // 如果整个内容被 ```markdown 包裹
+  const mdCodeBlockRegex = /```markdown\s*\n([\s\S]*?)```/g;
+  const matches = [...trimmedText.matchAll(mdCodeBlockRegex)];
+
+  if (matches.length > 0) {
+    return matches.map((m) => m[1].trim()).join("\n\n");
+  }
+
+  return trimmedText;
+}
+
+/**
+ * API 文档输入数据
+ */
+export interface ApiDocInput {
+  method: string;
+  url: string;
+  name?: string;
+  description?: string;
+  params?: Array<{ key: string; value: string; description?: string }>;
+  headers?: Array<{ key: string; value: string; description?: string }>;
+  requestBody?: string;
+  responseBody?: string;
+  responseStatus?: number;
+}
+
+/**
+ * 生成 API 文档
+ */
+export async function generateApiDoc(
+  modelConfig: ModelConfig,
+  apiData: ApiDocInput
+): Promise<LLMResponse> {
+  const systemPrompt = `你是一个专业的 API 文档编写专家。根据用户提供的 API 请求和响应信息，生成清晰、完整的 Markdown 格式 API 文档。
+
+要求：
+1. 使用 Markdown 格式，结构清晰
+2. 包含以下部分：
+   - 接口名称和描述
+   - 请求方法和 URL
+   - 请求参数说明（Query/Path/Body）
+   - 请求头说明
+   - 响应结构说明
+   - 请求示例（使用 curl 或 HTTP 格式）
+   - 响应示例
+   - 错误码说明（如果有）
+3. 参数说明要包含：参数名、类型、是否必填、说明
+4. 响应字段要包含：字段名、类型、说明
+5. 使用表格展示参数和字段信息
+6. 语言使用中文`;
+
+  // 构建用户输入
+  const parts: string[] = [];
+
+  parts.push(`## API 信息`);
+  parts.push(`- **方法**: ${apiData.method}`);
+  parts.push(`- **URL**: ${apiData.url}`);
+  if (apiData.name) parts.push(`- **名称**: ${apiData.name}`);
+  if (apiData.description) parts.push(`- **描述**: ${apiData.description}`);
+
+  if (apiData.params && apiData.params.length > 0) {
+    parts.push(`\n## 请求参数`);
+    apiData.params.forEach((p) => {
+      parts.push(`- ${p.key}: ${p.value}${p.description ? ` (${p.description})` : ""}`);
+    });
+  }
+
+  if (apiData.headers && apiData.headers.length > 0) {
+    parts.push(`\n## 请求头`);
+    apiData.headers.forEach((h) => {
+      parts.push(`- ${h.key}: ${h.value}${h.description ? ` (${h.description})` : ""}`);
+    });
+  }
+
+  if (apiData.requestBody) {
+    parts.push(`\n## 请求体`);
+    parts.push("```json");
+    parts.push(apiData.requestBody);
+    parts.push("```");
+  }
+
+  if (apiData.responseBody) {
+    parts.push(`\n## 响应体 (状态码: ${apiData.responseStatus || "N/A"})`);
+    parts.push("```json");
+    parts.push(apiData.responseBody);
+    parts.push("```");
+  }
+
+  const userPrompt = `请根据以下 API 信息生成完整的 API 文档：
+
+${parts.join("\n")}
+
+请生成 Markdown 格式的 API 文档：`;
+
+  const result = await callLlm(modelConfig, [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ]);
+
+  // 提取纯 Markdown 内容
+  if (result.success && result.content) {
+    result.content = extractMarkdownContent(result.content);
+  }
+
+  return result;
+}
+
+/**
  * 生成 TypeScript 类型定义
  */
 export async function generateTypeScriptTypes(
@@ -147,13 +263,10 @@ ${jsonData}
 
 请生成完整的 TypeScript 类型定义：`;
 
-  const result = await callLlm(
-    modelConfig,
-    [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ]
-  );
+  const result = await callLlm(modelConfig, [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ]);
 
   // 提取纯 TypeScript 代码
   if (result.success && result.content) {

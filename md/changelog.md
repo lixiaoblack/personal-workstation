@@ -4,6 +4,34 @@
 
 ---
 
+## [0.5.38] - 2026-02-26
+
+### 新增 (Added)
+
+- SimplePostman API 文档生成功能
+  - 响应区域添加"生成文档"按钮，当有响应时显示
+  - 使用 LLM 根据请求/响应数据生成 Markdown 格式的 API 文档
+  - 文档包含：接口名称、请求方法、URL、参数说明、请求体、响应体、示例代码等
+  - 支持复制生成的文档
+
+- ApiDocModal 弹窗组件
+  - 独立的 API 文档展示和编辑组件
+  - 支持模型选择、重新生成、复制功能
+  - 使用 Monaco Editor 展示 Markdown 内容
+
+- llmService.ts 扩展
+  - 新增 `generateApiDoc` 函数，生成 API 文档
+  - 新增 `ApiDocInput` 接口，定义 API 文档输入数据结构
+  - 新增 `extractMarkdownContent` 函数，提取纯 Markdown 内容
+
+### 修改 (Changed)
+
+- 类型定义 Tab 改为同时展示 LLM 生成的类型和默认类型定义
+  - LLM 类型在前，默认类型在后
+  - 标签改为"含 LLM 生成"
+
+---
+
 ## [0.5.37] - 2026-02-26
 
 ### 新增 (Added)

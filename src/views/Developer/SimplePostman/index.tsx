@@ -1088,7 +1088,7 @@ const SimplePostman: React.FC = () => {
           )}
           <span>编码: UTF-8</span>
           <span
-            className="material-symbols-outlined text-sm cursor-pointer hover:text-primary"
+            className="material-symbols-outlined !text-sm cursor-pointer hover:text-primary"
             onClick={handleOpenGlobalConfig}
           >
             settings
@@ -1115,7 +1115,7 @@ const SimplePostman: React.FC = () => {
         >
           <Button
             icon={
-              <span className="material-symbols-outlined text-sm">
+              <span className="material-symbols-outlined !text-sm">
                 upload_file
               </span>
             }

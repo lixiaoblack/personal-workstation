@@ -214,7 +214,7 @@ const PostmanAIPanel: React.FC<Props> = ({
             loading={loading}
             className="absolute right-1 top-1/2 -translate-y-1/2"
             icon={
-              <span className="material-symbols-outlined text-sm">send</span>
+              <span className="material-symbols-outlined !text-sm">send</span>
             }
           />
         </div>

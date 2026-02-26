@@ -123,13 +123,13 @@ const PostmanSidebar: React.FC<Props> = ({
     {
       key: "edit",
       label: "编辑文件夹",
-      icon: <span className="material-symbols-outlined text-sm">edit</span>,
+      icon: <span className="material-symbols-outlined !text-sm">edit</span>,
       onClick: () => onEditFolder(folder),
     },
     {
       key: "delete",
       label: "删除文件夹",
-      icon: <span className="material-symbols-outlined text-sm">delete</span>,
+      icon: <span className="material-symbols-outlined !text-sm">delete</span>,
       danger: true,
       onClick: () => onDeleteFolder(folder.id),
     },
@@ -140,7 +140,7 @@ const PostmanSidebar: React.FC<Props> = ({
     {
       key: "edit",
       label: "编辑项目",
-      icon: <span className="material-symbols-outlined text-sm">edit</span>,
+      icon: <span className="material-symbols-outlined !text-sm">edit</span>,
       onClick: () => {
         setEditingProject(project);
         setEditForm({
@@ -153,14 +153,14 @@ const PostmanSidebar: React.FC<Props> = ({
     {
       key: "reparse",
       label: "重新解析",
-      icon: <span className="material-symbols-outlined text-sm">sync</span>,
+      icon: <span className="material-symbols-outlined !text-sm">sync</span>,
       onClick: () => onReparseProject(project),
       disabled: !project.swaggerUrl,
     },
     {
       key: "delete",
       label: "删除项目",
-      icon: <span className="material-symbols-outlined text-sm">delete</span>,
+      icon: <span className="material-symbols-outlined !text-sm">delete</span>,
       danger: true,
       onClick: () => onDeleteFolder(project.id),
     },
@@ -213,7 +213,7 @@ const PostmanSidebar: React.FC<Props> = ({
           <Button
             size="small"
             icon={
-              <span className="material-symbols-outlined text-sm">
+              <span className="material-symbols-outlined !text-sm">
                 settings
               </span>
             }
@@ -237,7 +237,9 @@ const PostmanSidebar: React.FC<Props> = ({
       {/* Swagger 解析区域 */}
       <div className="p-4 space-y-4 border-b border-border">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-          <span className="material-symbols-outlined text-sm">upload_file</span>
+          <span className="material-symbols-outlined !text-sm">
+            upload_file
+          </span>
           解析 Swagger / OpenAPI
         </h2>
         <div className="space-y-2">
@@ -262,7 +264,7 @@ const PostmanSidebar: React.FC<Props> = ({
               onClick={onUploadSwagger}
               title="上传 JSON/YAML"
               icon={
-                <span className="material-symbols-outlined text-sm">
+                <span className="material-symbols-outlined !text-sm">
                   attach_file
                 </span>
               }
@@ -320,14 +322,14 @@ const PostmanSidebar: React.FC<Props> = ({
                       }}
                     >
                       <span
-                        className={`material-symbols-outlined text-sm transition-transform ${
+                        className={`material-symbols-outlined !text-sm transition-transform ${
                           isExpanded ? "rotate-90" : ""
                         } ${isActive ? "text-primary" : "text-text-tertiary"}`}
                       >
                         chevron_right
                       </span>
                       <span
-                        className={`material-symbols-outlined text-sm ${
+                        className={`material-symbols-outlined !text-sm ${
                           isActive ? "text-yellow-500" : "text-text-tertiary"
                         }`}
                       >
@@ -345,7 +347,7 @@ const PostmanSidebar: React.FC<Props> = ({
                         trigger={["click"]}
                       >
                         <span
-                          className="material-symbols-outlined text-sm text-text-tertiary hover:text-primary cursor-pointer"
+                          className="material-symbols-outlined !text-sm text-text-tertiary !text-[14px] hover:text-primary cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         >
                           more_vert
@@ -437,7 +439,7 @@ const PostmanSidebar: React.FC<Props> = ({
                               </span>
                               <Tooltip title="编辑">
                                 <span
-                                  className="material-symbols-outlined text-xs text-text-tertiary hover:text-primary cursor-pointer"
+                                  className="material-symbols-outlined !text-xs text-text-tertiary hover:text-primary cursor-pointer"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleStartEditProject(project);
@@ -495,7 +497,7 @@ const PostmanSidebar: React.FC<Props> = ({
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3 px-2 flex items-center justify-between">
             <span>接口分组</span>
-            <span className="material-symbols-outlined text-xs cursor-pointer hover:text-primary">
+            <span className="material-symbols-outlined !text-[18px] cursor-pointer hover:text-primary">
               sync
             </span>
           </h2>
@@ -541,7 +543,7 @@ const PostmanSidebar: React.FC<Props> = ({
                 ghost
                 expandIcon={({ isActive }) => (
                   <span
-                    className={`material-symbols-outlined text-sm text-text-tertiary transition-transform ${
+                    className={`material-symbols-outlined !text-sm text-text-tertiary !text-[14px] transition-transform ${
                       isActive ? "rotate-90" : ""
                     }`}
                   >
@@ -560,7 +562,7 @@ const PostmanSidebar: React.FC<Props> = ({
                     <Panel
                       header={
                         <div className="flex items-center gap-2 text-sm font-medium w-full">
-                          <span className="material-symbols-outlined text-sm text-yellow-500">
+                          <span className="material-symbols-outlined !text-sm text-yellow-500">
                             folder
                           </span>
                           <span className="truncate flex-1">{group.name}</span>
@@ -569,7 +571,7 @@ const PostmanSidebar: React.FC<Props> = ({
                             trigger={["click"]}
                           >
                             <span
-                              className="material-symbols-outlined text-sm text-text-tertiary hover:text-primary cursor-pointer"
+                              className="material-symbols-outlined !text-sm text-text-tertiary !text-[14px] hover:text-primary cursor-pointer"
                               onClick={(e) => e.stopPropagation()}
                             >
                               more_vert
@@ -616,7 +618,7 @@ const PostmanSidebar: React.FC<Props> = ({
       {/* 底部同步按钮 */}
       {/* <div className="p-4 border-t border-border">
         <Button type="primary" block className="font-bold text-sm">
-          <span className="material-symbols-outlined text-sm mr-1">
+          <span className="material-symbols-outlined !text-sm mr-1">
             sync_alt
           </span>
           接口同步

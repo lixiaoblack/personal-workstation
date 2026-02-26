@@ -1,8 +1,10 @@
 /**
  * PostmanWorkspace 主工作区组件
  */
-import React, { useState } from "react";
-import { Select, Input, Button, Table, Tooltip, Spin } from "antd";
+import React, { useState, useRef, useCallback, useMemo } from "react";
+import { Select, Input, Button, Table, Tooltip, Spin, App } from "antd";
+import Editor, { OnMount } from "@monaco-editor/react";
+import type * as Monaco from "monaco-editor";
 import {
   HTTP_METHODS,
   REQUEST_TABS,
@@ -58,7 +60,70 @@ const PostmanWorkspace: React.FC<Props> = ({
   effectiveBaseUrl,
   effectiveAuth,
 }) => {
+  const { message } = App.useApp();
   const [activeTab, setActiveTab] = useState<RequestTabKey>("body");
+  const responseEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
+
+  // 响应编辑器挂载处理
+  const handleResponseEditorMount: OnMount = (editor, monaco) => {
+    responseEditorRef.current = editor;
+    monacoRef.current = monaco;
+
+    // 配置 JSON 语言特性
+    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+      validate: true,
+      schemas: [],
+      enableSchemaRequest: false,
+      allowComments: false,
+      trailingCommas: "error",
+    });
+  };
+
+  // 尝试解析并美化 JSON
+  const parseAndBeautify = useCallback((input: string): string => {
+    if (!input.trim()) return "";
+
+    try {
+      const parsed = JSON.parse(input);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // 不是有效的 JSON，返回原始内容
+      return input;
+    }
+  }, []);
+
+  // 美化后的响应内容
+  const beautifiedResponseBody = useMemo(() => {
+    if (!response?.body) return "";
+    return parseAndBeautify(response.body);
+  }, [response?.body, parseAndBeautify]);
+
+  // 判断响应是否为 JSON
+  const isJsonResponse = useMemo(() => {
+    if (!response?.body) return false;
+    try {
+      JSON.parse(response.body);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [response?.body]);
+
+  // 复制响应内容
+  const handleCopyResponse = useCallback(() => {
+    if (response?.body) {
+      navigator.clipboard.writeText(response.body);
+      message.success("已复制到剪贴板");
+    }
+  }, [response?.body, message]);
+
+  // 格式化响应
+  const handleFormatResponse = useCallback(() => {
+    if (responseEditorRef.current) {
+      responseEditorRef.current.getAction("editor.action.formatDocument")?.run();
+    }
+  }, []);
 
   // 获取方法颜色
   const getMethodColor = (method: HttpMethod) => {
@@ -582,10 +647,11 @@ const PostmanWorkspace: React.FC<Props> = ({
             {effectiveBaseUrl && (
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">link</span>
-                Base URL: <span className="text-primary">{effectiveBaseUrl}</span>
+                Base URL:{" "}
+                <span className="text-primary">{effectiveBaseUrl}</span>
               </span>
             )}
-            {effectiveAuth && effectiveAuth.type !== 'none' && (
+            {effectiveAuth && effectiveAuth.type !== "none" && (
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">lock</span>
                 授权: <span className="text-primary">{effectiveAuth.type}</span>
@@ -653,52 +719,106 @@ const PostmanWorkspace: React.FC<Props> = ({
       </div>
 
       {/* 编辑器内容 */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
+      <div className="flex-1  flex flex-col">
         {/* 请求编辑区 */}
-        <div className="flex-1 min-h-[200px] border-b border-border">
+        <div className="flex-1 min-h-[200px] overflow-y-auto border-b border-border">
           {renderTabContent()}
         </div>
 
         {/* 响应区域 */}
-        <div className="border-t border-border pt-4">
+        <div className="border-t border-border h-[400px] pt-4 flex flex-col">
           <div className="flex items-center justify-between mb-4 px-4">
             <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider">
               响应内容
             </h3>
             {response && (
-              <div className="flex gap-4 text-xs">
-                <span className="flex items-center gap-1">
-                  <span className="text-text-tertiary">状态码:</span>
-                  <span
-                    className={`font-bold ${
-                      response.status < 400 ? "text-success" : "text-error"
-                    }`}
-                  >
-                    {response.status} {response.statusText}
+              <div className="flex items-center gap-4">
+                <div className="flex gap-4 text-xs">
+                  <span className="flex items-center gap-1">
+                    <span className="text-text-tertiary">状态码:</span>
+                    <span
+                      className={`font-bold ${
+                        response.status < 400 ? "text-success" : "text-error"
+                      }`}
+                    >
+                      {response.status} {response.statusText}
+                    </span>
                   </span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="text-text-tertiary">耗时:</span>
-                  <span className="text-text-secondary">{response.time}ms</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="text-text-tertiary">大小:</span>
-                  <span className="text-text-secondary">
-                    {formatSize(response.size)}
+                  <span className="flex items-center gap-1">
+                    <span className="text-text-tertiary">耗时:</span>
+                    <span className="text-text-secondary">{response.time}ms</span>
                   </span>
-                </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-text-tertiary">大小:</span>
+                    <span className="text-text-secondary">
+                      {formatSize(response.size)}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {isJsonResponse && (
+                    <Tooltip title="格式化">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={
+                          <span className="material-symbols-outlined text-sm">
+                            format_align_left
+                          </span>
+                        }
+                        onClick={handleFormatResponse}
+                      />
+                    </Tooltip>
+                  )}
+                  <Tooltip title="复制">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={
+                        <span className="material-symbols-outlined text-sm">
+                          content_copy
+                        </span>
+                      }
+                      onClick={handleCopyResponse}
+                    />
+                  </Tooltip>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="px-4 pb-4">
+          <div className="flex-1 px-4 pb-4 overflow-hidden">
             {responseLoading ? (
               <div className="flex items-center justify-center h-32">
                 <Spin tip="请求中..." />
               </div>
             ) : response ? (
-              <div className="bg-bg-tertiary rounded-xl p-4 font-mono text-sm overflow-x-auto text-text-primary">
-                <pre className="whitespace-pre-wrap">{response.body}</pre>
+              <div className="h-full rounded-xl overflow-hidden border border-border">
+                <Editor
+                  height="100%"
+                  language={isJsonResponse ? "json" : "plaintext"}
+                  value={beautifiedResponseBody}
+                  onMount={handleResponseEditorMount}
+                  theme="vs-dark"
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                    lineNumbers: "on",
+                    wordWrap: "on",
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    folding: true,
+                    foldingStrategy: "indentation",
+                    bracketPairColorization: { enabled: true },
+                    renderValidationDecorations: "on",
+                    scrollbar: {
+                      vertical: "auto",
+                      horizontal: "auto",
+                    },
+                  }}
+                />
               </div>
             ) : (
               <div className="flex items-center justify-center h-32 text-text-tertiary">

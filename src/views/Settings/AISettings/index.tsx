@@ -226,9 +226,8 @@ const AISettings: React.FC = () => {
   const handleRestartService = async () => {
     setServiceLoading(true);
     try {
-      const result = await window.electronAPI.restartPythonService(
-        serviceConfig
-      );
+      const result =
+        await window.electronAPI.restartPythonService(serviceConfig);
       if (result.success) {
         message.success("Python 服务已重启");
         await loadServiceInfo();
@@ -443,7 +442,9 @@ const AISettings: React.FC = () => {
                       <p className="text-sm font-medium text-text-primary">
                         {pythonEnv.virtualEnv.name}
                       </p>
-                      <p className="text-xs text-text-tertiary">活跃的虚拟环境</p>
+                      <p className="text-xs text-text-tertiary">
+                        活跃的虚拟环境
+                      </p>
                     </div>
                   </div>
                 )}
@@ -462,7 +463,9 @@ const AISettings: React.FC = () => {
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-text-primary">Python 服务已内置</h3>
+                <h3 className="font-bold text-text-primary">
+                  Python 服务已内置
+                </h3>
                 <p className="text-xs text-text-tertiary">
                   无需安装 Python，AI 智能体服务已打包在应用中
                 </p>
@@ -552,7 +555,10 @@ const AISettings: React.FC = () => {
               <button
                 className="flex-1 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 onClick={handleStartService}
-                disabled={serviceLoading || (!isPackaged && !pythonEnv?.meetsRequirements)}
+                disabled={
+                  serviceLoading ||
+                  (!isPackaged && !pythonEnv?.meetsRequirements)
+                }
               >
                 {serviceLoading ? (
                   <Spin size="small" />

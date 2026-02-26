@@ -11,11 +11,13 @@ websockets>=12.0
 httpx>=0.25.0
 
 # ==================== AI 智能体框架 ====================
+# 注意：langchain 0.3.0+ 移除了 docstore 模块，需要 langchain-community
 langgraph>=1.0.0
-langchain>=1.0.0
+langchain>=0.3.0
+langchain-core>=0.3.0
 langchain-community>=0.3.0
-langchain-openai>=0.2.0
-langchain-ollama>=0.2.0
+langchain-openai>=0.3.0
+langchain-ollama>=0.3.0
 
 # ==================== Deep Agents SDK（高级智能体能力）====================
 deepagents>=0.3.0
@@ -41,6 +43,8 @@ pydantic>=2.0.0      # 数据验证
 duckduckgo-search>=6.0.0  # DuckDuckGo 搜索（无需 API 密钥）
 
 # ==================== OCR 识别 ====================
+# 注意：PaddleOCR 在 Windows 上可能需要 Visual C++ Redistributable
+# 如果 OCR 功能不可用，可以跳过安装，应用仍可正常运行
 paddlepaddle>=2.5.0       # PaddleOCR 依赖
 paddleocr>=2.7.0          # OCR 引擎（中文识别优秀）
 Pillow>=10.0.0            # 图片处理

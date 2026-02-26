@@ -122,6 +122,13 @@ class OcrService:
                     "PaddleOCR 未安装，请运行: pip install paddlepaddle paddleocr"
                 )
             except Exception as e:
+                error_msg = str(e)
+                # 检查是否是 langchain.docstore 缺失问题
+                if "langchain.docstore" in error_msg or "docstore" in error_msg:
+                    logger.error(f"[OcrService] langchain 版本兼容性问题: {e}")
+                    raise RuntimeError(
+                        "OCR 服务需要更新 langchain 依赖。请运行: pip install --upgrade langchain langchain-core langchain-community"
+                    )
                 logger.error(f"[OcrService] PaddleOCR 初始化失败: {e}")
                 raise
 
@@ -317,7 +324,19 @@ class OcrService:
         try:
             self._get_ocr()
             return True
-        except Exception:
+        except RuntimeError as e:
+            logger.warning(f"[OcrService] OCR 不可用: {e}")
+            return False
+        except Exception as e:
+            error_msg = str(e)
+            # 检查是否是依赖缺失问题
+            if "langchain.docstore" in error_msg or "docstore" in error_msg:
+                logger.warning(
+                    "[OcrService] langchain 版本兼容性问题，OCR 功能暂时不可用。"
+                    "请运行: pip install --upgrade langchain langchain-core langchain-community"
+                )
+            else:
+                logger.warning(f"[OcrService] OCR 服务不可用: {e}")
             return False
 
 

@@ -5,6 +5,12 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      build_ocr:
+        description: "Build OCR module"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -89,6 +95,93 @@ jobs:
             release/*.exe
           retention-days: 7
 
+  # OCR 模块构建 - macOS
+  build-ocr-mac:
+    runs-on: macos-latest
+    if: ${{ github.event.inputs.build_ocr == 'true' || startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          # OCR 模块专用依赖
+          pip install fastapi uvicorn python-multipart
+          pip install paddlepaddle paddleocr Pillow
+
+      - name: Build OCR module
+        run: |
+          cd python-service
+          pyinstaller ocr-module.spec --noconfirm
+
+      - name: Package OCR module
+        run: |
+          cd python-service
+          mkdir -p ocr-package
+          cp -r dist/ocr-module/* ocr-package/
+          # 创建 manifest
+          echo '{"name":"ocr","version":"1.0.0","platform":"mac-'$(uname -m)'"}' > ocr-package/manifest.json
+          cd ocr-package
+          zip -r ../ocr-module-v1.0.0-mac-$(uname -m).zip .
+
+      - name: Upload OCR Mac artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-mac-build
+          path: python-service/ocr-module-*.zip
+          retention-days: 30
+
+  # OCR 模块构建 - Windows
+  build-ocr-win:
+    runs-on: windows-latest
+    if: ${{ github.event.inputs.build_ocr == 'true' || startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          # OCR 模块专用依赖
+          pip install fastapi uvicorn python-multipart
+          pip install paddlepaddle paddleocr Pillow
+
+      - name: Build OCR module
+        run: |
+          cd python-service
+          pyinstaller ocr-module.spec --noconfirm
+
+      - name: Package OCR module
+        shell: bash
+        run: |
+          cd python-service
+          mkdir -p ocr-package
+          cp -r dist/ocr-module/* ocr-package/
+          # 创建 manifest
+          echo '{"name":"ocr","version":"1.0.0","platform":"win-x64"}' > ocr-package/manifest.json
+          cd ocr-package
+          7z a -tzip ../ocr-module-v1.0.0-win-x64.zip .
+
+      - name: Upload OCR Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-win-build
+          path: python-service/ocr-module-*.zip
+          retention-days: 30
+
   release:
     needs: [build-mac, build-win]
     runs-on: ubuntu-latest
@@ -107,6 +200,20 @@ jobs:
         with:
           name: win-build
           path: artifacts/win
+
+      - name: Download OCR Mac artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ocr-mac-build
+          path: artifacts/ocr-mac
+        continue-on-error: true
+
+      - name: Download OCR Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ocr-win-build
+          path: artifacts/ocr-win
+        continue-on-error: true
 
       - name: Get version from tag
         id: get_version
@@ -127,9 +234,19 @@ jobs:
             |------|------|
             | macOS (Apple Silicon) | 下方 `.dmg` 文件 |
             | Windows | 下方 `.exe` 文件 |
+
+            ## 可选模块
+
+            | 模块 | 说明 | 下载 |
+            |------|------|------|
+            | OCR 文字识别 | 基于 PaddleOCR 的图片文字识别 | `ocr-module-*.zip` |
+
+            > OCR 模块为可选功能，可在应用设置中按需下载安装。
           files: |
             artifacts/mac/*.dmg
             artifacts/win/*.exe
+            artifacts/ocr-mac/*.zip
+            artifacts/ocr-win/*.zip
           draft: false
           prerelease: false
         env:

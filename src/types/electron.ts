@@ -537,6 +537,65 @@ export interface ElectronAPI {
     key: string,
     value: Record<string, unknown>
   ) => Promise<PostmanSetting>;
+
+  // 模块管理
+  moduleGetAvailable: () => Promise<
+    Array<{
+      id: string;
+      name: string;
+      description: string;
+      icon: string;
+      size: number;
+      capabilities: string[];
+      latestVersion: string;
+      downloadUrl: string;
+    }>
+  >;
+  moduleGetStatus: (moduleId: string) => Promise<{
+    id: string;
+    installed: boolean;
+    version?: string;
+    size?: number;
+    downloadProgress?: number;
+    status: "not_installed" | "downloading" | "installing" | "installed" | "error";
+    error?: string;
+  }>;
+  moduleGetAllStatus: () => Promise<
+    Record<
+      string,
+      {
+        id: string;
+        installed: boolean;
+        version?: string;
+        size?: number;
+        status: "not_installed" | "downloading" | "installing" | "installed" | "error";
+        error?: string;
+      }
+    >
+  >;
+  moduleInstall: (moduleId: string) => Promise<{ success: boolean; error?: string }>;
+  moduleUninstall: (moduleId: string) => Promise<{ success: boolean; error?: string }>;
+  moduleCancelDownload: (moduleId: string) => Promise<boolean>;
+
+  // OCR 模块管理
+  moduleStartOcr: () => Promise<{ success: boolean; port?: number; error?: string }>;
+  moduleStopOcr: () => Promise<void>;
+  moduleOcrStatus: () => Promise<{
+    installed: boolean;
+    running: boolean;
+    port: number | null;
+    version?: string;
+  }>;
+
+  // 模块下载进度监听
+  onModuleDownloadProgress: (
+    callback: (progress: {
+      moduleId: string;
+      downloaded: number;
+      total: number;
+      percent: number;
+    }) => void
+  ) => () => void;
 }
 
 // Swagger 解析结果类型

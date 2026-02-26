@@ -180,3 +180,56 @@ export const DEFAULT_PYTHON_SERVICE_CONFIG: PythonServiceConfig = {
   autoRestart: true,
   maxRestarts: 3,
 };
+
+// ============ 模块管理类型 ============
+
+// 模块状态
+export type ModuleStatusType =
+  | "not_installed" // 未安装
+  | "downloading" // 下载中
+  | "installing" // 安装中
+  | "installed" // 已安装
+  | "error"; // 错误
+
+// 模块清单
+export interface ModuleManifest {
+  name: string;
+  version: string;
+  platform: string;
+  size: number;
+  sha256: string;
+  downloadUrl: string;
+  capabilities: string[];
+  minAppVersion?: string;
+}
+
+// 模块状态
+export interface ModuleStatus {
+  id: string;
+  installed: boolean;
+  version?: string;
+  size?: number;
+  downloadProgress?: number;
+  status: ModuleStatusType;
+  error?: string;
+}
+
+// 模块信息
+export interface ModuleInfo {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  size: number;
+  capabilities: string[];
+  latestVersion: string;
+  downloadUrl: string;
+}
+
+// 下载进度
+export interface DownloadProgress {
+  moduleId: string;
+  downloaded: number;
+  total: number;
+  percent: number;
+}

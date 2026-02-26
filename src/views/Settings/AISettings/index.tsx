@@ -56,6 +56,20 @@ const AISettings: React.FC = () => {
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
 
+  // 模块管理状态
+  const [ocrModuleStatus, setOcrModuleStatus] = useState<{
+    installed: boolean;
+    running: boolean;
+    port: number | null;
+    version?: string;
+  } | null>(null);
+  const [ocrDownloading, setOcrDownloading] = useState(false);
+  const [ocrDownloadProgress, setOcrDownloadProgress] = useState<{
+    downloaded: number;
+    total: number;
+    percent: number;
+  } | null>(null);
+
   // 初始化
   useEffect(() => {
     const init = async () => {
@@ -69,6 +83,7 @@ const AISettings: React.FC = () => {
           loadServiceInfo(),
           loadModelConfigs(),
           loadSkills(),
+          loadOcrModuleStatus(),
         ]);
       } else {
         // 开发环境：检测 Python 环境
@@ -78,6 +93,7 @@ const AISettings: React.FC = () => {
           loadServiceInfo(),
           loadModelConfigs(),
           loadSkills(),
+          loadOcrModuleStatus(),
         ]);
       }
     };
@@ -85,7 +101,22 @@ const AISettings: React.FC = () => {
 
     // 定时刷新服务状态
     const interval = setInterval(loadServiceInfo, 5000);
-    return () => clearInterval(interval);
+    
+    // 监听模块下载进度
+    const unsubscribe = window.electronAPI.onModuleDownloadProgress((progress) => {
+      if (progress.moduleId === "ocr") {
+        setOcrDownloadProgress({
+          downloaded: progress.downloaded,
+          total: progress.total,
+          percent: progress.percent,
+        });
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -158,6 +189,81 @@ const AISettings: React.FC = () => {
       console.error("加载技能列表失败:", error);
     } finally {
       setSkillsLoading(false);
+    }
+  };
+
+  // 加载 OCR 模块状态
+  const loadOcrModuleStatus = async () => {
+    try {
+      const status = await window.electronAPI.moduleOcrStatus();
+      setOcrModuleStatus(status);
+    } catch (error) {
+      console.error("获取 OCR 模块状态失败:", error);
+    }
+  };
+
+  // 安装 OCR 模块
+  const handleInstallOcrModule = async () => {
+    setOcrDownloading(true);
+    setOcrDownloadProgress(null);
+    try {
+      const result = await window.electronAPI.moduleInstall("ocr");
+      if (result.success) {
+        message.success("OCR 模块安装成功");
+        await loadOcrModuleStatus();
+      } else {
+        message.error(`安装失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("安装 OCR 模块失败:", error);
+      message.error("安装 OCR 模块失败");
+    } finally {
+      setOcrDownloading(false);
+      setOcrDownloadProgress(null);
+    }
+  };
+
+  // 卸载 OCR 模块
+  const handleUninstallOcrModule = async () => {
+    try {
+      const result = await window.electronAPI.moduleUninstall("ocr");
+      if (result.success) {
+        message.success("OCR 模块已卸载");
+        await loadOcrModuleStatus();
+      } else {
+        message.error(`卸载失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("卸载 OCR 模块失败:", error);
+      message.error("卸载 OCR 模块失败");
+    }
+  };
+
+  // 启动 OCR 模块
+  const handleStartOcrModule = async () => {
+    try {
+      const result = await window.electronAPI.moduleStartOcr();
+      if (result.success) {
+        message.success(`OCR 模块已启动，端口: ${result.port}`);
+        await loadOcrModuleStatus();
+      } else {
+        message.error(`启动失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("启动 OCR 模块失败:", error);
+      message.error("启动 OCR 模块失败");
+    }
+  };
+
+  // 停止 OCR 模块
+  const handleStopOcrModule = async () => {
+    try {
+      await window.electronAPI.moduleStopOcr();
+      message.success("OCR 模块已停止");
+      await loadOcrModuleStatus();
+    } catch (error) {
+      console.error("停止 OCR 模块失败:", error);
+      message.error("停止 OCR 模块失败");
     }
   };
 
@@ -738,6 +844,134 @@ const AISettings: React.FC = () => {
     </div>
   );
 
+  // 渲染模块管理区域
+  const renderModulesSection = () => (
+    <div>
+      <div className="flex items-center gap-2 mb-6">
+        <span className="material-symbols-outlined text-primary">
+          puzzle
+        </span>
+        <h2 className="text-xl font-bold text-text-primary">可选模块</h2>
+      </div>
+
+      {/* OCR 模块卡片 */}
+      <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-purple-500">
+                text_fields
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-text-primary">OCR 文字识别</h3>
+              <p className="text-xs text-text-tertiary">
+                基于 PaddleOCR 的图片文字识别，支持中英文
+              </p>
+            </div>
+          </div>
+          {ocrModuleStatus?.installed && (
+            <span className="px-2 py-1 rounded text-xs font-medium bg-success/10 text-success">
+              已安装 {ocrModuleStatus.version ? `v${ocrModuleStatus.version}` : ""}
+            </span>
+          )}
+        </div>
+
+        {/* 未安装状态 */}
+        {!ocrModuleStatus?.installed && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
+              <span className="text-sm text-text-secondary">模块大小</span>
+              <span className="text-sm font-medium text-text-primary">约 150MB</span>
+            </div>
+
+            {ocrDownloading && ocrDownloadProgress && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">下载中...</span>
+                  <span className="text-text-primary">{ocrDownloadProgress.percent}%</span>
+                </div>
+                <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${ocrDownloadProgress.percent}%` }}
+                  />
+                </div>
+                <p className="text-xs text-text-tertiary text-right">
+                  {(ocrDownloadProgress.downloaded / 1024 / 1024).toFixed(1)}MB / {(ocrDownloadProgress.total / 1024 / 1024).toFixed(1)}MB
+                </p>
+              </div>
+            )}
+
+            <button
+              className="w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              onClick={handleInstallOcrModule}
+              disabled={ocrDownloading}
+            >
+              {ocrDownloading ? (
+                <>
+                  <Spin size="small" />
+                  下载安装中...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-base">download</span>
+                  下载并安装
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* 已安装状态 */}
+        {ocrModuleStatus?.installed && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
+              <span className="text-sm text-text-secondary">运行状态</span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    ocrModuleStatus.running ? "bg-success" : "bg-text-tertiary"
+                  }`}
+                />
+                <span className="text-sm font-medium text-text-primary">
+                  {ocrModuleStatus.running ? `运行中 (端口: ${ocrModuleStatus.port})` : "已停止"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {ocrModuleStatus.running ? (
+                <button
+                  className="flex-1 py-3 bg-error hover:bg-error/80 text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
+                  onClick={handleStopOcrModule}
+                >
+                  <span className="material-symbols-outlined text-base">stop</span>
+                  停止服务
+                </button>
+              ) : (
+                <button
+                  className="flex-1 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
+                  onClick={handleStartOcrModule}
+                >
+                  <span className="material-symbols-outlined text-base">play_arrow</span>
+                  启动服务
+                </button>
+              )}
+              <button
+                className="py-3 px-4 bg-bg-tertiary hover:bg-bg-hover text-text-primary rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
+                onClick={handleUninstallOcrModule}
+              >
+                <span className="material-symbols-outlined text-base">delete</span>
+                卸载
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-bg-primary">
       {/* 顶部导航栏 */}
@@ -764,6 +998,8 @@ const AISettings: React.FC = () => {
           <section>{renderModelConfigSection()}</section>
           {/* 技能管理 */}
           <section>{renderSkillsSection()}</section>
+          {/* 可选模块 */}
+          <section>{renderModulesSection()}</section>
           {/* Python 环境 & 服务 */}
           <section>
             <div className="flex items-center gap-2 mb-6">

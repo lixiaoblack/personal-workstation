@@ -78,10 +78,14 @@ export const defineMonacoDarkTheme = (monaco: typeof Monaco) => {
       "scrollbarSlider.hoverBackground": "#47556980",
       "scrollbarSlider.activeBackground": "#475569a0",
       // JSON 特定颜色
-      "editorBracketHighlight.foreground1": darkColors.bracketPairColorization[0],
-      "editorBracketHighlight.foreground2": darkColors.bracketPairColorization[1],
-      "editorBracketHighlight.foreground3": darkColors.bracketPairColorization[2],
-      "editorBracketHighlight.foreground4": darkColors.bracketPairColorization[3],
+      "editorBracketHighlight.foreground1":
+        darkColors.bracketPairColorization[0],
+      "editorBracketHighlight.foreground2":
+        darkColors.bracketPairColorization[1],
+      "editorBracketHighlight.foreground3":
+        darkColors.bracketPairColorization[2],
+      "editorBracketHighlight.foreground4":
+        darkColors.bracketPairColorization[3],
     },
   });
 };
@@ -130,10 +134,14 @@ export const defineMonacoLightTheme = (monaco: typeof Monaco) => {
       "scrollbarSlider.hoverBackground": "#9ca3af80",
       "scrollbarSlider.activeBackground": "#9ca3afa0",
       // JSON 特定颜色
-      "editorBracketHighlight.foreground1": lightColors.bracketPairColorization[0],
-      "editorBracketHighlight.foreground2": lightColors.bracketPairColorization[1],
-      "editorBracketHighlight.foreground3": lightColors.bracketPairColorization[2],
-      "editorBracketHighlight.foreground4": lightColors.bracketPairColorization[3],
+      "editorBracketHighlight.foreground1":
+        lightColors.bracketPairColorization[0],
+      "editorBracketHighlight.foreground2":
+        lightColors.bracketPairColorization[1],
+      "editorBracketHighlight.foreground3":
+        lightColors.bracketPairColorization[2],
+      "editorBracketHighlight.foreground4":
+        lightColors.bracketPairColorization[3],
     },
   });
 };

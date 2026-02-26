@@ -19,6 +19,7 @@ import {
   type RequestHeader,
   type ResponseData,
   type AuthConfig,
+  type SwaggerRequestInfo,
 } from "../../config";
 import { useTheme } from "@/contexts";
 import {
@@ -737,6 +738,373 @@ const PostmanWorkspace: React.FC<Props> = ({
     </div>
   );
 
+  // 将 Swagger 类型转换为 TypeScript 类型
+  const swaggerTypeToTypeScript = useCallback(
+    (
+      schema: Record<string, unknown>,
+      components?: Record<string, unknown>,
+      definitions?: Record<string, unknown>,
+      indent = 1
+    ): string => {
+      const indentStr = "  ".repeat(indent);
+
+      // 处理 $ref 引用
+      if (schema.$ref) {
+        const ref = schema.$ref as string;
+        const refName = ref.split("/").pop();
+        return refName || "unknown";
+      }
+
+      const type = schema.type as string;
+
+      switch (type) {
+        case "string":
+          if (schema.enum && Array.isArray(schema.enum)) {
+            return schema.enum.map((v) => `"${v}"`).join(" | ");
+          }
+          if (schema.format === "date" || schema.format === "date-time") {
+            return "string /* Date */";
+          }
+          return "string";
+
+        case "number":
+        case "integer":
+          return "number";
+
+        case "boolean":
+          return "boolean";
+
+        case "array": {
+          const items = schema.items as Record<string, unknown> | undefined;
+          if (items) {
+            const itemType = swaggerTypeToTypeScript(
+              items,
+              components,
+              definitions,
+              indent
+            );
+            return `${itemType}[]`;
+          }
+          return "unknown[]";
+        }
+
+        case "object": {
+          const properties = schema.properties as
+            | Record<string, Record<string, unknown>>
+            | undefined;
+          const required = (schema.required as string[]) || [];
+
+          if (!properties) {
+            if (schema.additionalProperties) {
+              const additionalProps = schema.additionalProperties as Record<
+                string,
+                unknown
+              >;
+              const valueType = swaggerTypeToTypeScript(
+                additionalProps,
+                components,
+                definitions,
+                indent
+              );
+              return `Record<string, ${valueType}>`;
+            }
+            return "Record<string, unknown>";
+          }
+
+          const lines: string[] = ["{"];
+          for (const [propName, propSchema] of Object.entries(properties)) {
+            const isRequired = required.includes(propName);
+            const propType = swaggerTypeToTypeScript(
+              propSchema,
+              components,
+              definitions,
+              indent + 1
+            );
+            const optional = isRequired ? "" : "?";
+            const description =
+              propSchema.description && typeof propSchema.description === "string"
+                ? ` /** ${propSchema.description} */\n${indentStr}  `
+                : "";
+            lines.push(
+              `${description}${propName}${optional}: ${propType};`
+            );
+          }
+          lines.push(`${indentStr}}`);
+          return lines.join(`\n${indentStr}`);
+        }
+
+        default:
+          if (schema.properties) {
+            return swaggerTypeToTypeScript(
+              { ...schema, type: "object" },
+              components,
+              definitions,
+              indent
+            );
+          }
+          return "unknown";
+      }
+    },
+    []
+  );
+
+  // 从 $ref 获取类型名称
+  const getRefTypeName = (ref: string): string => {
+    return ref.split("/").pop() || "unknown";
+  };
+
+  // 生成类型定义
+  const generateTypeDefinitions = useCallback((): string => {
+    const swaggerInfo = request.swaggerInfo as SwaggerRequestInfo | undefined;
+    if (!swaggerInfo) {
+      return "// 此接口没有 Swagger 类型信息\n// 请从 Swagger 文档导入接口以获取类型定义";
+    }
+
+    const lines: string[] = [];
+    const components = swaggerInfo.components?.schemas as
+      | Record<string, Record<string, unknown>>
+      | undefined;
+    const definitions = swaggerInfo.definitions as
+      | Record<string, Record<string, unknown>>
+      | undefined;
+
+    // 生成请求参数类型
+    if (swaggerInfo.parameters && swaggerInfo.parameters.length > 0) {
+      lines.push("/** 请求参数 */");
+      lines.push("interface RequestParams {");
+
+      // 按 in 分组
+      const queryParams = swaggerInfo.parameters.filter((p) => p.in === "query");
+      const pathParams = swaggerInfo.parameters.filter((p) => p.in === "path");
+      const headerParams = swaggerInfo.parameters.filter(
+        (p) => p.in === "header"
+      );
+
+      if (queryParams.length > 0) {
+        lines.push("  /** Query 参数 */");
+        queryParams.forEach((p) => {
+          const optional = p.required ? "" : "?";
+          const type = p.type || "unknown";
+          const desc = p.description ? ` /** ${p.description} */\n  ` : "";
+          lines.push(`${desc}${p.name}${optional}: ${type};`);
+        });
+      }
+
+      if (pathParams.length > 0) {
+        lines.push("  /** Path 参数 */");
+        pathParams.forEach((p) => {
+          const optional = p.required ? "" : "?";
+          const type = p.type || "unknown";
+          const desc = p.description ? ` /** ${p.description} */\n  ` : "";
+          lines.push(`${desc}${p.name}${optional}: ${type};`);
+        });
+      }
+
+      if (headerParams.length > 0) {
+        lines.push("  /** Header 参数 */");
+        headerParams.forEach((p) => {
+          const optional = p.required ? "" : "?";
+          const type = p.type || "unknown";
+          const desc = p.description ? ` /** ${p.description} */\n  ` : "";
+          lines.push(`${desc}${p.name}${optional}: ${type};`);
+        });
+      }
+
+      lines.push("}");
+      lines.push("");
+    }
+
+    // 生成请求体类型
+    if (swaggerInfo.requestBody?.content?.length) {
+      const firstContent = swaggerInfo.requestBody.content[0];
+      if (firstContent?.schema) {
+        const schema = firstContent.schema as Record<string, unknown>;
+        lines.push("/** 请求体 */");
+
+        if (schema.$ref) {
+          const typeName = getRefTypeName(schema.$ref as string);
+          lines.push(`type RequestBody = ${typeName};`);
+        } else {
+          const typeStr = swaggerTypeToTypeScript(
+            schema,
+            components,
+            definitions
+          );
+          lines.push(`type RequestBody = ${typeStr};`);
+        }
+        lines.push("");
+      }
+    }
+
+    // 生成响应体类型
+    if (swaggerInfo.responses?.length) {
+      const successResponse = swaggerInfo.responses.find(
+        (r) => r.statusCode === "200" || r.statusCode === "201"
+      );
+
+      if (successResponse?.content?.length) {
+        const firstContent = successResponse.content[0];
+        if (firstContent?.schema) {
+          const schema = firstContent.schema as Record<string, unknown>;
+          lines.push("/** 响应体 */");
+
+          if (schema.$ref) {
+            const typeName = getRefTypeName(schema.$ref as string);
+            lines.push(`type ResponseBody = ${typeName};`);
+          } else {
+            const typeStr = swaggerTypeToTypeScript(
+              schema,
+              components,
+              definitions
+            );
+            lines.push(`type ResponseBody = ${typeStr};`);
+          }
+          lines.push("");
+        }
+      }
+    }
+
+    // 生成引用的类型定义
+    const usedRefs = new Set<string>();
+    const collectRefs = (schema: Record<string, unknown>) => {
+      if (schema.$ref) {
+        usedRefs.add(schema.$ref as string);
+      }
+      if (schema.properties) {
+        Object.values(schema.properties as Record<string, Record<string, unknown>>).forEach(
+          collectRefs
+        );
+      }
+      if (schema.items) {
+        collectRefs(schema.items as Record<string, unknown>);
+      }
+    };
+
+    // 收集所有使用的 ref
+    swaggerInfo.parameters?.forEach((p) => {
+      if (p.schema) collectRefs(p.schema as Record<string, unknown>);
+    });
+    swaggerInfo.requestBody?.content?.forEach((c) => {
+      if (c.schema) collectRefs(c.schema as Record<string, unknown>);
+    });
+    swaggerInfo.responses?.forEach((r) => {
+      r.content?.forEach((c) => {
+        if (c.schema) collectRefs(c.schema as Record<string, unknown>);
+      });
+    });
+
+    // 生成引用的类型定义
+    if (usedRefs.size > 0) {
+      lines.push("/** 相关类型定义 */");
+
+      usedRefs.forEach((ref) => {
+        const typeName = getRefTypeName(ref);
+        let schemaDef: Record<string, unknown> | undefined;
+
+        // 从 components 或 definitions 中查找
+        if (components && components[typeName]) {
+          schemaDef = components[typeName];
+        } else if (definitions && definitions[typeName]) {
+          schemaDef = definitions[typeName];
+        }
+
+        if (schemaDef) {
+          const typeStr = swaggerTypeToTypeScript(
+            schemaDef,
+            components,
+            definitions
+          );
+          lines.push(`interface ${typeName} ${typeStr}`);
+          lines.push("");
+        }
+      });
+    }
+
+    return lines.length > 0
+      ? lines.join("\n")
+      : "// 没有可用的类型定义";
+  }, [request.swaggerInfo, swaggerTypeToTypeScript]);
+
+  // 类型定义编辑器挂载处理
+  const typesEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(
+    null
+  );
+
+  const handleTypesEditorMount: OnMount = (editor, monaco) => {
+    typesEditorRef.current = editor;
+    if (!monacoRef.current) {
+      monacoRef.current = monaco;
+    }
+
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
+    }
+  };
+
+  // 复制类型定义
+  const handleCopyTypes = useCallback(() => {
+    const types = generateTypeDefinitions();
+    navigator.clipboard.writeText(types);
+    message.success("已复制类型定义到剪贴板");
+  }, [generateTypeDefinitions, message]);
+
+  // 渲染类型定义标签页
+  const renderTypesTab = () => {
+    const typeDefinitions = generateTypeDefinitions();
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* 头部操作栏 */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-tertiary/30">
+          <span className="text-sm text-text-secondary">
+            TypeScript 类型定义
+          </span>
+          <Tooltip title="复制类型定义">
+            <Button
+              type="text"
+              size="small"
+              icon={
+                <span className="material-symbols-outlined text-sm">
+                  content_copy
+                </span>
+              }
+              onClick={handleCopyTypes}
+            />
+          </Tooltip>
+        </div>
+        {/* 类型定义编辑器 */}
+        <div className="flex-1">
+          <Editor
+            height="100%"
+            language="typescript"
+            value={typeDefinitions}
+            onMount={handleTypesEditorMount}
+            theme={monacoTheme}
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize: 13,
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              lineNumbers: "on",
+              wordWrap: "on",
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+              folding: true,
+              foldingStrategy: "indentation",
+              bracketPairColorization: { enabled: true },
+              renderValidationDecorations: "on",
+              scrollbar: {
+                vertical: "auto",
+                horizontal: "auto",
+              },
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   // 渲染标签页内容
   const renderTabContent = () => {
     switch (activeTab) {
@@ -748,6 +1116,8 @@ const PostmanWorkspace: React.FC<Props> = ({
         return renderHeadersTab();
       case "auth":
         return renderAuthTab();
+      case "types":
+        return renderTypesTab();
       case "settings":
         return renderSettingsTab();
       default:

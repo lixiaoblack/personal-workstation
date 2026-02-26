@@ -19,6 +19,7 @@ export const REQUEST_TABS = [
   { key: "params", label: "参数 (Params)" },
   { key: "headers", label: "请求头 (Headers)" },
   { key: "auth", label: "授权 (Auth)" },
+  { key: "types", label: "类型定义 (Types)" },
   { key: "settings", label: "设置" },
 ] as const;
 
@@ -131,6 +132,29 @@ export interface RequestConfig {
   // 是否覆盖文件夹/全局配置
   overrideFolderAuth?: boolean;
   overrideFolderBaseUrl?: boolean;
+  // Swagger 相关信息（用于生成类型定义）
+  swaggerInfo?: SwaggerRequestInfo;
+}
+
+// Swagger 请求信息（用于类型定义生成）
+export interface SwaggerRequestInfo {
+  tags?: string[];
+  parameters?: SwaggerParameter[];
+  requestBody?: SwaggerRequestBody;
+  responses?: SwaggerResponse[];
+  components?: {
+    schemas?: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
+    responses?: Record<string, unknown>;
+  };
+  definitions?: Record<string, unknown>; // Swagger 2.0
+}
+
+// TypeScript 类型定义
+export interface TypeDefinition {
+  name: string;
+  definition: string;
+  description?: string;
 }
 
 // 响应接口
@@ -179,7 +203,7 @@ export interface SwaggerEndpoint {
   tags?: string[];
   parameters?: SwaggerParameter[];
   requestBody?: SwaggerRequestBody;
-  responses?: Record<string, SwaggerResponse>;
+  responses?: SwaggerResponse[];
 }
 
 export interface SwaggerParameter {
@@ -187,18 +211,30 @@ export interface SwaggerParameter {
   in: "query" | "header" | "path" | "cookie";
   description?: string;
   required?: boolean;
+  type?: string;
+  format?: string;
   schema?: Record<string, unknown>;
 }
 
 export interface SwaggerRequestBody {
   description?: string;
   required?: boolean;
-  content?: Record<string, { schema?: Record<string, unknown> }>;
+  content?: Array<{
+    contentType: string;
+    schema?: Record<string, unknown>;
+    example?: unknown;
+    generatedExample?: Record<string, unknown>;
+  }>;
 }
 
 export interface SwaggerResponse {
-  description: string;
-  content?: Record<string, { schema?: Record<string, unknown> }>;
+  statusCode: string;
+  description?: string;
+  content?: Array<{
+    contentType: string;
+    schema?: Record<string, unknown>;
+    example?: unknown;
+  }>;
 }
 
 // 默认请求配置

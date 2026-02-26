@@ -27,7 +27,182 @@ import {
   type GlobalConfig,
   type EnvironmentConfig,
   type AuthConfig,
+  type SwaggerRequestInfo,
 } from "./config";
+
+// Swagger 解析结果类型（来自后端）
+interface SwaggerEndpointFromBackend {
+  path: string;
+  method: string;
+  summary?: string;
+  description?: string;
+  tags?: string[];
+  parameters?: Array<{
+    name: string;
+    in: "query" | "header" | "path" | "cookie";
+    description?: string;
+    required?: boolean;
+    type?: string;
+    format?: string;
+    schema?: Record<string, unknown>;
+  }>;
+  requestBody?: {
+    description?: string;
+    required?: boolean;
+    content?: Array<{
+      contentType: string;
+      schema?: Record<string, unknown>;
+      example?: unknown;
+      generatedExample?: Record<string, unknown>;
+    }>;
+  };
+  responses?: Array<{
+    statusCode: string;
+    description?: string;
+    content?: Array<{
+      contentType: string;
+      schema?: Record<string, unknown>;
+      example?: unknown;
+    }>;
+  }>;
+}
+
+interface SwaggerParseResultFromBackend {
+  success: boolean;
+  error?: string;
+  info?: {
+    title: string;
+    version: string;
+    description?: string;
+  };
+  endpoints?: SwaggerEndpointFromBackend[];
+  tags?: Array<{ name: string; description?: string }>;
+  components?: {
+    schemas?: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
+    responses?: Record<string, unknown>;
+  };
+  definitions?: Record<string, unknown>;
+}
+
+/**
+ * 处理 Swagger 解析结果，按 tags 分组创建文件夹和请求
+ */
+function processSwaggerResult(
+  parseResult: SwaggerParseResultFromBackend
+): { newFolders: ApiFolder[]; newRequests: RequestConfig[] } {
+  if (!parseResult.success || !parseResult.endpoints) {
+    return { newFolders: [], newRequests: [] };
+  }
+
+  const apiTitle = parseResult.info?.title || "导入的 API";
+  const apiDescription = parseResult.info?.description;
+  const timestamp = Date.now();
+
+  // 收集所有 tags
+  const tagSet = new Set<string>();
+  parseResult.endpoints.forEach((endpoint) => {
+    if (endpoint.tags && endpoint.tags.length > 0) {
+      endpoint.tags.forEach((tag) => tagSet.add(tag));
+    } else {
+      tagSet.add("默认分组");
+    }
+  });
+
+  // 创建 tag 到文件夹的映射
+  const tagToFolderMap = new Map<string, ApiFolder>();
+  const newFolders: ApiFolder[] = [];
+
+  // 创建主文件夹
+  const mainFolder: ApiFolder = {
+    id: `folder-${timestamp}`,
+    name: apiTitle,
+    description: apiDescription,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  newFolders.push(mainFolder);
+
+  // 为每个 tag 创建子文件夹
+  Array.from(tagSet).forEach((tag, index) => {
+    const tagFolder: ApiFolder = {
+      id: `folder-${timestamp}-tag-${index}`,
+      name: tag,
+      description: parseResult.tags?.find((t) => t.name === tag)?.description,
+      parentId: mainFolder.id,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    tagToFolderMap.set(tag, tagFolder);
+    newFolders.push(tagFolder);
+  });
+
+  // 创建请求
+  const newRequests: RequestConfig[] = parseResult.endpoints.map(
+    (endpoint, index) => {
+      let bodyContent = "";
+      if (endpoint.requestBody?.content?.length) {
+        const firstContent = endpoint.requestBody.content[0];
+        if (firstContent.generatedExample) {
+          bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+        } else if (firstContent.example) {
+          bodyContent = JSON.stringify(firstContent.example, null, 2);
+        }
+      }
+
+      // 确定文件夹 ID
+      const tagName =
+        endpoint.tags && endpoint.tags.length > 0
+          ? endpoint.tags[0]
+          : "默认分组";
+      const targetFolder = tagToFolderMap.get(tagName);
+
+      // 构建 swaggerInfo
+      const swaggerInfo: SwaggerRequestInfo = {
+        tags: endpoint.tags,
+        parameters: endpoint.parameters?.map((p) => ({
+          name: p.name,
+          in: p.in,
+          description: p.description,
+          required: p.required,
+          type: p.type,
+          format: p.format,
+          schema: p.schema,
+        })),
+        requestBody: endpoint.requestBody,
+        responses: endpoint.responses,
+        components: parseResult.components,
+        definitions: parseResult.definitions,
+      };
+
+      return {
+        id: `req-${timestamp}-${index}`,
+        name: endpoint.summary || endpoint.path,
+        method: endpoint.method.toUpperCase() as HttpMethod,
+        url: endpoint.path,
+        params:
+          endpoint.parameters?.map((p) => ({
+            id: `param-${timestamp}-${Math.random()}`,
+            key: p.name,
+            value: "",
+            description: p.description,
+            enabled: p.required ?? false,
+          })) || [],
+        headers: [...DEFAULT_HEADERS],
+        bodyType: "json" as const,
+        body: bodyContent,
+        authType: "none" as const,
+        authConfig: {},
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        folderId: targetFolder?.id || mainFolder.id,
+        swaggerInfo,
+      };
+    }
+  );
+
+  return { newFolders, newRequests };
+}
 
 const SimplePostman: React.FC = () => {
   const { message: antdMessage } = App.useApp();
@@ -167,56 +342,14 @@ const SimplePostman: React.FC = () => {
       const parseResult = await window.electronAPI.swaggerParseUrl(swaggerUrl);
 
       if (parseResult.success && parseResult.endpoints) {
-        const newFolder: ApiFolder = {
-          id: `folder-${Date.now()}`,
-          name: parseResult.info?.title || "导入的 API",
-          description: parseResult.info?.description,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setFolders((prev) => [...prev, newFolder]);
-
-        const newRequests = parseResult.endpoints.map((endpoint, index) => {
-          let bodyContent = "";
-          if (endpoint.requestBody?.content?.length) {
-            const firstContent = endpoint.requestBody.content[0];
-            if (firstContent.generatedExample) {
-              bodyContent = JSON.stringify(
-                firstContent.generatedExample,
-                null,
-                2
-              );
-            } else if (firstContent.example) {
-              bodyContent = JSON.stringify(firstContent.example, null, 2);
-            }
-          }
-
-          return {
-            id: `req-${Date.now()}-${index}`,
-            name: endpoint.summary || endpoint.path,
-            method: endpoint.method.toUpperCase() as HttpMethod,
-            url: endpoint.path,
-            params:
-              endpoint.parameters?.map((p) => ({
-                id: `param-${Date.now()}-${Math.random()}`,
-                key: p.name,
-                value: "",
-                description: p.description,
-                enabled: p.required ?? false,
-              })) || [],
-            headers: [...DEFAULT_HEADERS],
-            bodyType: "json" as const,
-            body: bodyContent,
-            authType: "none" as const,
-            authConfig: {},
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            folderId: newFolder.id,
-          };
-        });
+        const { newFolders, newRequests } = processSwaggerResult(
+          parseResult as SwaggerParseResultFromBackend
+        );
+        setFolders((prev) => [...prev, ...newFolders]);
         setRequests((prev) => [...prev, ...newRequests]);
-
-        antdMessage.success(`成功导入 ${parseResult.endpoints.length} 个接口`);
+        antdMessage.success(
+          `成功导入 ${newRequests.length} 个接口，共 ${newFolders.length - 1} 个分组`
+        );
       } else {
         antdMessage.error(parseResult.error || "解析失败");
       }
@@ -243,57 +376,13 @@ const SimplePostman: React.FC = () => {
         const parseResult = await window.electronAPI.swaggerParseFile(filePath);
 
         if (parseResult.success && parseResult.endpoints) {
-          const newFolder: ApiFolder = {
-            id: `folder-${Date.now()}`,
-            name: parseResult.info?.title || "导入的 API",
-            description: parseResult.info?.description,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          };
-          setFolders((prev) => [...prev, newFolder]);
-
-          const newRequests = parseResult.endpoints.map((endpoint, index) => {
-            let bodyContent = "";
-            if (endpoint.requestBody?.content?.length) {
-              const firstContent = endpoint.requestBody.content[0];
-              if (firstContent.generatedExample) {
-                bodyContent = JSON.stringify(
-                  firstContent.generatedExample,
-                  null,
-                  2
-                );
-              } else if (firstContent.example) {
-                bodyContent = JSON.stringify(firstContent.example, null, 2);
-              }
-            }
-
-            return {
-              id: `req-${Date.now()}-${index}`,
-              name: endpoint.summary || endpoint.path,
-              method: endpoint.method.toUpperCase() as HttpMethod,
-              url: endpoint.path,
-              params:
-                endpoint.parameters?.map((p) => ({
-                  id: `param-${Date.now()}-${Math.random()}`,
-                  key: p.name,
-                  value: "",
-                  description: p.description,
-                  enabled: p.required ?? false,
-                })) || [],
-              headers: [...DEFAULT_HEADERS],
-              bodyType: "json" as const,
-              body: bodyContent,
-              authType: "none" as const,
-              authConfig: {},
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-              folderId: newFolder.id,
-            };
-          });
+          const { newFolders, newRequests } = processSwaggerResult(
+            parseResult as SwaggerParseResultFromBackend
+          );
+          setFolders((prev) => [...prev, ...newFolders]);
           setRequests((prev) => [...prev, ...newRequests]);
-
           antdMessage.success(
-            `成功导入 ${parseResult.endpoints.length} 个接口`
+            `成功导入 ${newRequests.length} 个接口，共 ${newFolders.length - 1} 个分组`
           );
         } else {
           antdMessage.error(parseResult.error || "解析失败");
@@ -332,63 +421,13 @@ const SimplePostman: React.FC = () => {
             );
 
             if (parseResult.success && parseResult.endpoints) {
-              const newFolder: ApiFolder = {
-                id: `folder-${Date.now()}`,
-                name: parseResult.info?.title || "导入的 API",
-                description: parseResult.info?.description,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              };
-              setFolders((prev) => [...prev, newFolder]);
-
-              const newRequests = parseResult.endpoints.map(
-                (endpoint, index) => {
-                  let bodyContent = "";
-                  if (endpoint.requestBody?.content?.length) {
-                    const firstContent = endpoint.requestBody.content[0];
-                    if (firstContent.generatedExample) {
-                      bodyContent = JSON.stringify(
-                        firstContent.generatedExample,
-                        null,
-                        2
-                      );
-                    } else if (firstContent.example) {
-                      bodyContent = JSON.stringify(
-                        firstContent.example,
-                        null,
-                        2
-                      );
-                    }
-                  }
-
-                  return {
-                    id: `req-${Date.now()}-${index}`,
-                    name: endpoint.summary || endpoint.path,
-                    method: endpoint.method.toUpperCase() as HttpMethod,
-                    url: endpoint.path,
-                    params:
-                      endpoint.parameters?.map((p) => ({
-                        id: `param-${Date.now()}-${Math.random()}`,
-                        key: p.name,
-                        value: "",
-                        description: p.description,
-                        enabled: p.required ?? false,
-                      })) || [],
-                    headers: [...DEFAULT_HEADERS],
-                    bodyType: "json" as const,
-                    body: bodyContent,
-                    authType: "none" as const,
-                    authConfig: {},
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
-                    folderId: newFolder.id,
-                  };
-                }
+              const { newFolders, newRequests } = processSwaggerResult(
+                parseResult as SwaggerParseResultFromBackend
               );
+              setFolders((prev) => [...prev, ...newFolders]);
               setRequests((prev) => [...prev, ...newRequests]);
-
               antdMessage.success(
-                `成功导入 ${parseResult.endpoints.length} 个接口`
+                `成功导入 ${newRequests.length} 个接口，共 ${newFolders.length - 1} 个分组`
               );
               setUploadModalVisible(false);
               setFileList([]);

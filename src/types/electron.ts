@@ -172,6 +172,9 @@ export interface WsServerInfo {
 
 // Electron API 接口
 export interface ElectronAPI {
+  // 应用环境信息
+  isPackaged: () => Promise<boolean>;
+
   // 用户认证
   login: (credentials: LoginCredentials) => Promise<LoginResult>;
   register: (data: RegisterData) => Promise<LoginResult>;

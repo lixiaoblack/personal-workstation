@@ -4,7 +4,7 @@
  * 处理 Python 环境检测、服务管理、Ollama 连接、Skills 技能等
  */
 
-import { ipcMain } from "electron";
+import { ipcMain, app } from "electron";
 import * as websocketService from "../services/websocketService";
 import * as pythonEnvService from "../services/pythonEnvService";
 import * as pythonProcessService from "../services/pythonProcessService";
@@ -14,6 +14,12 @@ import type { PythonDetectOptions, PythonServiceConfig } from "../types";
  * 注册 Python 服务和 Ollama 相关 IPC 处理器
  */
 export function registerPythonIpc(): void {
+  // ========== 应用环境信息 ==========
+
+  ipcMain.handle("app:isPackaged", async () => {
+    return app.isPackaged;
+  });
+
   // ========== WebSocket 服务管理 ==========
 
   ipcMain.handle("ws:getInfo", async () => {

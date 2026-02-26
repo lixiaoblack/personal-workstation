@@ -25,6 +25,9 @@ const AISettings: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
 
+  // 应用环境状态
+  const [isPackaged, setIsPackaged] = useState(false);
+
   // Python 环境状态
   const [pythonEnv, setPythonEnv] = useState<PythonEnvironment | null>(null);
   const [pythonLoading, setPythonLoading] = useState(false);
@@ -56,13 +59,27 @@ const AISettings: React.FC = () => {
   // 初始化
   useEffect(() => {
     const init = async () => {
-      await Promise.all([
-        handleDetectPython(),
-        loadInstallGuide(),
-        loadServiceInfo(),
-        loadModelConfigs(),
-        loadSkills(),
-      ]);
+      // 检查是否是打包环境
+      const packaged = await window.electronAPI.isPackaged();
+      setIsPackaged(packaged);
+
+      if (packaged) {
+        // 打包环境：不检测 Python，直接加载其他数据
+        await Promise.all([
+          loadServiceInfo(),
+          loadModelConfigs(),
+          loadSkills(),
+        ]);
+      } else {
+        // 开发环境：检测 Python 环境
+        await Promise.all([
+          handleDetectPython(),
+          loadInstallGuide(),
+          loadServiceInfo(),
+          loadModelConfigs(),
+          loadSkills(),
+        ]);
+      }
     };
     init();
 
@@ -337,101 +354,122 @@ const AISettings: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        {/* Python 环境卡片 */}
-        <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-500">
-                  terminal
-                </span>
-              </div>
-              <div>
-                <h3 className="font-bold text-text-primary">Python 环境</h3>
-                <p className="text-xs text-text-tertiary">
-                  AI 智能体运行所需环境
-                </p>
-              </div>
-            </div>
-            <button
-              className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-              onClick={handleDetectPython}
-              disabled={pythonLoading}
-            >
-              <span
-                className={`material-symbols-outlined text-sm ${
-                  pythonLoading ? "animate-spin" : ""
-                }`}
-              >
-                {pythonLoading ? "progress_activity" : "refresh"}
-              </span>
-              重新检测
-            </button>
-          </div>
-
-          {pythonLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Spin />
-              <span className="ml-3 text-text-tertiary">
-                正在检测 Python 环境...
-              </span>
-            </div>
-          ) : pythonEnv ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-                <span className="material-symbols-outlined text-text-tertiary">
-                  computer
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-text-primary">
-                    {getOSDisplayName(pythonEnv.os)}{" "}
-                    {pythonEnv.osVersion.split(" ")[1]}
-                  </p>
-                  <p className="text-xs text-text-tertiary">操作系统</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
-                <span className="material-symbols-outlined text-text-tertiary">
-                  code
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-text-primary">
-                    {pythonEnv.pythonInstalled
-                      ? `Python ${pythonEnv.pythonVersion?.raw}`
-                      : "未安装"}
-                  </p>
-                  <p className="text-xs text-text-tertiary">
-                    {pythonEnv.pythonPath || "未检测到"}
-                  </p>
-                </div>
-                {pythonEnv.pythonInstalled && (
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      pythonEnv.meetsRequirements
-                        ? "bg-success/10 text-success"
-                        : "bg-warning/10 text-warning"
-                    }`}
-                  >
-                    {pythonEnv.meetsRequirements ? "满足要求" : "版本过低"}
+        {/* Python 环境卡片 - 仅开发环境显示 */}
+        {!isPackaged && (
+          <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-blue-500">
+                    terminal
                   </span>
-                )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-text-primary">Python 环境</h3>
+                  <p className="text-xs text-text-tertiary">
+                    AI 智能体运行所需环境
+                  </p>
+                </div>
               </div>
-              {pythonEnv.virtualEnv.active && (
-                <div className="flex items-center gap-4 p-3 bg-success/5 border border-success/20 rounded-lg">
-                  <span className="material-symbols-outlined text-success">
-                    check_circle
+              <button
+                className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+                onClick={handleDetectPython}
+                disabled={pythonLoading}
+              >
+                <span
+                  className={`material-symbols-outlined text-sm ${
+                    pythonLoading ? "animate-spin" : ""
+                  }`}
+                >
+                  {pythonLoading ? "progress_activity" : "refresh"}
+                </span>
+                重新检测
+              </button>
+            </div>
+
+            {pythonLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Spin />
+                <span className="ml-3 text-text-tertiary">
+                  正在检测 Python 环境...
+                </span>
+              </div>
+            ) : pythonEnv ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
+                  <span className="material-symbols-outlined text-text-tertiary">
+                    computer
                   </span>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-text-primary">
-                      {pythonEnv.virtualEnv.name}
+                      {getOSDisplayName(pythonEnv.os)}{" "}
+                      {pythonEnv.osVersion.split(" ")[1]}
                     </p>
-                    <p className="text-xs text-text-tertiary">活跃的虚拟环境</p>
+                    <p className="text-xs text-text-tertiary">操作系统</p>
                   </div>
                 </div>
-              )}
+                <div className="flex items-center gap-4 p-3 bg-bg-tertiary rounded-lg">
+                  <span className="material-symbols-outlined text-text-tertiary">
+                    code
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-text-primary">
+                      {pythonEnv.pythonInstalled
+                        ? `Python ${pythonEnv.pythonVersion?.raw}`
+                        : "未安装"}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {pythonEnv.pythonPath || "未检测到"}
+                    </p>
+                  </div>
+                  {pythonEnv.pythonInstalled && (
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        pythonEnv.meetsRequirements
+                          ? "bg-success/10 text-success"
+                          : "bg-warning/10 text-warning"
+                      }`}
+                    >
+                      {pythonEnv.meetsRequirements ? "满足要求" : "版本过低"}
+                    </span>
+                  )}
+                </div>
+                {pythonEnv.virtualEnv.active && (
+                  <div className="flex items-center gap-4 p-3 bg-success/5 border border-success/20 rounded-lg">
+                    <span className="material-symbols-outlined text-success">
+                      check_circle
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text-primary">
+                        {pythonEnv.virtualEnv.name}
+                      </p>
+                      <p className="text-xs text-text-tertiary">活跃的虚拟环境</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* 打包环境提示 */}
+        {isPackaged && (
+          <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-success">
+                  check_circle
+                </span>
+              </div>
+              <div>
+                <h3 className="font-bold text-text-primary">Python 服务已内置</h3>
+                <p className="text-xs text-text-tertiary">
+                  无需安装 Python，AI 智能体服务已打包在应用中
+                </p>
+              </div>
             </div>
-          ) : null}
-        </div>
+          </div>
+        )}
 
         {/* Python 服务卡片 */}
         <div className="p-6 bg-bg-secondary border border-border rounded-xl shadow-sm">
@@ -514,7 +552,7 @@ const AISettings: React.FC = () => {
               <button
                 className="flex-1 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 onClick={handleStartService}
-                disabled={serviceLoading || !pythonEnv?.meetsRequirements}
+                disabled={serviceLoading || (!isPackaged && !pythonEnv?.meetsRequirements)}
               >
                 {serviceLoading ? (
                   <Spin size="small" />

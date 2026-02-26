@@ -409,6 +409,9 @@ export interface SwaggerParseResult {
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld("electronAPI", {
+  // 应用环境信息
+  isPackaged: (): Promise<boolean> => ipcRenderer.invoke("app:isPackaged"),
+
   // 用户认证
   login: (credentials: LoginCredentials): Promise<LoginResult> =>
     ipcRenderer.invoke("user:login", credentials),
@@ -807,6 +810,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 // 类型声明
 export interface ElectronAPI {
+  // 应用环境信息
+  isPackaged: () => Promise<boolean>;
+
   // 用户认证
   login: (credentials: LoginCredentials) => Promise<LoginResult>;
   register: (data: RegisterData) => Promise<LoginResult>;

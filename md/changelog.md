@@ -4,6 +4,28 @@
 
 ---
 
+## [0.5.39] - 2026-02-26
+
+### 新增 (Added)
+
+- 添加 `isPackaged` API
+  - 前端可检测当前是否为打包环境
+  - 用于区分开发环境和生产环境的 UI 展示
+
+### 修改 (Changed)
+
+- AI 设置页面优化打包环境体验
+  - 打包环境下隐藏 Python 环境检测卡片
+  - 显示"Python 服务已内置"提示
+  - 启动服务按钮不再依赖 Python 环境检测
+
+- 字体本地化，支持离线使用
+  - 使用 `@fontsource/material-symbols-outlined` 替代 Google Fonts CDN
+  - 使用 `@fontsource/inter` 替代 Google Fonts CDN
+  - 无需联网即可正常显示 Material Symbols 图标和 Inter 字体
+
+---
+
 ## [0.5.38] - 2026-02-26
 
 ### 新增 (Added)

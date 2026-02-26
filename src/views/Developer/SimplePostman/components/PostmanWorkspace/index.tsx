@@ -302,6 +302,7 @@ const PostmanWorkspace: React.FC<Props> = ({
             </div>
           ) : (
             <Editor
+              key={`body-${request.id || "unknown"}`}
               height="100%"
               language={getBodyLanguage()}
               value={request.body || ""}

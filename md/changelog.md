@@ -8,6 +8,36 @@
 
 ### 新增 (Added)
 
+- LLM 生成 TypeScript 类型定义功能
+  - 响应区域添加"生成类型"按钮，当响应是 JSON 对象时显示
+  - 使用 AI 配置中的模型生成 TypeScript 类型/接口定义
+  - 支持保存类型定义到数据库
+  - 类型定义 Tab 展示 LLM 生成的类型（带"LLM 生成"标签）
+
+- LLM 服务模块 (`services/llmService.ts`)
+  - 封装 LLM API 调用逻辑，支持多种模型提供商
+  - 支持 Python HTTP API、Ollama、OpenAI 兼容 API
+  - `extractTypeScriptFromMarkdown` 函数处理 Markdown 格式，提取纯 TypeScript 代码
+
+- LlmTypesModal 弹窗组件
+  - 独立的类型定义展示和编辑组件
+  - 支持模型选择、格式化、复制、保存功能
+
+### 修改 (Changed)
+
+- 重构 PostmanWorkspace 组件
+  - 移除内联的 LLM 调用逻辑（约 230 行代码）
+  - 使用独立的 LlmTypesModal 组件
+  - 代码更简洁、职责更清晰
+
+- 数据库迁移：postman_requests 表添加 llm_types 列
+
+### 修复 (Fixed)
+
+- 修复 LLM 返回 Markdown 格式问题
+  - 自动提取 ```typescript 或 ```ts 代码块
+  - 支持纯代码格式识别
+
 - Swagger/OpenAPI 文档解析功能
   - 支持 Swagger 2.0 和 OpenAPI 3.0/3.1 格式
   - 支持从 URL 解析 Swagger 文档

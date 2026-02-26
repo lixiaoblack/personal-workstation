@@ -46,6 +46,7 @@ export interface PostmanRequest {
   authType: string;
   authConfig?: Record<string, unknown>;
   swaggerInfo?: Record<string, unknown>;
+  llmTypes?: string; // LLM 生成的 TypeScript 类型定义
   isFavorite: boolean;
   sortOrder: number;
   createdAt: number;
@@ -437,7 +438,7 @@ export function getRequestsByProjectId(projectId: number): PostmanRequest[] {
   const db = getDatabase();
   const rows = db
     .prepare(
-      `SELECT id, group_id, project_id, name, method, url, params, headers, body_type, body, auth_type, auth_config, swagger_info, is_favorite, sort_order, created_at, updated_at
+      `SELECT id, group_id, project_id, name, method, url, params, headers, body_type, body, auth_type, auth_config, swagger_info, llm_types, is_favorite, sort_order, created_at, updated_at
        FROM postman_requests
        WHERE project_id = ?
        ORDER BY sort_order, created_at`
@@ -456,6 +457,7 @@ export function getRequestsByProjectId(projectId: number): PostmanRequest[] {
     auth_type: string;
     auth_config: string | null;
     swagger_info: string | null;
+    llm_types: string | null;
     is_favorite: number;
     sort_order: number;
     created_at: number;
@@ -472,7 +474,7 @@ export function getRequestsByGroupId(groupId: number): PostmanRequest[] {
   const db = getDatabase();
   const rows = db
     .prepare(
-      `SELECT id, group_id, project_id, name, method, url, params, headers, body_type, body, auth_type, auth_config, swagger_info, is_favorite, sort_order, created_at, updated_at
+      `SELECT id, group_id, project_id, name, method, url, params, headers, body_type, body, auth_type, auth_config, swagger_info, llm_types, is_favorite, sort_order, created_at, updated_at
        FROM postman_requests
        WHERE group_id = ?
        ORDER BY sort_order, created_at`
@@ -491,6 +493,7 @@ export function getRequestsByGroupId(groupId: number): PostmanRequest[] {
     auth_type: string;
     auth_config: string | null;
     swagger_info: string | null;
+    llm_types: string | null;
     is_favorite: number;
     sort_order: number;
     created_at: number;
@@ -507,7 +510,7 @@ export function getRequestById(id: number): PostmanRequest | null {
   const db = getDatabase();
   const row = db
     .prepare(
-      `SELECT id, group_id, project_id, name, method, url, params, headers, body_type, body, auth_type, auth_config, swagger_info, is_favorite, sort_order, created_at, updated_at
+      `SELECT id, group_id, project_id, name, method, url, params, headers, body_type, body, auth_type, auth_config, swagger_info, llm_types, is_favorite, sort_order, created_at, updated_at
        FROM postman_requests
        WHERE id = ?`
     )
@@ -526,6 +529,7 @@ export function getRequestById(id: number): PostmanRequest | null {
         auth_type: string;
         auth_config: string | null;
         swagger_info: string | null;
+        llm_types: string | null;
         is_favorite: number;
         sort_order: number;
         created_at: number;
@@ -686,6 +690,23 @@ export function deleteRequest(id: number): boolean {
     .prepare("DELETE FROM postman_requests WHERE id = ?")
     .run(id);
   return result.changes > 0;
+}
+
+/**
+ * 更新请求的 LLM 生成的类型定义
+ */
+export function updateRequestLlmTypes(
+  id: number,
+  llmTypes: string
+): PostmanRequest | null {
+  const db = getDatabase();
+  const now = Date.now();
+
+  db.prepare(
+    `UPDATE postman_requests SET llm_types = ?, updated_at = ? WHERE id = ?`
+  ).run(llmTypes, now, id);
+
+  return getRequestById(id);
 }
 
 /**
@@ -964,6 +985,7 @@ function transformRequestRow(row: {
   auth_type: string;
   auth_config: string | null;
   swagger_info: string | null;
+  llm_types: string | null;
   is_favorite: number;
   sort_order: number;
   created_at: number;
@@ -983,6 +1005,7 @@ function transformRequestRow(row: {
     authType: row.auth_type,
     authConfig: row.auth_config ? JSON.parse(row.auth_config) : undefined,
     swaggerInfo: row.swagger_info ? JSON.parse(row.swagger_info) : undefined,
+    llmTypes: row.llm_types || undefined,
     isFavorite: row.is_favorite === 1,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
@@ -1008,6 +1031,7 @@ export default {
   getRequestById,
   createRequest,
   updateRequest,
+  updateRequestLlmTypes,
   deleteRequest,
   batchCreateRequests,
   // 历史

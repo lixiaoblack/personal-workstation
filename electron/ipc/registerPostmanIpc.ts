@@ -125,6 +125,14 @@ export function registerPostmanIpc(): void {
     return postmanService.deleteRequest(id);
   });
 
+  // 更新请求的 LLM 类型定义
+  ipcMain.handle(
+    "postman:updateRequestLlmTypes",
+    (_event, id: number, llmTypes: string) => {
+      return postmanService.updateRequestLlmTypes(id, llmTypes);
+    }
+  );
+
   // 批量创建请求
   ipcMain.handle(
     "postman:batchCreateRequests",

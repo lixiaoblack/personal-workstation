@@ -499,7 +499,7 @@ const PostmanSidebar: React.FC<Props> = ({
               sync
             </span>
           </h2>
-          <div className="space-y-1 h-[calc(100vh-530px)] overflow-y-auto">
+          <div className="space-y-1 h-[calc(100vh-480px)] overflow-y-auto">
             {projects.length === 0 ? (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -614,14 +614,14 @@ const PostmanSidebar: React.FC<Props> = ({
       </div>
 
       {/* 底部同步按钮 */}
-      <div className="p-4 border-t border-border">
+      {/* <div className="p-4 border-t border-border">
         <Button type="primary" block className="font-bold text-sm">
           <span className="material-symbols-outlined text-sm mr-1">
             sync_alt
           </span>
           接口同步
         </Button>
-      </div>
+      </div> */}
     </aside>
   );
 };

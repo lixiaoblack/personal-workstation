@@ -442,6 +442,20 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_postman_history_created_at ON postman_history(created_at);
     CREATE INDEX IF NOT EXISTS idx_postman_history_request_id ON postman_history(request_id);
   `);
+
+  // 数据迁移：为 postman_requests 表添加 llm_types 列（存储 LLM 生成的类型定义）
+  try {
+    const requestColumns = database
+      .prepare("PRAGMA table_info(postman_requests)")
+      .all() as Array<{ name: string }>;
+    const hasLlmTypes = requestColumns.some((col) => col.name === "llm_types");
+    if (!hasLlmTypes) {
+      database.exec(`ALTER TABLE postman_requests ADD COLUMN llm_types TEXT`);
+      console.log("[Database] 已添加 postman_requests.llm_types 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 llm_types 列失败:", error);
+  }
 }
 
 export default {

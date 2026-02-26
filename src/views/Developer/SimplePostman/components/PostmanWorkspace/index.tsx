@@ -29,6 +29,7 @@ import {
   initMonacoThemes,
   getMonacoThemeName,
 } from "@/styles/themes/monaco-theme";
+import LlmTypesModal from "../LlmTypesModal";
 
 const { TextArea } = Input;
 
@@ -58,6 +59,11 @@ interface Props {
   // 继承的配置
   effectiveBaseUrl?: string;
   effectiveAuth?: AuthConfig;
+
+  // LLM 生成的类型定义
+  llmTypes?: string;
+  // 保存 LLM 类型定义到数据库的回调
+  onSaveLlmTypes?: (types: string) => Promise<void>;
 }
 
 const PostmanWorkspace: React.FC<Props> = ({
@@ -68,6 +74,8 @@ const PostmanWorkspace: React.FC<Props> = ({
   onSend,
   effectiveBaseUrl,
   effectiveAuth,
+  llmTypes,
+  onSaveLlmTypes,
 }) => {
   const { message } = App.useApp();
   const { resolvedTheme } = useTheme();
@@ -83,6 +91,9 @@ const PostmanWorkspace: React.FC<Props> = ({
   const monacoRef = useRef<typeof Monaco | null>(null);
   const themesInitializedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // LLM 类型生成弹窗状态
+  const [llmTypesModalVisible, setLlmTypesModalVisible] = useState(false);
 
   // Monaco 主题名称
   const monacoTheme = getMonacoThemeName(resolvedTheme);
@@ -287,7 +298,29 @@ const PostmanWorkspace: React.FC<Props> = ({
     onRequestChange({ ...request, authConfig });
   };
 
-  // 渲染 Body 标签页
+  // ==================== LLM 类型生成相关 ====================
+
+  // 判断响应是否为 JSON 对象（非数组、非基本类型）
+  const isJsonObjectResponse = useMemo(() => {
+    if (!response?.body) return false;
+    try {
+      const parsed = JSON.parse(response.body);
+      return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
+    } catch {
+      return false;
+    }
+  }, [response?.body]);
+
+  // 打开 LLM 类型生成弹窗
+  const handleOpenLlmTypesModal = useCallback(() => {
+    if (!response?.body || !isJsonObjectResponse) {
+      message.warning("响应不是有效的 JSON 对象");
+      return;
+    }
+    setLlmTypesModalVisible(true);
+  }, [response?.body, isJsonObjectResponse, message]);
+
+  // ==================== 渲染函数 ====================
   const renderBodyTab = () => {
     // 根据Body类型确定语言
     const getBodyLanguage = (): string => {
@@ -1128,15 +1161,24 @@ const PostmanWorkspace: React.FC<Props> = ({
 
   // 渲染类型定义标签页
   const renderTypesTab = () => {
-    const typeDefinitions = generateTypeDefinitions();
+    // 优先使用 LLM 生成的类型定义，否则使用 Swagger 生成的
+    const typeDefinitions = llmTypes || generateTypeDefinitions();
+    const hasLlmTypes = !!llmTypes;
 
     return (
       <div className="flex flex-col h-full">
         {/* 头部操作栏 */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-tertiary/30">
-          <span className="text-sm text-text-secondary">
-            TypeScript 类型定义
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-secondary">
+              TypeScript 类型定义
+            </span>
+            {hasLlmTypes && (
+              <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary">
+                LLM 生成
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <Tooltip title="格式化">
               <Button
@@ -1385,6 +1427,23 @@ const PostmanWorkspace: React.FC<Props> = ({
                       onClick={handleCopyResponse}
                     />
                   </Tooltip>
+                  {/* 生成类型定义按钮：当响应是 JSON 对象时显示 */}
+                  {isJsonObjectResponse && (
+                    <Tooltip title="使用 AI 生成 TypeScript 类型定义">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={
+                          <span className="material-symbols-outlined text-sm">
+                            code_blocks
+                          </span>
+                        }
+                        onClick={handleOpenLlmTypesModal}
+                      >
+                        生成类型
+                      </Button>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             )}
@@ -1436,6 +1495,14 @@ const PostmanWorkspace: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* LLM 类型定义弹窗 */}
+      <LlmTypesModal
+        visible={llmTypesModalVisible}
+        jsonData={beautifiedResponseBody}
+        onClose={() => setLlmTypesModalVisible(false)}
+        onSave={onSaveLlmTypes || (async () => {})}
+      />
     </main>
   );
 };

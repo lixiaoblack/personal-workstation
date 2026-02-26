@@ -7,7 +7,7 @@
  * 3. 多环境配置支持
  * 4. 全局配置和文件夹级别配置
  */
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { App, Modal, Upload, Button, Input, Select, Form } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 
@@ -650,6 +650,37 @@ const SimplePostman: React.FC = () => {
     [requests]
   );
 
+  // 获取当前请求的 LLM 类型定义
+  const currentRequestLlmTypes = useMemo(() => {
+    if (!activeRequestId) return undefined;
+    const request = requests.find((r) => r.id === activeRequestId);
+    return request?.llmTypes;
+  }, [activeRequestId, requests]);
+
+  // 保存 LLM 类型定义到数据库
+  const handleSaveLlmTypes = useCallback(
+    async (types: string) => {
+      if (!activeRequestId) {
+        antdMessage.warning("请先选择一个请求");
+        return;
+      }
+
+      try {
+        await window.electronAPI.postmanUpdateRequestLlmTypes(
+          activeRequestId,
+          types
+        );
+        // 重新加载数据以更新本地状态
+        await loadAllData();
+      } catch (error) {
+        throw new Error(
+          `保存失败: ${error instanceof Error ? error.message : "未知错误"}`
+        );
+      }
+    },
+    [activeRequestId, antdMessage, loadAllData]
+  );
+
   // 发送请求
   const handleSendRequest = useCallback(async () => {
     if (!currentRequest.url) {
@@ -1024,6 +1055,8 @@ const SimplePostman: React.FC = () => {
           onSend={handleSendRequest}
           effectiveBaseUrl={getEffectiveBaseUrl(currentRequest.folderId)}
           effectiveAuth={getEffectiveAuth(currentRequest.folderId)}
+          llmTypes={currentRequestLlmTypes}
+          onSaveLlmTypes={handleSaveLlmTypes}
         />
       </div>
 

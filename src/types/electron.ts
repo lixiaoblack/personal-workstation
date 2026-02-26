@@ -515,6 +515,10 @@ export interface ElectronAPI {
     input: Partial<PostmanRequestInput>
   ) => Promise<PostmanRequest | null>;
   postmanDeleteRequest: (id: number) => Promise<boolean>;
+  postmanUpdateRequestLlmTypes: (
+    id: number,
+    llmTypes: string
+  ) => Promise<PostmanRequest | null>;
   postmanBatchCreateRequests: (
     requests: PostmanRequestInput[]
   ) => Promise<PostmanRequest[]>;
@@ -698,6 +702,7 @@ export interface PostmanRequest {
   authType: string;
   authConfig?: Record<string, unknown>;
   swaggerInfo?: Record<string, unknown>;
+  llmTypes?: string; // LLM 生成的 TypeScript 类型定义
   isFavorite: boolean;
   sortOrder: number;
   createdAt: number;

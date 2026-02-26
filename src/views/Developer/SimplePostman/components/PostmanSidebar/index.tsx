@@ -2,13 +2,15 @@
  * PostmanSidebar 左侧边栏组件
  */
 import React, { useState } from "react";
-import { Input, Button, Collapse, Empty } from "antd";
+import { Input, Button, Collapse, Empty, Select, Dropdown } from "antd";
+import type { MenuProps } from "antd";
 import {
   SIDEBAR_MENU_ITEMS,
   type SidebarMenuKey,
   type ApiFolder,
   type RequestConfig,
   type HttpMethod,
+  type GlobalConfig,
 } from "../../config";
 
 const { Panel } = Collapse;
@@ -43,6 +45,16 @@ interface Props {
   // 同步状态
   syncing?: boolean;
   syncStatus?: string;
+
+  // 文件夹操作
+  onEditFolder: (folder: ApiFolder) => void;
+  onDeleteFolder: (folderId: string) => void;
+
+  // 全局配置和环境
+  globalConfig: GlobalConfig;
+  currentEnvironment: string;
+  onEnvironmentChange: (envKey: string) => void;
+  onOpenGlobalConfig: () => void;
 }
 
 const PostmanSidebar: React.FC<Props> = ({
@@ -59,6 +71,12 @@ const PostmanSidebar: React.FC<Props> = ({
   onRequestSelect,
   syncing,
   syncStatus,
+  onEditFolder,
+  onDeleteFolder,
+  globalConfig,
+  currentEnvironment,
+  onEnvironmentChange,
+  onOpenGlobalConfig,
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
 
@@ -67,8 +85,52 @@ const PostmanSidebar: React.FC<Props> = ({
     return METHOD_COLORS[method] || "text-gray-500";
   };
 
+  // 文件夹操作菜单
+  const getFolderMenuItems = (folder: ApiFolder): MenuProps['items'] => [
+    {
+      key: 'edit',
+      label: '编辑文件夹',
+      icon: <span className="material-symbols-outlined text-sm">edit</span>,
+      onClick: () => onEditFolder(folder),
+    },
+    {
+      key: 'delete',
+      label: '删除文件夹',
+      icon: <span className="material-symbols-outlined text-sm">delete</span>,
+      danger: true,
+      onClick: () => onDeleteFolder(folder.id),
+    },
+  ];
+
   return (
     <aside className="w-64 border-r border-border flex flex-col bg-bg-primary">
+      {/* 环境选择器 */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Select
+            value={currentEnvironment}
+            onChange={onEnvironmentChange}
+            className="flex-1"
+            size="small"
+            options={globalConfig.environments.map(env => ({
+              value: env.key,
+              label: env.name,
+            }))}
+          />
+          <Button
+            size="small"
+            icon={<span className="material-symbols-outlined text-sm">settings</span>}
+            onClick={onOpenGlobalConfig}
+            title="全局配置"
+          />
+        </div>
+        {globalConfig.environments.find(e => e.key === currentEnvironment)?.baseUrl && (
+          <div className="mt-2 text-[10px] text-text-tertiary truncate">
+            Base: {globalConfig.environments.find(e => e.key === currentEnvironment)?.baseUrl}
+          </div>
+        )}
+      </div>
+
       {/* Swagger 解析区域 */}
       <div className="p-4 space-y-4 border-b border-border">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
@@ -179,11 +241,22 @@ const PostmanSidebar: React.FC<Props> = ({
                   return (
                     <Panel
                       header={
-                        <div className="flex items-center gap-2 text-sm font-medium">
+                        <div className="flex items-center gap-2 text-sm font-medium w-full">
                           <span className="material-symbols-outlined text-sm text-yellow-500">
                             folder
                           </span>
-                          <span className="truncate">{folder.name}</span>
+                          <span className="truncate flex-1">{folder.name}</span>
+                          <Dropdown
+                            menu={{ items: getFolderMenuItems(folder) }}
+                            trigger={['click']}
+                          >
+                            <span
+                              className="material-symbols-outlined text-sm text-text-tertiary hover:text-primary cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              more_vert
+                            </span>
+                          </Dropdown>
                         </div>
                       }
                       key={folder.id}

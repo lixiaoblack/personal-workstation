@@ -21,6 +21,18 @@
   - 支持多种数据类型：string、number、boolean、array、object
   - 支持格式化输出：date、email、uri、uuid 等
 
+- SimplePostman 多环境配置功能
+  - 支持多环境配置（开发、测试、预发布、生产）
+  - 全局 BaseUrl 和授权配置
+  - 文件夹级别的 BaseUrl 和授权覆盖
+  - 配置继承机制（全局 → 文件夹 → 请求）
+  - 文件夹编辑功能（名称、描述、Base URL）
+  - 环境快速切换
+
+### 修改 (Changed)
+
+- 移除 AI 模块（PostmanAIPanel），后期将作为可选功能重新添加
+
 ### 修复 (Fixed)
 
 - 修复 swagger-parser ESM 模块兼容性问题

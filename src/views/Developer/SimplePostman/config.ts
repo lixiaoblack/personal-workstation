@@ -46,8 +46,14 @@ export const AUTH_TYPES = [
 // 侧边栏菜单项
 export const SIDEBAR_MENU_ITEMS = [
   { key: "history", icon: "history", label: "历史记录" },
-  { key: "favorites", icon: "star", label: "收藏夹" },
-  { key: "collections", icon: "folder_open", label: "API 集合" },
+] as const;
+
+// 预设环境配置
+export const PRESET_ENVIRONMENTS = [
+  { key: "development", label: "开发环境", color: "#10b981" },
+  { key: "testing", label: "测试环境", color: "#f59e0b" },
+  { key: "staging", label: "预发布环境", color: "#8b5cf6" },
+  { key: "production", label: "生产环境", color: "#ef4444" },
 ] as const;
 
 // 类型定义
@@ -56,6 +62,37 @@ export type RequestTabKey = (typeof REQUEST_TABS)[number]["key"];
 export type BodyType = (typeof BODY_TYPES)[number]["value"];
 export type AuthType = (typeof AUTH_TYPES)[number]["value"];
 export type SidebarMenuKey = (typeof SIDEBAR_MENU_ITEMS)[number]["key"];
+export type EnvironmentKey = (typeof PRESET_ENVIRONMENTS)[number]["key"];
+
+// 授权配置接口
+export interface AuthConfig {
+  type: AuthType;
+  bearerToken?: string;
+  basicUsername?: string;
+  basicPassword?: string;
+  apiKeyName?: string;
+  apiKeyValue?: string;
+  apiKeyAddTo?: "header" | "query";
+}
+
+// 环境配置接口
+export interface EnvironmentConfig {
+  key: string;
+  name: string;
+  baseUrl: string;
+  auth?: AuthConfig;
+  variables?: Record<string, string>;
+  isDefault?: boolean;
+}
+
+// 全局配置接口
+export interface GlobalConfig {
+  currentEnvironment: string;
+  environments: EnvironmentConfig[];
+  globalAuth?: AuthConfig;
+  defaultHeaders?: RequestHeader[];
+  timeout?: number;
+}
 
 // 请求参数接口
 export interface RequestParam {
@@ -91,6 +128,9 @@ export interface RequestConfig {
   updatedAt: number;
   folderId?: string;
   isFavorite?: boolean;
+  // 是否覆盖文件夹/全局配置
+  overrideFolderAuth?: boolean;
+  overrideFolderBaseUrl?: boolean;
 }
 
 // 响应接口
@@ -111,6 +151,12 @@ export interface ApiFolder {
   parentId?: string;
   createdAt: number;
   updatedAt: number;
+  // 文件夹级别的配置
+  baseUrl?: string;
+  auth?: AuthConfig;
+  // 是否覆盖全局配置
+  overrideGlobalAuth?: boolean;
+  overrideGlobalBaseUrl?: boolean;
 }
 
 // Swagger 解析结果接口
@@ -177,3 +223,16 @@ export const DEFAULT_REQUEST_CONFIG: Partial<RequestConfig> = {
 export const DEFAULT_HEADERS: RequestHeader[] = [
   { id: "1", key: "Content-Type", value: "application/json", enabled: true },
 ];
+
+// 默认全局配置
+export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
+  currentEnvironment: "development",
+  environments: [
+    { key: "development", name: "开发环境", baseUrl: "", isDefault: true },
+    { key: "testing", name: "测试环境", baseUrl: "" },
+    { key: "staging", name: "预发布环境", baseUrl: "" },
+    { key: "production", name: "生产环境", baseUrl: "" },
+  ],
+  defaultHeaders: [...DEFAULT_HEADERS],
+  timeout: 30000,
+};

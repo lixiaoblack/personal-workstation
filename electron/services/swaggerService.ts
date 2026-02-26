@@ -456,8 +456,10 @@ function generateExampleFromSchema(
       if (schema.format === "date") return "2024-01-01";
       if (schema.format === "date-time") return "2024-01-01T00:00:00Z";
       if (schema.format === "email") return "user@example.com";
-      if (schema.format === "uri" || schema.format === "url") return "https://example.com";
-      if (schema.format === "uuid") return "00000000-0000-0000-0000-000000000000";
+      if (schema.format === "uri" || schema.format === "url")
+        return "https://example.com";
+      if (schema.format === "uuid")
+        return "00000000-0000-0000-0000-000000000000";
       if (schema.format === "password") return "********";
       return schema.description ? `示例: ${schema.description}` : "string";
 
@@ -487,21 +489,32 @@ function generateExampleFromSchema(
 
     case "object": {
       const result: Record<string, unknown> = {};
-      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
-      
+      const properties = schema.properties as
+        | Record<string, Record<string, unknown>>
+        | undefined;
+
       if (properties) {
         for (const [propName, propSchema] of Object.entries(properties)) {
           // 检查是否是必填字段
-          const required = Array.isArray(schema.required) && schema.required.includes(propName);
+          const required =
+            Array.isArray(schema.required) &&
+            schema.required.includes(propName);
           // 只为必填字段生成示例，可选字段可以留空
           if (required || depth < 2) {
-            result[propName] = generateExampleFromSchema(propSchema, api, depth + 1);
+            result[propName] = generateExampleFromSchema(
+              propSchema,
+              api,
+              depth + 1
+            );
           }
         }
       }
-      
+
       // 处理 additionalProperties
-      if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+      if (
+        schema.additionalProperties &&
+        typeof schema.additionalProperties === "object"
+      ) {
         // 如果对象没有固定属性，添加一个示例属性
         if (Object.keys(result).length === 0) {
           result["additionalProperty"] = generateExampleFromSchema(
@@ -511,7 +524,7 @@ function generateExampleFromSchema(
           );
         }
       }
-      
+
       return result;
     }
 
@@ -543,14 +556,14 @@ function parseRequestBody(
     )) {
       const mt = mediaType as Record<string, unknown>;
       const schema = mt.schema as Record<string, unknown> | undefined;
-      
+
       // 生成示例数据
       let generatedExample: Record<string, unknown> | undefined;
       if (schema) {
         const example = generateExampleFromSchema(schema, api);
         generatedExample = example as Record<string, unknown>;
       }
-      
+
       content.push({
         contentType,
         schema,

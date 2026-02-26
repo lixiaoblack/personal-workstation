@@ -16,6 +16,7 @@ import {
   type RequestParam,
   type RequestHeader,
   type ResponseData,
+  type AuthConfig,
 } from "../../config";
 
 const { TextArea } = Input;
@@ -42,6 +43,10 @@ interface Props {
 
   // 操作
   onSend: () => void;
+
+  // 继承的配置
+  effectiveBaseUrl?: string;
+  effectiveAuth?: AuthConfig;
 }
 
 const PostmanWorkspace: React.FC<Props> = ({
@@ -50,6 +55,8 @@ const PostmanWorkspace: React.FC<Props> = ({
   response,
   responseLoading,
   onSend,
+  effectiveBaseUrl,
+  effectiveAuth,
 }) => {
   const [activeTab, setActiveTab] = useState<RequestTabKey>("body");
 
@@ -569,6 +576,23 @@ const PostmanWorkspace: React.FC<Props> = ({
     <main className="flex-1 flex flex-col overflow-hidden bg-bg-primary">
       {/* 请求栏 */}
       <div className="p-4 border-b border-border space-y-4">
+        {/* 继承配置提示 */}
+        {(effectiveBaseUrl || effectiveAuth) && (
+          <div className="flex items-center gap-4 text-xs text-text-tertiary">
+            {effectiveBaseUrl && (
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">link</span>
+                Base URL: <span className="text-primary">{effectiveBaseUrl}</span>
+              </span>
+            )}
+            {effectiveAuth && effectiveAuth.type !== 'none' && (
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">lock</span>
+                授权: <span className="text-primary">{effectiveAuth.type}</span>
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex gap-3">
           <Select
             value={request.method || "GET"}
@@ -588,10 +612,15 @@ const PostmanWorkspace: React.FC<Props> = ({
               </Select.Option>
             ))}
           </Select>
+          {effectiveBaseUrl && (
+            <div className="flex items-center px-3 h-10 bg-bg-tertiary rounded-lg text-xs text-text-tertiary border border-border">
+              <span className="truncate max-w-[150px]">{effectiveBaseUrl}</span>
+            </div>
+          )}
           <Input
             value={request.url || ""}
             onChange={(e) => handleUrlChange(e.target.value)}
-            placeholder="输入请求 URL..."
+            placeholder={effectiveBaseUrl ? "输入路径..." : "输入请求 URL..."}
             className="flex-1 h-10"
             onPressEnter={onSend}
           />

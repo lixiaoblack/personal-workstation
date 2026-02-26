@@ -5,6 +5,9 @@ import React, { useState, useRef, useCallback, useMemo } from "react";
 import { Select, Input, Button, Table, Tooltip, Spin, App } from "antd";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
+import * as prettier from "prettier/standalone";
+import * as parserEstree from "prettier/plugins/estree";
+import * as parserTypescript from "prettier/plugins/typescript";
 import {
   HTTP_METHODS,
   REQUEST_TABS,
@@ -69,6 +72,8 @@ const PostmanWorkspace: React.FC<Props> = ({
   const { message } = App.useApp();
   const { resolvedTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<RequestTabKey>("body");
+  const [responseHeight, setResponseHeight] = useState(400); // 响应区域默认高度
+  const [isDragging, setIsDragging] = useState(false);
   const responseEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(
     null
   );
@@ -77,9 +82,54 @@ const PostmanWorkspace: React.FC<Props> = ({
   );
   const monacoRef = useRef<typeof Monaco | null>(null);
   const themesInitializedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Monaco 主题名称
   const monacoTheme = getMonacoThemeName(resolvedTheme);
+
+  // 拖拽处理
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newHeight = containerRect.bottom - e.clientY;
+
+      // 限制最小和最大高度
+      const minHeight = 100;
+      const maxHeight = containerRect.height - 200;
+      const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+
+      setResponseHeight(clampedHeight);
+    },
+    [isDragging]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // 添加全局鼠标事件监听
+  React.useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   // 响应编辑器挂载处理
   const handleResponseEditorMount: OnMount = (editor, monaco) => {
@@ -823,12 +873,11 @@ const PostmanWorkspace: React.FC<Props> = ({
             );
             const optional = isRequired ? "" : "?";
             const description =
-              propSchema.description && typeof propSchema.description === "string"
+              propSchema.description &&
+              typeof propSchema.description === "string"
                 ? ` /** ${propSchema.description} */\n${indentStr}  `
                 : "";
-            lines.push(
-              `${description}${propName}${optional}: ${propType};`
-            );
+            lines.push(`${description}${propName}${optional}: ${propType};`);
           }
           lines.push(`${indentStr}}`);
           return lines.join(`\n${indentStr}`);
@@ -874,8 +923,16 @@ const PostmanWorkspace: React.FC<Props> = ({
       lines.push("/** 请求参数 */");
       lines.push("interface RequestParams {");
 
+      // 将 Swagger 类型转换为 TypeScript 类型
+      const convertType = (t: string | undefined): string => {
+        if (t === "integer") return "number";
+        return t || "unknown";
+      };
+
       // 按 in 分组
-      const queryParams = swaggerInfo.parameters.filter((p) => p.in === "query");
+      const queryParams = swaggerInfo.parameters.filter(
+        (p) => p.in === "query"
+      );
       const pathParams = swaggerInfo.parameters.filter((p) => p.in === "path");
       const headerParams = swaggerInfo.parameters.filter(
         (p) => p.in === "header"
@@ -885,7 +942,7 @@ const PostmanWorkspace: React.FC<Props> = ({
         lines.push("  /** Query 参数 */");
         queryParams.forEach((p) => {
           const optional = p.required ? "" : "?";
-          const type = p.type || "unknown";
+          const type = convertType(p.type);
           const desc = p.description ? ` /** ${p.description} */\n  ` : "";
           lines.push(`${desc}${p.name}${optional}: ${type};`);
         });
@@ -895,7 +952,7 @@ const PostmanWorkspace: React.FC<Props> = ({
         lines.push("  /** Path 参数 */");
         pathParams.forEach((p) => {
           const optional = p.required ? "" : "?";
-          const type = p.type || "unknown";
+          const type = convertType(p.type);
           const desc = p.description ? ` /** ${p.description} */\n  ` : "";
           lines.push(`${desc}${p.name}${optional}: ${type};`);
         });
@@ -905,7 +962,7 @@ const PostmanWorkspace: React.FC<Props> = ({
         lines.push("  /** Header 参数 */");
         headerParams.forEach((p) => {
           const optional = p.required ? "" : "?";
-          const type = p.type || "unknown";
+          const type = convertType(p.type);
           const desc = p.description ? ` /** ${p.description} */\n  ` : "";
           lines.push(`${desc}${p.name}${optional}: ${type};`);
         });
@@ -972,9 +1029,9 @@ const PostmanWorkspace: React.FC<Props> = ({
         usedRefs.add(schema.$ref as string);
       }
       if (schema.properties) {
-        Object.values(schema.properties as Record<string, Record<string, unknown>>).forEach(
-          collectRefs
-        );
+        Object.values(
+          schema.properties as Record<string, Record<string, unknown>>
+        ).forEach(collectRefs);
       }
       if (schema.items) {
         collectRefs(schema.items as Record<string, unknown>);
@@ -1021,9 +1078,7 @@ const PostmanWorkspace: React.FC<Props> = ({
       });
     }
 
-    return lines.length > 0
-      ? lines.join("\n")
-      : "// 没有可用的类型定义";
+    return lines.length > 0 ? lines.join("\n") : "// 没有可用的类型定义";
   }, [request.swaggerInfo, swaggerTypeToTypeScript]);
 
   // 类型定义编辑器挂载处理
@@ -1051,9 +1106,25 @@ const PostmanWorkspace: React.FC<Props> = ({
   }, [generateTypeDefinitions, message]);
 
   // 格式化类型定义
-  const handleFormatTypes = useCallback(() => {
+  const handleFormatTypes = useCallback(async () => {
     if (typesEditorRef.current) {
-      typesEditorRef.current.getAction("editor.action.formatDocument")?.run();
+      try {
+        const currentValue = typesEditorRef.current.getValue();
+        const formatted = await prettier.format(currentValue, {
+          parser: "typescript",
+          plugins: [parserTypescript, parserEstree],
+          semi: true,
+          singleQuote: false,
+          tabWidth: 2,
+          printWidth: 80,
+        });
+        typesEditorRef.current.setValue(formatted);
+      } catch {
+        // 如果格式化失败，尝试使用编辑器内置格式化
+        typesEditorRef.current
+          .getAction("editor.action.formatDocument")
+          ?.run();
+      }
     }
   }, []);
 
@@ -1237,14 +1308,28 @@ const PostmanWorkspace: React.FC<Props> = ({
       </div>
 
       {/* 编辑器内容 */}
-      <div className="flex-1  flex flex-col">
+      <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
         {/* 请求编辑区 */}
-        <div className="h-[calc(100%-420px)] overflow-y-auto border-b border-border">
+        <div
+          className="flex-1 overflow-y-auto border-b border-border"
+          style={{ minHeight: 100 }}
+        >
           {renderTabContent()}
         </div>
 
+        {/* 可拖拽分隔条 */}
+        <div
+          className={`h-1 bg-border hover:bg-primary cursor-row-resize transition-colors flex-shrink-0 ${
+            isDragging ? "bg-primary" : ""
+          }`}
+          onMouseDown={handleMouseDown}
+        />
+
         {/* 响应区域 */}
-        <div className="border-t border-border h-[400px] pt-4 flex flex-col">
+        <div
+          className="border-t border-border pt-4 flex flex-col flex-shrink-0"
+          style={{ height: responseHeight }}
+        >
           <div className="flex items-center justify-between mb-4 px-4">
             <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider">
               响应内容

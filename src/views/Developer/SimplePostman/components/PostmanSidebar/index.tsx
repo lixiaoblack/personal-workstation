@@ -1,7 +1,7 @@
 /**
  * PostmanSidebar 左侧边栏组件
  */
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Input, Button, Collapse, Empty, Select, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -55,6 +55,10 @@ interface Props {
   currentEnvironment: string;
   onEnvironmentChange: (envKey: string) => void;
   onOpenGlobalConfig: () => void;
+
+  // 项目选择
+  activeProjectId?: string;
+  onProjectChange: (projectId: string) => void;
 }
 
 const PostmanSidebar: React.FC<Props> = ({
@@ -77,8 +81,24 @@ const PostmanSidebar: React.FC<Props> = ({
   currentEnvironment,
   onEnvironmentChange,
   onOpenGlobalConfig,
+  activeProjectId,
+  onProjectChange,
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
+
+  // 获取项目列表（顶层文件夹，没有 parentId 的）
+  const projects = useMemo(() => {
+    return folders.filter((f) => !f.parentId);
+  }, [folders]);
+
+  // 获取当前项目的分组列表
+  const currentProjectGroups = useMemo(() => {
+    if (!activeProjectId && projects.length > 0) {
+      // 如果没有选中项目，默认选中第一个
+      return folders.filter((f) => f.parentId === projects[0].id);
+    }
+    return folders.filter((f) => f.parentId === activeProjectId);
+  }, [folders, activeProjectId, projects]);
 
   // 获取方法颜色
   const getMethodColor = (method: HttpMethod) => {
@@ -215,19 +235,64 @@ const PostmanSidebar: React.FC<Props> = ({
 
         {/* 接口文件夹 */}
         <div>
+          {/* 项目选择器 */}
+          {projects.length > 0 && (
+            <div className="mb-3 px-2">
+              <Select
+                value={activeProjectId || projects[0]?.id}
+                onChange={onProjectChange}
+                className="w-full"
+                size="small"
+                placeholder="选择项目"
+                options={projects.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                }))}
+              />
+            </div>
+          )}
+
           <h2 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3 px-2 flex items-center justify-between">
-            <span>接口文件夹</span>
+            <span>接口分组</span>
             <span className="material-symbols-outlined text-xs cursor-pointer hover:text-primary">
               sync
             </span>
           </h2>
           <div className="space-y-1">
-            {folders.length === 0 && requests.length === 0 ? (
+            {projects.length === 0 ? (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description="暂无接口"
                 className="py-4"
               />
+            ) : currentProjectGroups.length === 0 ? (
+              // 如果没有分组，直接显示项目下的接口
+              <div className="ml-2 space-y-1">
+                {requests
+                  .filter((r) => r.folderId === (activeProjectId || projects[0]?.id))
+                  .map((request) => (
+                    <button
+                      key={request.id}
+                      onClick={() => onRequestSelect(request.id)}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                        activeRequestId === request.id
+                          ? "bg-primary/10 text-primary"
+                          : "text-text-tertiary hover:bg-bg-tertiary"
+                      }`}
+                    >
+                      <span
+                        className={`font-bold w-10 text-left ${getMethodColor(
+                          request.method
+                        )}`}
+                      >
+                        {request.method}
+                      </span>
+                      <span className="truncate flex-1 text-left">
+                        {request.name || request.url}
+                      </span>
+                    </button>
+                  ))}
+              </div>
             ) : (
               <Collapse
                 ghost
@@ -244,9 +309,9 @@ const PostmanSidebar: React.FC<Props> = ({
                 activeKey={expandedFolders}
                 onChange={(keys) => setExpandedFolders(keys as string[])}
               >
-                {folders.map((folder) => {
-                  const folderRequests = requests.filter(
-                    (r) => r.folderId === folder.id
+                {currentProjectGroups.map((group) => {
+                  const groupRequests = requests.filter(
+                    (r) => r.folderId === group.id
                   );
                   return (
                     <Panel
@@ -255,9 +320,9 @@ const PostmanSidebar: React.FC<Props> = ({
                           <span className="material-symbols-outlined text-sm text-yellow-500">
                             folder
                           </span>
-                          <span className="truncate flex-1">{folder.name}</span>
+                          <span className="truncate flex-1">{group.name}</span>
                           <Dropdown
-                            menu={{ items: getFolderMenuItems(folder) }}
+                            menu={{ items: getFolderMenuItems(group) }}
                             trigger={["click"]}
                           >
                             <span
@@ -269,11 +334,11 @@ const PostmanSidebar: React.FC<Props> = ({
                           </Dropdown>
                         </div>
                       }
-                      key={folder.id}
+                      key={group.id}
                       className="!border-none !bg-transparent"
                     >
                       <div className="ml-6 space-y-1">
-                        {folderRequests.map((request) => (
+                        {groupRequests.map((request) => (
                           <button
                             key={request.id}
                             onClick={() => onRequestSelect(request.id)}

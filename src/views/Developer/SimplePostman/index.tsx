@@ -88,9 +88,10 @@ interface SwaggerParseResultFromBackend {
 /**
  * 处理 Swagger 解析结果，按 tags 分组创建文件夹和请求
  */
-function processSwaggerResult(
-  parseResult: SwaggerParseResultFromBackend
-): { newFolders: ApiFolder[]; newRequests: RequestConfig[] } {
+function processSwaggerResult(parseResult: SwaggerParseResultFromBackend): {
+  newFolders: ApiFolder[];
+  newRequests: RequestConfig[];
+} {
   if (!parseResult.success || !parseResult.endpoints) {
     return { newFolders: [], newRequests: [] };
   }
@@ -236,6 +237,7 @@ const SimplePostman: React.FC = () => {
   // 侧边栏状态
   const [activeMenu, setActiveMenu] = useState<SidebarMenuKey>("history");
   const [activeRequestId, setActiveRequestId] = useState<string | undefined>();
+  const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
 
   // 文件夹和请求列表（模拟数据，后续接入数据库）
   const [folders, setFolders] = useState<ApiFolder[]>([]);
@@ -362,8 +364,14 @@ const SimplePostman: React.FC = () => {
         );
         setFolders((prev) => [...prev, ...newFolders]);
         setRequests((prev) => [...prev, ...newRequests]);
+        // 设置新导入的项目为当前项目
+        if (newFolders.length > 0) {
+          setActiveProjectId(newFolders[0].id);
+        }
         antdMessage.success(
-          `成功导入 ${newRequests.length} 个接口，共 ${newFolders.length - 1} 个分组`
+          `成功导入 ${newRequests.length} 个接口，共 ${
+            newFolders.length - 1
+          } 个分组`
         );
       } else {
         antdMessage.error(parseResult.error || "解析失败");
@@ -396,8 +404,14 @@ const SimplePostman: React.FC = () => {
           );
           setFolders((prev) => [...prev, ...newFolders]);
           setRequests((prev) => [...prev, ...newRequests]);
+          // 设置新导入的项目为当前项目
+          if (newFolders.length > 0) {
+            setActiveProjectId(newFolders[0].id);
+          }
           antdMessage.success(
-            `成功导入 ${newRequests.length} 个接口，共 ${newFolders.length - 1} 个分组`
+            `成功导入 ${newRequests.length} 个接口，共 ${
+              newFolders.length - 1
+            } 个分组`
           );
         } else {
           antdMessage.error(parseResult.error || "解析失败");
@@ -442,7 +456,9 @@ const SimplePostman: React.FC = () => {
               setFolders((prev) => [...prev, ...newFolders]);
               setRequests((prev) => [...prev, ...newRequests]);
               antdMessage.success(
-                `成功导入 ${newRequests.length} 个接口，共 ${newFolders.length - 1} 个分组`
+                `成功导入 ${newRequests.length} 个接口，共 ${
+                  newFolders.length - 1
+                } 个分组`
               );
               setUploadModalVisible(false);
               setFileList([]);
@@ -728,6 +744,8 @@ const SimplePostman: React.FC = () => {
           currentEnvironment={globalConfig.currentEnvironment}
           onEnvironmentChange={handleEnvironmentChange}
           onOpenGlobalConfig={handleOpenGlobalConfig}
+          activeProjectId={activeProjectId}
+          onProjectChange={setActiveProjectId}
         />
 
         {/* 主工作区 */}

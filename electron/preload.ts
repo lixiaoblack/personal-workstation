@@ -1210,6 +1210,8 @@ export interface ElectronAPI {
     running: boolean;
     port: number | null;
     version?: string;
+    ocrAvailable?: boolean;
+    error?: string;
   }>;
 
   // 模块下载进度监听

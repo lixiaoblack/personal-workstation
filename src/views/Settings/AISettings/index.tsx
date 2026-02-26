@@ -62,6 +62,8 @@ const AISettings: React.FC = () => {
     running: boolean;
     port: number | null;
     version?: string;
+    ocrAvailable?: boolean;
+    error?: string;
   } | null>(null);
   const [ocrDownloading, setOcrDownloading] = useState(false);
   const [ocrDownloadProgress, setOcrDownloadProgress] = useState<{
@@ -939,16 +941,35 @@ const AISettings: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    ocrModuleStatus.running ? "bg-success" : "bg-text-tertiary"
+                    ocrModuleStatus.running && ocrModuleStatus.ocrAvailable
+                      ? "bg-success"
+                      : ocrModuleStatus.running
+                        ? "bg-warning"
+                        : "bg-text-tertiary"
                   }`}
                 />
                 <span className="text-sm font-medium text-text-primary">
-                  {ocrModuleStatus.running
+                  {ocrModuleStatus.running && ocrModuleStatus.ocrAvailable
                     ? `运行中 (端口: ${ocrModuleStatus.port})`
-                    : "已停止"}
+                    : ocrModuleStatus.running
+                      ? "服务运行中，OCR 不可用"
+                      : "已停止"}
                 </span>
               </div>
             </div>
+
+            {/* 显示错误信息 */}
+            {ocrModuleStatus.running && !ocrModuleStatus.ocrAvailable && ocrModuleStatus.error && (
+              <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-warning text-base">warning</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-warning font-medium">OCR 初始化失败</p>
+                    <p className="text-xs text-text-secondary mt-1">{ocrModuleStatus.error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
               {ocrModuleStatus.running ? (

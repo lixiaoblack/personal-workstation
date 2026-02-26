@@ -128,13 +128,18 @@ export function registerModuleIpc(): void {
       running: boolean;
       port: number | null;
       version?: string;
+      ocrAvailable?: boolean;
+      error?: string;
     }> => {
       const status = moduleManager.getModuleStatus("ocr");
+      const health = await moduleManager.checkOcrHealth();
       return {
         installed: status.installed,
-        running: moduleManager.isOcrRunning(),
-        port: moduleManager.getOcrPort(),
+        running: health.running,
+        port: health.running ? moduleManager.getOcrPort() : null,
         version: status.version,
+        ocrAvailable: health.ocrAvailable,
+        error: health.error,
       };
     }
   );

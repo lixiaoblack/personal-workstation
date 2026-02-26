@@ -251,21 +251,18 @@ const SimplePostman: React.FC = () => {
   }, [loadAllData]);
 
   // 保存全局设置
-  const saveGlobalConfig = useCallback(
-    async (config: GlobalConfig) => {
-      try {
-        await window.electronAPI.postmanSaveSetting("global", {
-          currentEnvironment: config.currentEnvironment,
-          environments: config.environments,
-          globalAuth: config.globalAuth,
-          timeout: config.timeout,
-        });
-      } catch (error) {
-        console.error("保存全局设置失败:", error);
-      }
-    },
-    []
-  );
+  const saveGlobalConfig = useCallback(async (config: GlobalConfig) => {
+    try {
+      await window.electronAPI.postmanSaveSetting("global", {
+        currentEnvironment: config.currentEnvironment,
+        environments: config.environments,
+        globalAuth: config.globalAuth,
+        timeout: config.timeout,
+      });
+    } catch (error) {
+      console.error("保存全局设置失败:", error);
+    }
+  }, []);
 
   // ==================== 辅助函数 ====================
 
@@ -413,7 +410,11 @@ const SimplePostman: React.FC = () => {
           if (endpoint.requestBody?.content?.length) {
             const firstContent = endpoint.requestBody.content[0];
             if (firstContent.generatedExample) {
-              bodyContent = JSON.stringify(firstContent.generatedExample, null, 2);
+              bodyContent = JSON.stringify(
+                firstContent.generatedExample,
+                null,
+                2
+              );
             } else if (firstContent.example) {
               bodyContent = JSON.stringify(firstContent.example, null, 2);
             }
@@ -994,7 +995,9 @@ const SimplePostman: React.FC = () => {
           onUploadSwagger={handleUploadSwagger}
           folders={folders}
           requests={requestsForSidebar}
-          activeRequestId={activeRequestId !== undefined ? String(activeRequestId) : undefined}
+          activeRequestId={
+            activeRequestId !== undefined ? String(activeRequestId) : undefined
+          }
           onRequestSelect={(id) => handleRequestSelect(Number(id))}
           syncing={syncing}
           syncStatus={syncStatus}
@@ -1004,7 +1007,9 @@ const SimplePostman: React.FC = () => {
           currentEnvironment={globalConfig.currentEnvironment}
           onEnvironmentChange={handleEnvironmentChange}
           onOpenGlobalConfig={handleOpenGlobalConfig}
-          activeProjectId={activeProjectId !== undefined ? String(activeProjectId) : undefined}
+          activeProjectId={
+            activeProjectId !== undefined ? String(activeProjectId) : undefined
+          }
           onProjectChange={(id) => setActiveProjectId(Number(id))}
           onUpdateProject={handleUpdateProject}
           onReparseProject={handleReparseProject}

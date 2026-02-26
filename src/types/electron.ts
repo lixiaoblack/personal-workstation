@@ -487,9 +487,7 @@ export interface ElectronAPI {
   // SimplePostman 项目管理
   postmanGetProjects: () => Promise<PostmanProject[]>;
   postmanGetProjectById: (id: number) => Promise<PostmanProject | null>;
-  postmanCreateProject: (
-    input: PostmanProjectInput
-  ) => Promise<PostmanProject>;
+  postmanCreateProject: (input: PostmanProjectInput) => Promise<PostmanProject>;
   postmanUpdateProject: (
     id: number,
     input: Partial<PostmanProjectInput>
@@ -511,9 +509,7 @@ export interface ElectronAPI {
   ) => Promise<PostmanRequest[]>;
   postmanGetRequestsByGroupId: (groupId: number) => Promise<PostmanRequest[]>;
   postmanGetRequestById: (id: number) => Promise<PostmanRequest | null>;
-  postmanCreateRequest: (
-    input: PostmanRequestInput
-  ) => Promise<PostmanRequest>;
+  postmanCreateRequest: (input: PostmanRequestInput) => Promise<PostmanRequest>;
   postmanUpdateRequest: (
     id: number,
     input: Partial<PostmanRequestInput>

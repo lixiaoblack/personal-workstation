@@ -752,8 +752,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("swagger:selectFile"),
 
   // SimplePostman 项目管理
-  postmanGetProjects: () =>
-    ipcRenderer.invoke("postman:getProjects"),
+  postmanGetProjects: () => ipcRenderer.invoke("postman:getProjects"),
   postmanGetProjectById: (id: number) =>
     ipcRenderer.invoke("postman:getProjectById", id),
   postmanCreateProject: (input: Record<string, unknown>) =>
@@ -794,8 +793,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("postman:addHistory", input),
   postmanGetHistoryList: (limit?: number) =>
     ipcRenderer.invoke("postman:getHistoryList", limit),
-  postmanClearHistory: () =>
-    ipcRenderer.invoke("postman:clearHistory"),
+  postmanClearHistory: () => ipcRenderer.invoke("postman:clearHistory"),
 
   // SimplePostman 设置管理
   postmanGetSetting: (key: string) =>
@@ -1051,23 +1049,36 @@ export interface ElectronAPI {
   postmanGetProjects: () => Promise<PostmanProject[]>;
   postmanGetProjectById: (id: number) => Promise<PostmanProject | null>;
   postmanCreateProject: (input: PostmanProjectInput) => Promise<PostmanProject>;
-  postmanUpdateProject: (id: number, input: Partial<PostmanProjectInput>) => Promise<PostmanProject | null>;
+  postmanUpdateProject: (
+    id: number,
+    input: Partial<PostmanProjectInput>
+  ) => Promise<PostmanProject | null>;
   postmanDeleteProject: (id: number) => Promise<boolean>;
 
   // SimplePostman 分组管理
   postmanGetGroupsByProjectId: (projectId: number) => Promise<PostmanGroup[]>;
   postmanCreateGroup: (input: PostmanGroupInput) => Promise<PostmanGroup>;
-  postmanUpdateGroup: (id: number, input: Partial<PostmanGroupInput>) => Promise<PostmanGroup | null>;
+  postmanUpdateGroup: (
+    id: number,
+    input: Partial<PostmanGroupInput>
+  ) => Promise<PostmanGroup | null>;
   postmanDeleteGroup: (id: number) => Promise<boolean>;
 
   // SimplePostman 请求管理
-  postmanGetRequestsByProjectId: (projectId: number) => Promise<PostmanRequest[]>;
+  postmanGetRequestsByProjectId: (
+    projectId: number
+  ) => Promise<PostmanRequest[]>;
   postmanGetRequestsByGroupId: (groupId: number) => Promise<PostmanRequest[]>;
   postmanGetRequestById: (id: number) => Promise<PostmanRequest | null>;
   postmanCreateRequest: (input: PostmanRequestInput) => Promise<PostmanRequest>;
-  postmanUpdateRequest: (id: number, input: Partial<PostmanRequestInput>) => Promise<PostmanRequest | null>;
+  postmanUpdateRequest: (
+    id: number,
+    input: Partial<PostmanRequestInput>
+  ) => Promise<PostmanRequest | null>;
   postmanDeleteRequest: (id: number) => Promise<boolean>;
-  postmanBatchCreateRequests: (requests: PostmanRequestInput[]) => Promise<PostmanRequest[]>;
+  postmanBatchCreateRequests: (
+    requests: PostmanRequestInput[]
+  ) => Promise<PostmanRequest[]>;
 
   // SimplePostman 历史记录
   postmanAddHistory: (input: PostmanHistoryInput) => Promise<PostmanHistory>;
@@ -1076,7 +1087,10 @@ export interface ElectronAPI {
 
   // SimplePostman 设置管理
   postmanGetSetting: (key: string) => Promise<PostmanSetting | null>;
-  postmanSaveSetting: (key: string, value: Record<string, unknown>) => Promise<PostmanSetting>;
+  postmanSaveSetting: (
+    key: string,
+    value: Record<string, unknown>
+  ) => Promise<PostmanSetting>;
 }
 
 declare global {

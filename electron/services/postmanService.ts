@@ -138,16 +138,18 @@ export function getProjectById(id: number): PostmanProject | null {
        FROM postman_projects
        WHERE id = ?`
     )
-    .get(id) as {
-    id: number;
-    name: string;
-    description: string | null;
-    base_url: string | null;
-    swagger_url: string | null;
-    auth_config: string | null;
-    created_at: number;
-    updated_at: number;
-  } | undefined;
+    .get(id) as
+    | {
+        id: number;
+        name: string;
+        description: string | null;
+        base_url: string | null;
+        swagger_url: string | null;
+        auth_config: string | null;
+        created_at: number;
+        updated_at: number;
+      }
+    | undefined;
 
   if (!row) return null;
 
@@ -248,7 +250,9 @@ export function updateProject(
  */
 export function deleteProject(id: number): boolean {
   const db = getDatabase();
-  const result = db.prepare("DELETE FROM postman_projects WHERE id = ?").run(id);
+  const result = db
+    .prepare("DELETE FROM postman_projects WHERE id = ?")
+    .run(id);
   return result.changes > 0;
 }
 
@@ -384,18 +388,20 @@ export function updateGroup(
       `SELECT id, project_id, name, description, base_url, auth_config, override_global, sort_order, created_at, updated_at
        FROM postman_groups WHERE id = ?`
     )
-    .get(id) as {
-    id: number;
-    project_id: number;
-    name: string;
-    description: string | null;
-    base_url: string | null;
-    auth_config: string | null;
-    override_global: number;
-    sort_order: number;
-    created_at: number;
-    updated_at: number;
-  } | undefined;
+    .get(id) as
+    | {
+        id: number;
+        project_id: number;
+        name: string;
+        description: string | null;
+        base_url: string | null;
+        auth_config: string | null;
+        override_global: number;
+        sort_order: number;
+        created_at: number;
+        updated_at: number;
+      }
+    | undefined;
 
   if (!row) return null;
 
@@ -505,25 +511,27 @@ export function getRequestById(id: number): PostmanRequest | null {
        FROM postman_requests
        WHERE id = ?`
     )
-    .get(id) as {
-    id: number;
-    group_id: number | null;
-    project_id: number;
-    name: string | null;
-    method: string;
-    url: string;
-    params: string | null;
-    headers: string | null;
-    body_type: string;
-    body: string | null;
-    auth_type: string;
-    auth_config: string | null;
-    swagger_info: string | null;
-    is_favorite: number;
-    sort_order: number;
-    created_at: number;
-    updated_at: number;
-  } | undefined;
+    .get(id) as
+    | {
+        id: number;
+        group_id: number | null;
+        project_id: number;
+        name: string | null;
+        method: string;
+        url: string;
+        params: string | null;
+        headers: string | null;
+        body_type: string;
+        body: string | null;
+        auth_type: string;
+        auth_config: string | null;
+        swagger_info: string | null;
+        is_favorite: number;
+        sort_order: number;
+        created_at: number;
+        updated_at: number;
+      }
+    | undefined;
 
   if (!row) return null;
   return transformRequestRow(row);
@@ -631,14 +639,36 @@ export function updateRequest(
     input.name ?? existing.name ?? null,
     input.method ?? existing.method,
     input.url ?? existing.url,
-    input.params ? JSON.stringify(input.params) : existing.params ? JSON.stringify(existing.params) : null,
-    input.headers ? JSON.stringify(input.headers) : existing.headers ? JSON.stringify(existing.headers) : null,
+    input.params
+      ? JSON.stringify(input.params)
+      : existing.params
+        ? JSON.stringify(existing.params)
+        : null,
+    input.headers
+      ? JSON.stringify(input.headers)
+      : existing.headers
+        ? JSON.stringify(existing.headers)
+        : null,
     input.bodyType ?? existing.bodyType,
     input.body ?? existing.body ?? null,
     input.authType ?? existing.authType,
-    input.authConfig ? JSON.stringify(input.authConfig) : existing.authConfig ? JSON.stringify(existing.authConfig) : null,
-    input.swaggerInfo ? JSON.stringify(input.swaggerInfo) : existing.swaggerInfo ? JSON.stringify(existing.swaggerInfo) : null,
-    input.isFavorite !== undefined ? (input.isFavorite ? 1 : 0) : (existing.isFavorite ? 1 : 0),
+    input.authConfig
+      ? JSON.stringify(input.authConfig)
+      : existing.authConfig
+        ? JSON.stringify(existing.authConfig)
+        : null,
+    input.swaggerInfo
+      ? JSON.stringify(input.swaggerInfo)
+      : existing.swaggerInfo
+        ? JSON.stringify(existing.swaggerInfo)
+        : null,
+    input.isFavorite !== undefined
+      ? input.isFavorite
+        ? 1
+        : 0
+      : existing.isFavorite
+        ? 1
+        : 0,
     input.sortOrder ?? existing.sortOrder,
     now,
     id
@@ -652,7 +682,9 @@ export function updateRequest(
  */
 export function deleteRequest(id: number): boolean {
   const db = getDatabase();
-  const result = db.prepare("DELETE FROM postman_requests WHERE id = ?").run(id);
+  const result = db
+    .prepare("DELETE FROM postman_requests WHERE id = ?")
+    .run(id);
   return result.changes > 0;
 }
 
@@ -822,11 +854,15 @@ export function getHistoryList(limit = 50): PostmanHistory[] {
     requestId: row.request_id || undefined,
     method: row.method,
     url: row.url,
-    requestHeaders: row.request_headers ? JSON.parse(row.request_headers) : undefined,
+    requestHeaders: row.request_headers
+      ? JSON.parse(row.request_headers)
+      : undefined,
     requestBody: row.request_body || undefined,
     responseStatus: row.response_status,
     responseStatusText: row.response_status_text || undefined,
-    responseHeaders: row.response_headers ? JSON.parse(row.response_headers) : undefined,
+    responseHeaders: row.response_headers
+      ? JSON.parse(row.response_headers)
+      : undefined,
     responseBody: row.response_body || undefined,
     responseTime: row.response_time,
     responseSize: row.response_size,
@@ -854,12 +890,14 @@ export function getSetting(key: string): PostmanSetting | null {
     .prepare(
       `SELECT id, key, value, updated_at FROM postman_settings WHERE key = ?`
     )
-    .get(key) as {
-    id: number;
-    key: string;
-    value: string;
-    updated_at: number;
-  } | undefined;
+    .get(key) as
+    | {
+        id: number;
+        key: string;
+        value: string;
+        updated_at: number;
+      }
+    | undefined;
 
   if (!row) return null;
 
@@ -874,7 +912,10 @@ export function getSetting(key: string): PostmanSetting | null {
 /**
  * 保存设置
  */
-export function saveSetting(key: string, value: Record<string, unknown>): PostmanSetting {
+export function saveSetting(
+  key: string,
+  value: Record<string, unknown>
+): PostmanSetting {
   const db = getDatabase();
   const now = Date.now();
 

@@ -62,13 +62,37 @@ const PostmanWorkspace: React.FC<Props> = ({
 }) => {
   const { message } = App.useApp();
   const [activeTab, setActiveTab] = useState<RequestTabKey>("body");
-  const responseEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const responseEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(
+    null
+  );
+  const bodyEditorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(
+    null
+  );
   const monacoRef = useRef<typeof Monaco | null>(null);
 
   // 响应编辑器挂载处理
   const handleResponseEditorMount: OnMount = (editor, monaco) => {
     responseEditorRef.current = editor;
-    monacoRef.current = monaco;
+    if (!monacoRef.current) {
+      monacoRef.current = monaco;
+    }
+
+    // 配置 JSON 语言特性
+    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+      validate: true,
+      schemas: [],
+      enableSchemaRequest: false,
+      allowComments: false,
+      trailingCommas: "error",
+    });
+  };
+
+  // Body 编辑器挂载处理
+  const handleBodyEditorMount: OnMount = (editor, monaco) => {
+    bodyEditorRef.current = editor;
+    if (!monacoRef.current) {
+      monacoRef.current = monaco;
+    }
 
     // 配置 JSON 语言特性
     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -121,9 +145,34 @@ const PostmanWorkspace: React.FC<Props> = ({
   // 格式化响应
   const handleFormatResponse = useCallback(() => {
     if (responseEditorRef.current) {
-      responseEditorRef.current.getAction("editor.action.formatDocument")?.run();
+      responseEditorRef.current
+        .getAction("editor.action.formatDocument")
+        ?.run();
     }
   }, []);
+
+  // 复制 Body 内容
+  const handleCopyBody = useCallback(() => {
+    if (request.body) {
+      navigator.clipboard.writeText(request.body);
+      message.success("已复制到剪贴板");
+    }
+  }, [request.body, message]);
+
+  // 格式化 Body
+  const handleFormatBody = useCallback(() => {
+    if (bodyEditorRef.current) {
+      bodyEditorRef.current.getAction("editor.action.formatDocument")?.run();
+    }
+  }, []);
+
+  // Body 编辑器内容变化
+  const handleBodyEditorChange = useCallback(
+    (value: string | undefined) => {
+      onRequestChange({ ...request, body: value || "" });
+    },
+    [request, onRequestChange]
+  );
 
   // 获取方法颜色
   const getMethodColor = (method: HttpMethod) => {
@@ -143,11 +192,6 @@ const PostmanWorkspace: React.FC<Props> = ({
   // 更新 Body 类型
   const handleBodyTypeChange = (bodyType: BodyType) => {
     onRequestChange({ ...request, bodyType });
-  };
-
-  // 更新 Body 内容
-  const handleBodyChange = (body: string) => {
-    onRequestChange({ ...request, body });
   };
 
   // 更新参数
@@ -171,51 +215,107 @@ const PostmanWorkspace: React.FC<Props> = ({
   };
 
   // 渲染 Body 标签页
-  const renderBodyTab = () => (
-    <div className="flex flex-col h-full">
-      {/* Body 类型选择 */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-tertiary/30">
-        <Select
-          value={request.bodyType || "json"}
-          onChange={handleBodyTypeChange}
-          options={BODY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-          className="w-56"
-          size="small"
-        />
-        <Tooltip title="复制内容">
-          <Button
-            type="text"
+  const renderBodyTab = () => {
+    // 根据Body类型确定语言
+    const getBodyLanguage = (): string => {
+      switch (request.bodyType) {
+        case "json":
+          return "json";
+        case "raw":
+          return "plaintext";
+        default:
+          return "plaintext";
+      }
+    };
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Body 类型选择 */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-tertiary/30">
+          <Select
+            value={request.bodyType || "json"}
+            onChange={handleBodyTypeChange}
+            options={BODY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+            className="w-56"
             size="small"
-            icon={
-              <span className="material-symbols-outlined text-sm">
-                content_copy
-              </span>
-            }
           />
-        </Tooltip>
-      </div>
-      {/* Body 编辑器 */}
-      <div className="flex-1 p-4">
-        {request.bodyType === "none" ? (
-          <div className="flex items-center justify-center h-full text-text-tertiary">
-            当前请求不需要 Body
+          <div className="flex items-center gap-1">
+            {request.bodyType === "json" && (
+              <Tooltip title="格式化">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={
+                    <span className="material-symbols-outlined text-sm">
+                      format_align_left
+                    </span>
+                  }
+                  onClick={handleFormatBody}
+                />
+              </Tooltip>
+            )}
+            <Tooltip title="复制内容">
+              <Button
+                type="text"
+                size="small"
+                icon={
+                  <span className="material-symbols-outlined text-sm">
+                    content_copy
+                  </span>
+                }
+                onClick={handleCopyBody}
+              />
+            </Tooltip>
           </div>
-        ) : (
-          <TextArea
-            value={request.body || ""}
-            onChange={(e) => handleBodyChange(e.target.value)}
-            placeholder={
-              request.bodyType === "json"
-                ? '{\n  "key": "value"\n}'
-                : "请求体内容..."
-            }
-            className="flex-1 font-mono text-sm resize-none"
-            style={{ minHeight: 200 }}
-          />
-        )}
+        </div>
+        {/* Body 编辑器 */}
+        <div className="flex-1">
+          {request.bodyType === "none" ? (
+            <div className="flex items-center justify-center h-full text-text-tertiary">
+              当前请求不需要 Body
+            </div>
+          ) : (
+            <Editor
+              height="100%"
+              language={getBodyLanguage()}
+              value={request.body || ""}
+              onChange={handleBodyEditorChange}
+              onMount={handleBodyEditorMount}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                lineNumbers: "on",
+                wordWrap: "on",
+                automaticLayout: true,
+                formatOnPaste: true,
+                formatOnType: true,
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                acceptSuggestionOnEnter: "on",
+                tabSize: 2,
+                insertSpaces: true,
+                renderWhitespace: "selection",
+                scrollBeyondLastLine: false,
+                folding: true,
+                foldingStrategy: "indentation",
+                bracketPairColorization: { enabled: true },
+                autoClosingBrackets: "always",
+                autoClosingQuotes: "always",
+                autoSurround: "brackets",
+                renderValidationDecorations: "on",
+                scrollbar: {
+                  vertical: "auto",
+                  horizontal: "auto",
+                },
+              }}
+            />
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // 渲染 Params 标签页
   const renderParamsTab = () => {
@@ -721,7 +821,7 @@ const PostmanWorkspace: React.FC<Props> = ({
       {/* 编辑器内容 */}
       <div className="flex-1  flex flex-col">
         {/* 请求编辑区 */}
-        <div className="flex-1 min-h-[200px] overflow-y-auto border-b border-border">
+        <div className="h-[calc(100%-420px)] overflow-y-auto border-b border-border">
           {renderTabContent()}
         </div>
 
@@ -746,7 +846,9 @@ const PostmanWorkspace: React.FC<Props> = ({
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="text-text-tertiary">耗时:</span>
-                    <span className="text-text-secondary">{response.time}ms</span>
+                    <span className="text-text-secondary">
+                      {response.time}ms
+                    </span>
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="text-text-tertiary">大小:</span>

@@ -22,7 +22,6 @@ import {
   type RequestConfig,
   type ResponseData,
   type ApiFolder,
-  type SidebarMenuKey,
   type HttpMethod,
   type GlobalConfig,
   type EnvironmentConfig,
@@ -88,7 +87,10 @@ interface SwaggerParseResultFromBackend {
 /**
  * 处理 Swagger 解析结果，按 tags 分组创建文件夹和请求
  */
-function processSwaggerResult(parseResult: SwaggerParseResultFromBackend): {
+function processSwaggerResult(
+  parseResult: SwaggerParseResultFromBackend,
+  swaggerSourceUrl?: string
+): {
   newFolders: ApiFolder[];
   newRequests: RequestConfig[];
 } {
@@ -135,6 +137,7 @@ function processSwaggerResult(parseResult: SwaggerParseResultFromBackend): {
     description: apiDescription,
     createdAt: timestamp,
     updatedAt: timestamp,
+    swaggerUrl: swaggerSourceUrl,
   };
   newFolders.push(mainFolder);
 
@@ -235,7 +238,6 @@ const SimplePostman: React.FC = () => {
   const [swaggerLoading, setSwaggerLoading] = useState(false);
 
   // 侧边栏状态
-  const [activeMenu, setActiveMenu] = useState<SidebarMenuKey>("history");
   const [activeRequestId, setActiveRequestId] = useState<string | undefined>();
   const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
 
@@ -360,7 +362,8 @@ const SimplePostman: React.FC = () => {
 
       if (parseResult.success && parseResult.endpoints) {
         const { newFolders, newRequests } = processSwaggerResult(
-          parseResult as SwaggerParseResultFromBackend
+          parseResult as SwaggerParseResultFromBackend,
+          swaggerUrl
         );
         setFolders((prev) => [...prev, ...newFolders]);
         setRequests((prev) => [...prev, ...newRequests]);
@@ -400,7 +403,8 @@ const SimplePostman: React.FC = () => {
 
         if (parseResult.success && parseResult.endpoints) {
           const { newFolders, newRequests } = processSwaggerResult(
-            parseResult as SwaggerParseResultFromBackend
+            parseResult as SwaggerParseResultFromBackend,
+            undefined // 文件上传没有 URL
           );
           setFolders((prev) => [...prev, ...newFolders]);
           setRequests((prev) => [...prev, ...newRequests]);
@@ -451,7 +455,8 @@ const SimplePostman: React.FC = () => {
 
             if (parseResult.success && parseResult.endpoints) {
               const { newFolders, newRequests } = processSwaggerResult(
-                parseResult as SwaggerParseResultFromBackend
+                parseResult as SwaggerParseResultFromBackend,
+                undefined // 文件上传没有 URL
               );
               setFolders((prev) => [...prev, ...newFolders]);
               setRequests((prev) => [...prev, ...newRequests]);
@@ -667,6 +672,83 @@ const SimplePostman: React.FC = () => {
     }
   }, [editingFolder, folderForm, antdMessage]);
 
+  // 更新项目信息
+  const handleUpdateProject = useCallback(
+    (project: ApiFolder) => {
+      setFolders((prev) =>
+        prev.map((f) =>
+          f.id === project.id ? { ...project, updatedAt: Date.now() } : f
+        )
+      );
+      antdMessage.success("项目已更新");
+    },
+    [antdMessage]
+  );
+
+  // 重新解析项目
+  const handleReparseProject = useCallback(
+    async (project: ApiFolder) => {
+      if (!project.swaggerUrl) {
+        antdMessage.warning("该项目没有 Swagger URL，无法重新解析");
+        return;
+      }
+
+      setSwaggerLoading(true);
+      setSyncing(true);
+      setSyncStatus("正在重新解析 Swagger 文档...");
+
+      try {
+        const parseResult = await window.electronAPI.swaggerParseUrl(
+          project.swaggerUrl
+        );
+
+        if (parseResult.success && parseResult.endpoints) {
+          const { newFolders, newRequests } = processSwaggerResult(
+            parseResult as SwaggerParseResultFromBackend,
+            project.swaggerUrl
+          );
+
+          // 删除旧的项目及其子文件夹和请求
+          const oldFolderIds = folders
+            .filter(
+              (f) => f.id === project.id || f.parentId === project.id
+            )
+            .map((f) => f.id);
+          setFolders((prev) =>
+            prev.filter((f) => !oldFolderIds.includes(f.id))
+          );
+          setRequests((prev) =>
+            prev.filter((r) => !oldFolderIds.includes(r.folderId || ""))
+          );
+
+          // 添加新的文件夹和请求
+          setFolders((prev) => [...prev, ...newFolders]);
+          setRequests((prev) => [...prev, ...newRequests]);
+
+          // 设置新项目为当前项目
+          if (newFolders.length > 0) {
+            setActiveProjectId(newFolders[0].id);
+          }
+
+          antdMessage.success(
+            `重新解析成功，导入 ${newRequests.length} 个接口`
+          );
+        } else {
+          antdMessage.error(parseResult.error || "解析失败");
+        }
+      } catch (error) {
+        antdMessage.error(
+          `解析失败: ${error instanceof Error ? error.message : "未知错误"}`
+        );
+      } finally {
+        setSwaggerLoading(false);
+        setSyncing(false);
+        setSyncStatus("");
+      }
+    },
+    [folders, antdMessage]
+  );
+
   // 环境切换
   const handleEnvironmentChange = useCallback(
     (envKey: string) => {
@@ -730,8 +812,6 @@ const SimplePostman: React.FC = () => {
           onSwaggerUrlChange={setSwaggerUrl}
           onParseSwagger={handleParseSwagger}
           onUploadSwagger={handleUploadSwagger}
-          activeMenu={activeMenu}
-          onMenuChange={setActiveMenu}
           folders={folders}
           requests={requests}
           activeRequestId={activeRequestId}
@@ -746,6 +826,8 @@ const SimplePostman: React.FC = () => {
           onOpenGlobalConfig={handleOpenGlobalConfig}
           activeProjectId={activeProjectId}
           onProjectChange={setActiveProjectId}
+          onUpdateProject={handleUpdateProject}
+          onReparseProject={handleReparseProject}
         />
 
         {/* 主工作区 */}

@@ -181,6 +181,8 @@ export interface ApiFolder {
   // 是否覆盖全局配置
   overrideGlobalAuth?: boolean;
   overrideGlobalBaseUrl?: boolean;
+  // Swagger 解析来源
+  swaggerUrl?: string;
 }
 
 // Swagger 解析结果接口

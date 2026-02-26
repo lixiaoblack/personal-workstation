@@ -1121,9 +1121,7 @@ const PostmanWorkspace: React.FC<Props> = ({
         typesEditorRef.current.setValue(formatted);
       } catch {
         // 如果格式化失败，尝试使用编辑器内置格式化
-        typesEditorRef.current
-          .getAction("editor.action.formatDocument")
-          ?.run();
+        typesEditorRef.current.getAction("editor.action.formatDocument")?.run();
       }
     }
   }, []);

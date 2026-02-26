@@ -99,6 +99,20 @@ function processSwaggerResult(
   const apiDescription = parseResult.info?.description;
   const timestamp = Date.now();
 
+  // 创建 tag 信息映射 (name -> {description, displayName})
+  const tagInfoMap = new Map<
+    string,
+    { description: string; displayName: string }
+  >();
+  if (parseResult.tags) {
+    parseResult.tags.forEach((tag) => {
+      tagInfoMap.set(tag.name, {
+        description: tag.description || "",
+        displayName: tag.description || tag.name,
+      });
+    });
+  }
+
   // 收集所有 tags
   const tagSet = new Set<string>();
   parseResult.endpoints.forEach((endpoint) => {
@@ -113,7 +127,7 @@ function processSwaggerResult(
   const tagToFolderMap = new Map<string, ApiFolder>();
   const newFolders: ApiFolder[] = [];
 
-  // 创建主文件夹
+  // 创建主文件夹（API 文件）
   const mainFolder: ApiFolder = {
     id: `folder-${timestamp}`,
     name: apiTitle,
@@ -123,12 +137,13 @@ function processSwaggerResult(
   };
   newFolders.push(mainFolder);
 
-  // 为每个 tag 创建子文件夹
+  // 为每个 tag 创建子文件夹（使用 description 作为显示名称）
   Array.from(tagSet).forEach((tag, index) => {
+    const tagInfo = tagInfoMap.get(tag);
     const tagFolder: ApiFolder = {
       id: `folder-${timestamp}-tag-${index}`,
-      name: tag,
-      description: parseResult.tags?.find((t) => t.name === tag)?.description,
+      name: tagInfo?.displayName || tag,
+      description: tagInfo?.description || "",
       parentId: mainFolder.id,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -157,7 +172,7 @@ function processSwaggerResult(
           : "默认分组";
       const targetFolder = tagToFolderMap.get(tagName);
 
-      // 构建 swaggerInfo
+      // 构建 swaggerInfo - 每个接口独立的类型信息
       const swaggerInfo: SwaggerRequestInfo = {
         tags: endpoint.tags,
         parameters: endpoint.parameters?.map((p) => ({

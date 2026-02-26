@@ -1049,6 +1049,13 @@ const PostmanWorkspace: React.FC<Props> = ({
     message.success("已复制类型定义到剪贴板");
   }, [generateTypeDefinitions, message]);
 
+  // 格式化类型定义
+  const handleFormatTypes = useCallback(() => {
+    if (typesEditorRef.current) {
+      typesEditorRef.current.getAction("editor.action.formatDocument")?.run();
+    }
+  }, []);
+
   // 渲染类型定义标签页
   const renderTypesTab = () => {
     const typeDefinitions = generateTypeDefinitions();
@@ -1060,22 +1067,37 @@ const PostmanWorkspace: React.FC<Props> = ({
           <span className="text-sm text-text-secondary">
             TypeScript 类型定义
           </span>
-          <Tooltip title="复制类型定义">
-            <Button
-              type="text"
-              size="small"
-              icon={
-                <span className="material-symbols-outlined text-sm">
-                  content_copy
-                </span>
-              }
-              onClick={handleCopyTypes}
-            />
-          </Tooltip>
+          <div className="flex items-center gap-1">
+            <Tooltip title="格式化">
+              <Button
+                type="text"
+                size="small"
+                icon={
+                  <span className="material-symbols-outlined text-sm">
+                    format_align_left
+                  </span>
+                }
+                onClick={handleFormatTypes}
+              />
+            </Tooltip>
+            <Tooltip title="复制类型定义">
+              <Button
+                type="text"
+                size="small"
+                icon={
+                  <span className="material-symbols-outlined text-sm">
+                    content_copy
+                  </span>
+                }
+                onClick={handleCopyTypes}
+              />
+            </Tooltip>
+          </div>
         </div>
         {/* 类型定义编辑器 */}
         <div className="flex-1">
           <Editor
+            key={`types-${request.id || "unknown"}`}
             height="100%"
             language="typescript"
             value={typeDefinitions}

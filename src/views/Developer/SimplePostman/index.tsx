@@ -293,8 +293,20 @@ const SimplePostman: React.FC = () => {
     (folderId?: string): string => {
       if (folderId) {
         const folder = folders.find((f) => f.id === folderId);
+        // 如果是项目（顶层文件夹，没有 parentId），直接使用其 baseUrl
+        if (!folder?.parentId && folder?.baseUrl) {
+          return folder.baseUrl;
+        }
+        // 如果是分组，检查是否覆盖全局配置
         if (folder?.overrideGlobalBaseUrl && folder.baseUrl) {
           return folder.baseUrl;
+        }
+        // 如果分组没有设置，尝试获取其所属项目的 baseUrl
+        if (folder?.parentId) {
+          const parentFolder = folders.find((f) => f.id === folder.parentId);
+          if (parentFolder?.baseUrl) {
+            return parentFolder.baseUrl;
+          }
         }
       }
       // 使用当前环境的 baseUrl
@@ -710,9 +722,7 @@ const SimplePostman: React.FC = () => {
 
           // 删除旧的项目及其子文件夹和请求
           const oldFolderIds = folders
-            .filter(
-              (f) => f.id === project.id || f.parentId === project.id
-            )
+            .filter((f) => f.id === project.id || f.parentId === project.id)
             .map((f) => f.id);
           setFolders((prev) =>
             prev.filter((f) => !oldFolderIds.includes(f.id))

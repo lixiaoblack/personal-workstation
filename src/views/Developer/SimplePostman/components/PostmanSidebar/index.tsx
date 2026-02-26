@@ -2,7 +2,15 @@
  * PostmanSidebar 左侧边栏组件
  */
 import React, { useState, useMemo } from "react";
-import { Input, Button, Collapse, Empty, Select, Dropdown, Tooltip } from "antd";
+import {
+  Input,
+  Button,
+  Collapse,
+  Empty,
+  Select,
+  Dropdown,
+  Tooltip,
+} from "antd";
 import type { MenuProps } from "antd";
 import {
   type ApiFolder,
@@ -145,9 +153,7 @@ const PostmanSidebar: React.FC<Props> = ({
     {
       key: "reparse",
       label: "重新解析",
-      icon: (
-        <span className="material-symbols-outlined text-sm">sync</span>
-      ),
+      icon: <span className="material-symbols-outlined text-sm">sync</span>,
       onClick: () => onReparseProject(project),
       disabled: !project.swaggerUrl,
     },

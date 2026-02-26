@@ -474,6 +474,107 @@ export interface ElectronAPI {
     chunk_count?: number;
     error?: string;
   }>;
+
+  // Swagger 解析相关
+  swaggerParseUrl: (url: string) => Promise<SwaggerParseResult>;
+  swaggerParseFile: (filePath: string) => Promise<SwaggerParseResult>;
+  swaggerParseContent: (
+    content: string,
+    format?: "json" | "yaml"
+  ) => Promise<SwaggerParseResult>;
+  swaggerSelectFile: () => Promise<{ canceled: boolean; filePaths: string[] }>;
+}
+
+// Swagger 解析结果类型
+export interface SwaggerParseResult {
+  success: boolean;
+  error?: string;
+  source?: {
+    type: "url" | "file";
+    location: string;
+  };
+  specVersion?: "2.0" | "3.0" | "3.1";
+  info?: {
+    title: string;
+    version: string;
+    description?: string;
+    contact?: {
+      name?: string;
+      email?: string;
+      url?: string;
+    };
+    license?: {
+      name: string;
+      url?: string;
+    };
+    servers?: Array<{
+      url: string;
+      description?: string;
+    }>;
+    basePath?: string;
+    host?: string;
+  };
+  endpoints?: Array<{
+    path: string;
+    method: string;
+    summary?: string;
+    description?: string;
+    operationId?: string;
+    tags: string[];
+    deprecated: boolean;
+    parameters: Array<{
+      name: string;
+      in: "query" | "header" | "path" | "cookie";
+      description?: string;
+      required: boolean;
+      type?: string;
+      format?: string;
+      schema?: Record<string, unknown>;
+      example?: unknown;
+      defaultValue?: unknown;
+      enum?: unknown[];
+    }>;
+    requestBody?: {
+      description?: string;
+      required?: boolean;
+      content: Array<{
+        contentType: string;
+        schema?: Record<string, unknown>;
+        example?: unknown;
+      }>;
+    };
+    responses: Array<{
+      statusCode: string;
+      description?: string;
+      content?: Array<{
+        contentType: string;
+        schema?: Record<string, unknown>;
+        example?: unknown;
+      }>;
+    }>;
+    security?: Array<Record<string, unknown>>;
+  }>;
+  tags?: Array<{
+    name: string;
+    description?: string;
+  }>;
+  securitySchemes?: Record<
+    string,
+    {
+      type: string;
+      name?: string;
+      in?: string;
+      description?: string;
+      scheme?: string;
+      bearerFormat?: string;
+    }
+  >;
+  components?: {
+    schemas?: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
+    responses?: Record<string, unknown>;
+  };
+  definitions?: Record<string, unknown>;
 }
 
 declare global {

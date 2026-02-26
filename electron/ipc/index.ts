@@ -16,6 +16,7 @@ import { registerKnowledgeIpc } from "./registerKnowledgeIpc";
 import { registerMemoryIpc } from "./registerMemoryIpc";
 import { registerOcrIpc } from "./registerOcrIpc";
 import { registerPythonIpc } from "./registerPythonIpc";
+import { registerSwaggerIpc } from "./registerSwaggerIpc";
 
 // 导出用户认证相关函数
 export { getCurrentToken, setCurrentToken, getCurrentUser };
@@ -43,6 +44,9 @@ export function registerAllIpcHandlers(mainWindow: BrowserWindow | null): void {
 
   // Python 服务和 Ollama
   registerPythonIpc();
+
+  // Swagger 解析
+  registerSwaggerIpc();
 
   console.log("[IPC] 所有 IPC 处理器已注册");
 }

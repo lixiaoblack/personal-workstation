@@ -1,0 +1,543 @@
+/**
+ * Swagger 解析服务
+ * 支持 Swagger 2.0 和 OpenAPI 3.0 格式
+ */
+import { createRequire } from "module";
+import yaml from "js-yaml";
+import path from "path";
+import fs from "fs";
+
+// 使用 require 加载 ESM 不兼容的 swagger-parser
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SwaggerParser = require("@apidevtools/swagger-parser");
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiDocument = any;
+
+// 解析后的 API 信息
+export interface ParsedApiInfo {
+  title: string;
+  version: string;
+  description?: string;
+  contact?: {
+    name?: string;
+    email?: string;
+    url?: string;
+  };
+  license?: {
+    name: string;
+    url?: string;
+  };
+  servers?: Array<{
+    url: string;
+    description?: string;
+  }>;
+  basePath?: string; // Swagger 2.0
+  host?: string; // Swagger 2.0
+}
+
+// 解析后的参数
+export interface ParsedParameter {
+  name: string;
+  in: "query" | "header" | "path" | "cookie";
+  description?: string;
+  required: boolean;
+  type?: string;
+  format?: string;
+  schema?: Record<string, unknown>;
+  example?: unknown;
+  defaultValue?: unknown;
+  enum?: unknown[];
+}
+
+// 解析后的请求体
+export interface ParsedRequestBody {
+  description?: string;
+  required?: boolean;
+  content: Array<{
+    contentType: string;
+    schema?: Record<string, unknown>;
+    example?: unknown;
+  }>;
+}
+
+// 解析后的响应
+export interface ParsedResponse {
+  statusCode: string;
+  description?: string;
+  content?: Array<{
+    contentType: string;
+    schema?: Record<string, unknown>;
+    example?: unknown;
+  }>;
+}
+
+// 解析后的端点
+export interface ParsedEndpoint {
+  path: string;
+  method: string; // GET, POST, PUT, DELETE, PATCH, etc.
+  summary?: string;
+  description?: string;
+  operationId?: string;
+  tags: string[];
+  deprecated: boolean;
+  parameters: ParsedParameter[];
+  requestBody?: ParsedRequestBody;
+  responses: ParsedResponse[];
+  security?: Array<Record<string, unknown>>;
+  servers?: Array<{ url: string; description?: string }>;
+}
+
+// 解析后的安全定义
+export interface ParsedSecurityScheme {
+  type: string;
+  name?: string;
+  in?: string;
+  description?: string;
+  scheme?: string;
+  bearerFormat?: string;
+  flows?: Record<string, unknown>;
+}
+
+// 完整的解析结果
+export interface SwaggerParseResult {
+  success: boolean;
+  error?: string;
+  source?: {
+    type: "url" | "file";
+    location: string;
+  };
+  specVersion?: "2.0" | "3.0" | "3.1";
+  info?: ParsedApiInfo;
+  endpoints?: ParsedEndpoint[];
+  tags?: Array<{
+    name: string;
+    description?: string;
+  }>;
+  securitySchemes?: Record<string, ParsedSecurityScheme>;
+  components?: {
+    schemas?: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
+    responses?: Record<string, unknown>;
+  };
+  definitions?: Record<string, unknown>; // Swagger 2.0
+}
+
+/**
+ * 从 URL 解析 Swagger 文档
+ */
+export async function parseSwaggerFromUrl(
+  url: string
+): Promise<SwaggerParseResult> {
+  try {
+    // 使用 swagger-parser 解析和验证
+    const api = await SwaggerParser.validate(url);
+    return parseApiDocument(api, "url", url);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "解析失败",
+      source: { type: "url", location: url },
+    };
+  }
+}
+
+/**
+ * 从文件路径解析 Swagger 文档
+ */
+export async function parseSwaggerFromFile(
+  filePath: string
+): Promise<SwaggerParseResult> {
+  try {
+    // 检查文件是否存在
+    if (!fs.existsSync(filePath)) {
+      return {
+        success: false,
+        error: "文件不存在",
+        source: { type: "file", location: filePath },
+      };
+    }
+
+    // 读取文件内容
+    const content = fs.readFileSync(filePath, "utf-8");
+    const ext = path.extname(filePath).toLowerCase();
+
+    let jsonContent: string;
+
+    if (ext === ".yaml" || ext === ".yml") {
+      // YAML 转 JSON
+      const yamlObj = yaml.load(content);
+      jsonContent = JSON.stringify(yamlObj);
+    } else {
+      jsonContent = content;
+    }
+
+    // 使用 swagger-parser 解析和验证
+    const api = await SwaggerParser.validate(JSON.parse(jsonContent));
+    return parseApiDocument(api, "file", filePath);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "解析失败",
+      source: { type: "file", location: filePath },
+    };
+  }
+}
+
+/**
+ * 从内容字符串解析 Swagger 文档
+ */
+export async function parseSwaggerFromContent(
+  content: string,
+  format: "json" | "yaml" = "json"
+): Promise<SwaggerParseResult> {
+  try {
+    let jsonContent: string;
+
+    if (format === "yaml") {
+      const yamlObj = yaml.load(content);
+      jsonContent = JSON.stringify(yamlObj);
+    } else {
+      jsonContent = content;
+    }
+
+    const api = await SwaggerParser.validate(JSON.parse(jsonContent));
+    return parseApiDocument(api, "file", "content");
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "解析失败",
+    };
+  }
+}
+
+/**
+ * 解析 API 文档对象
+ */
+function parseApiDocument(
+  api: ApiDocument,
+  sourceType: "url" | "file",
+  sourceLocation: string
+): SwaggerParseResult {
+  try {
+    // 判断 OpenAPI 版本
+    const isOpenAPI3 = api.openapi && api.openapi.startsWith("3");
+    const specVersion = isOpenAPI3
+      ? api.openapi.startsWith("3.1")
+        ? "3.1"
+        : "3.0"
+      : "2.0";
+
+    // 解析基本信息
+    const info: ParsedApiInfo = {
+      title: api.info?.title || "Unknown API",
+      version: api.info?.version || "1.0.0",
+      description: api.info?.description,
+      contact: api.info?.contact as ParsedApiInfo["contact"],
+      license: api.info?.license as ParsedApiInfo["license"],
+    };
+
+    // 解析服务器信息
+    if (isOpenAPI3) {
+      info.servers = api.servers?.map(
+        (s: { url: string; description?: string }) => ({
+          url: s.url,
+          description: s.description,
+        })
+      );
+    } else {
+      // Swagger 2.0
+      info.host = api.host;
+      info.basePath = api.basePath;
+    }
+
+    // 解析端点
+    const endpoints: ParsedEndpoint[] = [];
+    const paths = api.paths || {};
+
+    for (const [path, pathItem] of Object.entries(paths)) {
+      const methods = [
+        "get",
+        "post",
+        "put",
+        "delete",
+        "patch",
+        "head",
+        "options",
+        "trace",
+      ];
+
+      for (const method of methods) {
+        const operation = (pathItem as Record<string, unknown>)[method] as
+          | Record<string, unknown>
+          | undefined;
+
+        if (!operation) continue;
+
+        const endpoint: ParsedEndpoint = {
+          path,
+          method: method.toUpperCase(),
+          summary: operation.summary as string,
+          description: operation.description as string,
+          operationId: operation.operationId as string,
+          tags: (operation.tags as string[]) || [],
+          deprecated: (operation.deprecated as boolean) || false,
+          parameters: parseParameters(operation.parameters, pathItem),
+          responses: parseResponses(
+            operation.responses as Record<string, unknown>
+          ),
+          security: operation.security as Array<Record<string, unknown>>,
+        };
+
+        // OpenAPI 3.x requestBody
+        if (isOpenAPI3 && operation.requestBody) {
+          endpoint.requestBody = parseRequestBody(
+            operation.requestBody as Record<string, unknown>
+          );
+        }
+
+        // Swagger 2.0 body parameter
+        if (!isOpenAPI3) {
+          const bodyParam = (operation.parameters as unknown[])?.find(
+            (p) => (p as Record<string, unknown>).in === "body"
+          );
+          if (bodyParam) {
+            endpoint.requestBody = parseSwagger2BodyParameter(
+              bodyParam as Record<string, unknown>
+            );
+          }
+        }
+
+        endpoints.push(endpoint);
+      }
+    }
+
+    // 解析标签
+    const tags = api.tags?.map((t: { name: string; description?: string }) => ({
+      name: t.name,
+      description: t.description,
+    }));
+
+    // 解析安全定义
+    const securitySchemes = parseSecuritySchemes(api);
+
+    // 解析组件/定义
+    const components = isOpenAPI3
+      ? {
+          schemas: api.components?.schemas,
+          parameters: api.components?.parameters,
+          responses: api.components?.responses,
+        }
+      : {
+          definitions: api.definitions,
+        };
+
+    return {
+      success: true,
+      source: { type: sourceType, location: sourceLocation },
+      specVersion,
+      info,
+      endpoints,
+      tags,
+      securitySchemes,
+      components,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "解析失败",
+      source: { type: sourceType, location: sourceLocation },
+    };
+  }
+}
+
+/**
+ * 解析参数
+ */
+function parseParameters(
+  operationParams: unknown,
+  pathItem: unknown
+): ParsedParameter[] {
+  const parameters: ParsedParameter[] = [];
+  const pathParams =
+    ((pathItem as Record<string, unknown>)?.parameters as unknown[]) || [];
+  const opParams = (operationParams as unknown[]) || [];
+  const allParams = [...pathParams, ...opParams] as Array<
+    Record<string, unknown>
+  >;
+
+  for (const param of allParams) {
+    parameters.push({
+      name: param.name as string,
+      in: param.in as ParsedParameter["in"],
+      description: param.description as string,
+      required: param.required as boolean,
+      type:
+        (param.type as string) ||
+        ((param.schema as Record<string, unknown>)?.type as string),
+      format: param.format as string,
+      schema: param.schema as Record<string, unknown>,
+      example: param.example,
+      defaultValue: param.default,
+      enum: param.enum as unknown[],
+    });
+  }
+
+  return parameters;
+}
+
+/**
+ * 解析请求体 (OpenAPI 3.x)
+ */
+function parseRequestBody(reqBody: Record<string, unknown>): ParsedRequestBody {
+  const content: ParsedRequestBody["content"] = [];
+
+  if (reqBody.content) {
+    for (const [contentType, mediaType] of Object.entries(
+      reqBody.content as Record<string, unknown>
+    )) {
+      const mt = mediaType as Record<string, unknown>;
+      content.push({
+        contentType,
+        schema: mt.schema as Record<string, unknown>,
+        example: mt.example,
+      });
+    }
+  }
+
+  return {
+    description: reqBody.description as string,
+    required: reqBody.required as boolean,
+    content,
+  };
+}
+
+/**
+ * 解析 Swagger 2.0 body 参数
+ */
+function parseSwagger2BodyParameter(
+  param: Record<string, unknown>
+): ParsedRequestBody {
+  return {
+    description: param.description as string,
+    required: param.required as boolean,
+    content: [
+      {
+        contentType: "application/json",
+        schema: param.schema as Record<string, unknown>,
+      },
+    ],
+  };
+}
+
+/**
+ * 解析响应
+ */
+function parseResponses(
+  responses: Record<string, unknown> = {}
+): ParsedResponse[] {
+  const result: ParsedResponse[] = [];
+
+  for (const [statusCode, response] of Object.entries(responses)) {
+    const resp = response as Record<string, unknown>;
+    const parsed: ParsedResponse = {
+      statusCode,
+      description: resp.description as string,
+    };
+
+    if (resp.content) {
+      parsed.content = [];
+      for (const [contentType, mediaType] of Object.entries(
+        resp.content as Record<string, unknown>
+      )) {
+        const mt = mediaType as Record<string, unknown>;
+        parsed.content.push({
+          contentType,
+          schema: mt.schema as Record<string, unknown>,
+          example: mt.example,
+        });
+      }
+    }
+
+    // Swagger 2.0 schema
+    if (resp.schema) {
+      parsed.content = [
+        {
+          contentType: "application/json",
+          schema: resp.schema as Record<string, unknown>,
+        },
+      ];
+    }
+
+    result.push(parsed);
+  }
+
+  return result;
+}
+
+/**
+ * 解析安全定义
+ */
+function parseSecuritySchemes(
+  api: ApiDocument
+): Record<string, ParsedSecurityScheme> | undefined {
+  const result: Record<string, ParsedSecurityScheme> = {};
+
+  // OpenAPI 3.x
+  if (api.components?.securitySchemes) {
+    for (const [name, scheme] of Object.entries(
+      api.components.securitySchemes as Record<string, Record<string, unknown>>
+    )) {
+      result[name] = {
+        type: scheme.type as string,
+        name: scheme.name as string,
+        in: scheme.in as string,
+        description: scheme.description as string,
+        scheme: scheme.scheme as string,
+        bearerFormat: scheme.bearerFormat as string,
+        flows: scheme.flows as Record<string, unknown>,
+      };
+    }
+  }
+
+  // Swagger 2.0
+  if (api.securityDefinitions) {
+    for (const [name, scheme] of Object.entries(
+      api.securityDefinitions as Record<string, Record<string, unknown>>
+    )) {
+      result[name] = {
+        type: scheme.type as string,
+        name: scheme.name as string,
+        in: scheme.in as string,
+        description: scheme.description as string,
+      };
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/**
+ * 选择 Swagger 文件
+ */
+export async function selectSwaggerFile(): Promise<{
+  canceled: boolean;
+  filePaths: string[];
+}> {
+  const { dialog } = await import("electron");
+  const result = await dialog.showOpenDialog({
+    title: "选择 Swagger/OpenAPI 文件",
+    filters: [
+      { name: "Swagger/OpenAPI", extensions: ["json", "yaml", "yml"] },
+      { name: "JSON", extensions: ["json"] },
+      { name: "YAML", extensions: ["yaml", "yml"] },
+    ],
+    properties: ["openFile"],
+  });
+
+  return {
+    canceled: result.canceled,
+    filePaths: result.filePaths,
+  };
+}

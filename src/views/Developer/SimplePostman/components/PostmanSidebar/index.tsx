@@ -1,0 +1,239 @@
+/**
+ * PostmanSidebar 左侧边栏组件
+ */
+import React, { useState } from "react";
+import { Input, Button, Collapse, Empty } from "antd";
+import {
+  SIDEBAR_MENU_ITEMS,
+  type SidebarMenuKey,
+  type ApiFolder,
+  type RequestConfig,
+  type HttpMethod,
+} from "../../config";
+
+const { Panel } = Collapse;
+
+// HTTP 方法颜色映射
+const METHOD_COLORS: Record<string, string> = {
+  GET: "text-green-500",
+  POST: "text-yellow-500",
+  PUT: "text-blue-500",
+  DELETE: "text-red-500",
+  PATCH: "text-purple-500",
+  HEAD: "text-gray-500",
+  OPTIONS: "text-gray-500",
+};
+
+interface Props {
+  // Swagger 解析相关
+  swaggerUrl: string;
+  swaggerLoading: boolean;
+  onSwaggerUrlChange: (url: string) => void;
+  onParseSwagger: () => void;
+  onUploadSwagger: () => void;
+
+  // 菜单和请求相关
+  activeMenu: SidebarMenuKey;
+  onMenuChange: (key: SidebarMenuKey) => void;
+  folders: ApiFolder[];
+  requests: RequestConfig[];
+  activeRequestId?: string;
+  onRequestSelect: (id: string) => void;
+
+  // 同步状态
+  syncing?: boolean;
+  syncStatus?: string;
+}
+
+const PostmanSidebar: React.FC<Props> = ({
+  swaggerUrl,
+  swaggerLoading,
+  onSwaggerUrlChange,
+  onParseSwagger,
+  onUploadSwagger,
+  activeMenu,
+  onMenuChange,
+  folders,
+  requests,
+  activeRequestId,
+  onRequestSelect,
+  syncing,
+  syncStatus,
+}) => {
+  const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
+
+  // 获取方法颜色
+  const getMethodColor = (method: HttpMethod) => {
+    return METHOD_COLORS[method] || "text-gray-500";
+  };
+
+  return (
+    <aside className="w-64 border-r border-border flex flex-col bg-bg-primary">
+      {/* Swagger 解析区域 */}
+      <div className="p-4 space-y-4 border-b border-border">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+          <span className="material-symbols-outlined text-sm">upload_file</span>
+          解析 Swagger / OpenAPI
+        </h2>
+        <div className="space-y-2">
+          <Input
+            value={swaggerUrl}
+            onChange={(e) => onSwaggerUrlChange(e.target.value)}
+            placeholder="粘贴 Swagger URL..."
+            className="text-xs"
+          />
+          <div className="flex gap-2">
+            <Button
+              type="primary"
+              size="small"
+              loading={swaggerLoading}
+              onClick={onParseSwagger}
+              className="flex-1 text-xs font-bold"
+            >
+              解析链接
+            </Button>
+            <Button
+              size="small"
+              onClick={onUploadSwagger}
+              title="上传 JSON/YAML"
+              icon={
+                <span className="material-symbols-outlined text-sm">
+                  attach_file
+                </span>
+              }
+            />
+          </div>
+        </div>
+        {/* 同步状态 */}
+        {syncing && (
+          <div className="flex items-center gap-2 pt-2 border-t border-border">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-[10px] text-text-tertiary">
+              {syncStatus || "正在同步接口..."}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* 菜单列表 */}
+      <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3 px-2">
+            请求列表
+          </h2>
+          <nav className="space-y-1">
+            {SIDEBAR_MENU_ITEMS.map((item) => (
+              <button
+                key={item.key}
+                onClick={() => onMenuChange(item.key)}
+                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors ${
+                  activeMenu === item.key
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-text-secondary hover:bg-bg-tertiary"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {item.icon}
+                </span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* 接口文件夹 */}
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3 px-2 flex items-center justify-between">
+            <span>接口文件夹</span>
+            <span className="material-symbols-outlined text-xs cursor-pointer hover:text-primary">
+              sync
+            </span>
+          </h2>
+          <div className="space-y-1">
+            {folders.length === 0 && requests.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="暂无接口"
+                className="py-4"
+              />
+            ) : (
+              <Collapse
+                ghost
+                expandIcon={({ isActive }) => (
+                  <span
+                    className={`material-symbols-outlined text-sm text-text-tertiary transition-transform ${
+                      isActive ? "rotate-90" : ""
+                    }`}
+                  >
+                    chevron_right
+                  </span>
+                )}
+                expandIconPosition="start"
+                activeKey={expandedFolders}
+                onChange={(keys) => setExpandedFolders(keys as string[])}
+              >
+                {folders.map((folder) => {
+                  const folderRequests = requests.filter(
+                    (r) => r.folderId === folder.id
+                  );
+                  return (
+                    <Panel
+                      header={
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <span className="material-symbols-outlined text-sm text-yellow-500">
+                            folder
+                          </span>
+                          <span className="truncate">{folder.name}</span>
+                        </div>
+                      }
+                      key={folder.id}
+                      className="!border-none !bg-transparent"
+                    >
+                      <div className="ml-6 space-y-1">
+                        {folderRequests.map((request) => (
+                          <button
+                            key={request.id}
+                            onClick={() => onRequestSelect(request.id)}
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                              activeRequestId === request.id
+                                ? "bg-primary/10 text-primary"
+                                : "text-text-tertiary hover:bg-bg-tertiary"
+                            }`}
+                          >
+                            <span
+                              className={`font-bold w-10 text-left ${getMethodColor(
+                                request.method
+                              )}`}
+                            >
+                              {request.method}
+                            </span>
+                            <span className="truncate flex-1 text-left">
+                              {request.name || request.url}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </Panel>
+                  );
+                })}
+              </Collapse>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 底部同步按钮 */}
+      <div className="p-4 border-t border-border">
+        <Button type="primary" block className="font-bold text-sm">
+          <span className="material-symbols-outlined text-sm mr-1">
+            sync_alt
+          </span>
+          接口同步
+        </Button>
+      </div>
+    </aside>
+  );
+};
+
+export { PostmanSidebar };
+export default PostmanSidebar;

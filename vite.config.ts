@@ -20,6 +20,8 @@ export default defineConfig({
                 "bcrypt",
                 "bufferutil",
                 "utf-8-validate",
+                "swagger-parser",
+                "@apidevtools/swagger-parser",
               ],
             },
           },

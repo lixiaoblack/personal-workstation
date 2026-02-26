@@ -4,6 +4,26 @@
 
 ---
 
+## [0.5.37] - 2026-02-26
+
+### 新增 (Added)
+
+- Swagger/OpenAPI 文档解析功能
+  - 支持 Swagger 2.0 和 OpenAPI 3.0/3.1 格式
+  - 支持从 URL 解析 Swagger 文档
+  - 支持从本地文件解析（JSON/YAML）
+  - 支持从内容字符串解析
+  - 解析结果包含：API 信息、端点列表、参数、请求体、响应、安全定义、标签等
+
+### 修复 (Fixed)
+
+- 修复 swagger-parser ESM 模块兼容性问题
+  - 将 swagger-parser 添加到 vite external 配置
+  - 使用 createRequire 加载 ESM 不兼容的模块
+  - 解决 Electron 主进程启动时的 `Cannot convert undefined or null to object` 错误
+
+---
+
 ## [0.5.22] - 2026-02-22
 
 ### 新增 (Added)

@@ -1,0 +1,448 @@
+<!doctype html>
+
+<html class="dark" lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>工作日志 - 智能工作空间</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#137fec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#0f172a",
+            },
+            fontFamily: {
+              display: ["Inter", "system-ui", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen"
+  >
+    <div class="layout-container flex h-full grow flex-col">
+      <!-- Top Navigation Bar -->
+      <header
+        class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 sticky top-0 z-50"
+      >
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-3 text-primary">
+            <span class="material-symbols-outlined text-3xl"
+              >auto_awesome_motion</span
+            >
+            <h2
+              class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight"
+            >
+              工作日志
+            </h2>
+          </div>
+          <nav class="hidden md:flex items-center gap-6">
+            <a
+              class="text-primary text-sm font-semibold border-b-2 border-primary pb-1"
+              href="#"
+              >首页</a
+            >
+            <a
+              class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white text-sm font-medium transition-colors"
+              href="#"
+              >日志</a
+            >
+            <a
+              class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white text-sm font-medium transition-colors"
+              href="#"
+              >团队</a
+            >
+            <a
+              class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white text-sm font-medium transition-colors"
+              href="#"
+              >设置</a
+            >
+          </nav>
+        </div>
+        <div class="flex flex-1 justify-end gap-6 items-center">
+          <label class="hidden sm:flex flex-col min-w-40 h-10 max-w-64">
+            <div
+              class="flex w-full flex-1 items-stretch rounded-lg h-full overflow-hidden border border-slate-200 dark:border-slate-700"
+            >
+              <div
+                class="text-slate-400 flex bg-slate-50 dark:bg-slate-800 items-center justify-center pl-3"
+              >
+                <span class="material-symbols-outlined text-xl">search</span>
+              </div>
+              <input
+                class="form-input flex w-full min-w-0 flex-1 border-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-500 text-sm"
+                placeholder="搜索任务或日志..."
+                value=""
+              />
+            </div>
+          </label>
+          <div class="flex gap-4 items-center">
+            <span
+              class="material-symbols-outlined text-slate-600 dark:text-slate-400 cursor-pointer hover:text-primary"
+              >notifications</span
+            >
+            <div
+              class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border-2 border-primary/20"
+              data-alt="User profile avatar with professional photo"
+              style="
+                background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDKQPvv1jqcR8w4pVoI41cz9gaT7H_wluxDBzw9oCpr9L-sruujnuT9FkpNvcum-osZwN3V8MUTT_a92I4h1clsEw7RFpqbhuquzi_UxflziOBi5gwwHd2ZGh8pQB2Pr6BjhqPIFDvTmKy-hWPDcuNS3qkrvqnF08wpdLUnUbYa6KHqHovwvFmLmC4pX98TpkJsAfI0_H5jYJIApl0UZn1XAws9JB14T67YOMZGGv1YnJRwpCOEuQZenWof9_7KSBPtlMBItITZI6Y&quot;);
+              "
+            ></div>
+          </div>
+        </div>
+      </header>
+      <main class="flex flex-1 overflow-hidden h-[calc(100vh-64px)]">
+        <!-- Left Sidebar: Calendar & Workspace -->
+        <aside
+          class="w-80 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 flex flex-col p-4 gap-6 overflow-y-auto"
+        >
+          <div class="space-y-4">
+            <div class="flex items-center justify-between px-2">
+              <h3
+                class="text-slate-900 dark:text-white font-bold text-sm uppercase tracking-wider"
+              >
+                2023年10月
+              </h3>
+              <div class="flex gap-1">
+                <button
+                  class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >chevron_left</span
+                  >
+                </button>
+                <button
+                  class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+            <div
+              class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400 mb-2"
+            >
+              <span>日</span><span>一</span><span>二</span><span>三</span
+              ><span>四</span><span>五</span><span>六</span>
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+              <!-- Simplified Calendar for layout -->
+              <div
+                class="h-8 flex items-center justify-center text-xs text-slate-400"
+              >
+                27
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs text-slate-400"
+              >
+                28
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs text-slate-400"
+              >
+                29
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                1
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                2
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                3
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                4
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs bg-primary text-white rounded-full font-bold"
+              >
+                5
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                6
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                7
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                8
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200 relative after:content-[''] after:absolute after:bottom-1 after:w-1 after:h-1 after:bg-primary after:rounded-full"
+              >
+                9
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                10
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                11
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                12
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                13
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200 relative after:content-[''] after:absolute after:bottom-1 after:w-1 after:h-1 after:bg-primary after:rounded-full"
+              >
+                14
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                15
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                16
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                17
+              </div>
+              <div
+                class="h-8 flex items-center justify-center text-xs dark:text-slate-200"
+              >
+                18
+              </div>
+            </div>
+          </div>
+          <div class="border-t border-slate-200 dark:border-slate-800 pt-6">
+            <h3
+              class="text-slate-900 dark:text-white font-bold text-sm uppercase tracking-wider px-2 mb-4"
+            >
+              导航菜单
+            </h3>
+            <div class="space-y-1">
+              <div
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >dashboard</span
+                >
+                <span class="text-sm font-medium">今日概览</span>
+              </div>
+              <div
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary transition-colors cursor-pointer"
+              >
+                <span
+                  class="material-symbols-outlined text-xl"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >calendar_today</span
+                >
+                <span class="text-sm font-semibold">日历日志</span>
+              </div>
+              <div
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >assignment</span
+                >
+                <span class="text-sm font-medium">任务详情</span>
+              </div>
+              <div
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >psychology</span
+                >
+                <span class="text-sm font-medium">AI 助手</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <!-- Middle Section: Task Log Editing -->
+        <section
+          class="flex-1 overflow-y-auto bg-slate-50 dark:bg-background-dark p-6"
+        >
+          <div class="max-w-3xl mx-auto space-y-6">
+            <div class="flex justify-between items-end">
+              <div>
+                <div class="flex gap-2 text-slate-500 text-xs font-medium mb-1">
+                  <span>我的工作空间</span> /
+                  <span class="text-primary">日历日志</span>
+                </div>
+                <h1 class="text-2xl font-bold dark:text-white">
+                  10月5日 工作记录
+                </h1>
+              </div>
+              <button
+                class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"
+              >
+                <span class="material-symbols-outlined text-lg">add</span>
+                <span>新增记录</span>
+              </button>
+            </div>
+            <!-- Task Item 1 -->
+            <div
+              class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm"
+            >
+              <div class="flex gap-4">
+                <div class="flex flex-col items-center gap-2">
+                  <span class="text-xs font-bold text-slate-400">09:30</span>
+                  <div
+                    class="w-0.5 grow bg-slate-200 dark:bg-slate-800 rounded-full"
+                  ></div>
+                </div>
+                <div class="flex-1 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h3
+                      class="font-bold text-slate-900 dark:text-white text-lg"
+                    >
+                      产品设计周会
+                    </h3>
+                    <span
+                      class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                      >已完成</span
+                    >
+                  </div>
+                  <textarea
+                    class="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-primary focus:border-primary p-3 min-h-[100px]"
+                    placeholder="输入会议纪要..."
+                  >
+讨论了V2.0版本的UI改版方向，确定了以深色模式为核心的设计风格。下一步需要完善组件库的配色方案。
+
+1. 确立主色调为 #137fec
+2. 简化导航栏结构
+3. 增加AI总结模块</textarea
+                  >
+                  <div class="flex gap-2">
+                    <span
+                      class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs text-slate-600 dark:text-slate-400"
+                      ><span class="material-symbols-outlined text-sm">tag</span
+                      >设计</span
+                    >
+                    <span
+                      class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs text-slate-600 dark:text-slate-400"
+                      ><span class="material-symbols-outlined text-sm"
+                        >group</span
+                      >团队</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Task Item 2 -->
+            <div
+              class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm"
+            >
+              <div class="flex gap-4">
+                <div class="flex flex-col items-center gap-2">
+                  <span class="text-xs font-bold text-slate-400">14:00</span>
+                  <div
+                    class="w-0.5 grow bg-slate-200 dark:bg-slate-800 rounded-full"
+                  ></div>
+                </div>
+                <div class="flex-1 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h3
+                      class="font-bold text-slate-900 dark:text-white text-lg"
+                    >
+                      前端组件开发
+                    </h3>
+                    <span
+                      class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                      >进行中</span
+                    >
+                  </div>
+                  <textarea
+                    class="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-primary focus:border-primary p-3 min-h-[100px]"
+                    placeholder="输入任务进展..."
+                  >
+正在迁移 Tailwind CSS 配置文件，并同步 Material Symbols 库。
+                                    
+当前进度：
+- [x] 颜色主题配置
+- [ ] 按钮组件重构
+- [ ] 响应式侧边栏调整</textarea
+                  >
+                  <div class="flex gap-2">
+                    <span
+                      class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs text-slate-600 dark:text-slate-400"
+                      ><span class="material-symbols-outlined text-sm"
+                        >code</span
+                      >前端开发</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Task Item 3 (New Empty) -->
+            <div
+              class="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center text-slate-400 hover:border-primary/50 hover:text-primary transition-all cursor-pointer group"
+            >
+              <span
+                class="material-symbols-outlined text-4xl mb-2 group-hover:scale-110 transition-transform"
+                >post_add</span
+              >
+              <p class="text-sm font-medium">点击添加下午的工作记录...</p>
+            </div>
+          </div>
+        </section>
+        <!-- Right Sidebar: AI Summary Panel -->
+      </main>
+    </div>
+    <button
+      class="fixed bottom-8 right-8 z-[60] flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-full shadow-2xl shadow-primary/40 transition-all transform hover:scale-105 active:scale-95"
+    >
+      <span class="material-symbols-outlined text-2xl">auto_awesome</span>
+      <span class="font-bold text-sm">AI 助手</span>
+    </button>
+  </body>
+</html>

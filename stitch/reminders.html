@@ -1,0 +1,476 @@
+<!doctype html>
+
+<html class="dark" lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#137fec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#0f172a",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .glass-card {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .sidebar-item-active {
+        background: rgba(19, 127, 236, 0.15);
+        border-right: 3px solid #137fec;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display"
+  >
+    <div class="flex h-screen overflow-hidden">
+      <!-- Sidebar -->
+      <aside
+        class="w-64 flex-shrink-0 border-r border-slate-800 bg-[#0f172a] flex flex-col"
+      >
+        <div class="p-6 flex items-center gap-3">
+          <div
+            class="size-10 bg-primary rounded-xl flex items-center justify-center text-white"
+          >
+            <span class="material-symbols-outlined text-2xl">task_alt</span>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight">任务管理器</h1>
+            <p class="text-xs text-slate-500">工作空间 v2.0</p>
+          </div>
+        </div>
+        <nav class="flex-1 px-4 space-y-2 mt-4">
+          <a
+            class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors"
+            href="#"
+          >
+            <span class="material-symbols-outlined">terminal</span>
+            <span class="text-sm font-medium">开发工具</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors"
+            href="#"
+          >
+            <span class="material-symbols-outlined">map</span>
+            <span class="text-sm font-medium">GIS 系统</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors"
+            href="#"
+          >
+            <span class="material-symbols-outlined">auto_stories</span>
+            <span class="text-sm font-medium">日志</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors"
+            href="#"
+          >
+            <span class="material-symbols-outlined">description</span>
+            <span class="text-sm font-medium">笔记本</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 text-white sidebar-item-active rounded-lg transition-colors"
+            href="#"
+          >
+            <span class="material-symbols-outlined">notifications_active</span>
+            <span class="text-sm font-medium">提醒事项</span>
+          </a>
+        </nav>
+        <div class="p-4 mt-auto border-t border-slate-800">
+          <div class="flex items-center gap-3 p-2">
+            <div class="size-8 rounded-full bg-slate-700 overflow-hidden">
+              <img
+                alt="User"
+                data-alt="User profile avatar"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9vG_NCSJDXkwdzJySYYbTLsicmfvXBfMhYxmbFSAW5E3vH--HqZxGmNfYblvjsMtNXuR05PLZ-nKfWxcRv_Z2uuQg2k9JOcCU2_5ocRu6dxu_MN70zsnARA2vEvRYJQYS_DpTHOXZg5F-TIdUh73tHqyKpoExyen7hhbi8Og3t5k2EqKh_sE6HYfqNdKbQiuDdLuzvFGtMS5RdN18AgJYVKXF4y7XIoo6wluF1_RH4rWIhkGkdj0IQv1jt3VUDYxwI8sC-8qSHxg"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">管理员用户</p>
+              <p class="text-xs text-slate-500 truncate">admin@task.pro</p>
+            </div>
+            <span class="material-symbols-outlined text-slate-500 text-lg"
+              >settings</span
+            >
+          </div>
+        </div>
+      </aside>
+      <!-- Main Content -->
+      <main class="flex-1 flex flex-col overflow-hidden relative">
+        <!-- Header -->
+        <header
+          class="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-background-dark/50 backdrop-blur-md sticky top-0 z-10"
+        >
+          <div class="flex items-center gap-4">
+            <h2 class="text-xl font-semibold">任务看板</h2>
+            <div
+              class="flex items-center gap-1 bg-slate-800/50 rounded-full px-3 py-1"
+            >
+              <span class="size-2 rounded-full bg-green-500"></span>
+              <span class="text-xs text-slate-400">系统已连接</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <span
+                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl"
+                >search</span
+              >
+              <input
+                class="bg-slate-800/50 border-none rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary"
+                placeholder="搜索任务..."
+                type="text"
+              />
+            </div>
+            <button
+              class="bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-sm">add</span>
+              新建分类
+            </button>
+          </div>
+        </header>
+        <!-- Content Scroll Area -->
+        <div class="flex-1 overflow-y-auto p-8">
+          <div class="mb-8">
+            <h3 class="text-3xl font-bold mb-2">我的提醒事项</h3>
+            <p class="text-slate-500">管理您的日常任务和分组记录</p>
+          </div>
+          <!-- Dashboard Tabs -->
+          <div class="flex gap-8 border-b border-slate-800 mb-8">
+            <button
+              class="pb-4 border-b-2 border-primary text-primary font-semibold text-sm"
+            >
+              进行中 (11)
+            </button>
+            <button
+              class="pb-4 border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition-colors text-sm"
+            >
+              已完成 (45)
+            </button>
+            <button
+              class="pb-4 border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition-colors text-sm"
+            >
+              所有任务
+            </button>
+          </div>
+          <!-- Cards Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Category Card: Work -->
+            <div class="glass-card rounded-xl p-6 flex flex-col h-fit">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500"
+                  >
+                    <span class="material-symbols-outlined">work</span>
+                  </div>
+                  <h4 class="text-lg font-bold">工作任务</h4>
+                </div>
+                <span
+                  class="text-xs font-bold bg-blue-500/10 text-blue-500 px-2 py-1 rounded"
+                  >4 个待办</span
+                >
+              </div>
+              <div class="space-y-4">
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      项目进度汇报 PPT 制作
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      明天 09:00
+                    </span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      核心 API 文档审查
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      今天 14:30
+                    </span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      跨部门协作会议
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-red-400 font-semibold flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >priority_high</span
+                      >
+                      已逾期
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                class="mt-6 text-xs text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span class="material-symbols-outlined text-sm"
+                  >add_circle</span
+                >
+                添加子任务
+              </button>
+            </div>
+            <!-- Category Card: Life -->
+            <div class="glass-card rounded-xl p-6 flex flex-col h-fit">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-500"
+                  >
+                    <span class="material-symbols-outlined">favorite</span>
+                  </div>
+                  <h4 class="text-lg font-bold">个人生活</h4>
+                </div>
+                <span
+                  class="text-xs font-bold bg-orange-500/10 text-orange-500 px-2 py-1 rounded"
+                  >2 个待办</span
+                >
+              </div>
+              <div class="space-y-4">
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      健身房锻炼 - 腿部训练
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      今天 18:00
+                    </span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      购买周末聚会食材
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      周五 17:00
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                class="mt-6 text-xs text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span class="material-symbols-outlined text-sm"
+                  >add_circle</span
+                >
+                添加子任务
+              </button>
+            </div>
+            <!-- Category Card: Study -->
+            <div class="glass-card rounded-xl p-6 flex flex-col h-fit">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-500"
+                  >
+                    <span class="material-symbols-outlined">school</span>
+                  </div>
+                  <h4 class="text-lg font-bold">学习计划</h4>
+                </div>
+                <span
+                  class="text-xs font-bold bg-purple-500/10 text-purple-500 px-2 py-1 rounded"
+                  >5 个待办</span
+                >
+              </div>
+              <div class="space-y-4">
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      阅读《Clean Code》第三章
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      每天 21:00
+                    </span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      练习 Rust 所有权概念
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      周六 10:00
+                    </span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 group">
+                  <input
+                    class="mt-1 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary"
+                    type="checkbox"
+                  />
+                  <div class="flex-1">
+                    <p
+                      class="text-sm font-medium group-hover:text-primary transition-colors cursor-pointer"
+                    >
+                      托福听力模拟测试
+                    </p>
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1 mt-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >schedule</span
+                      >
+                      10月24日
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                class="mt-6 text-xs text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span class="material-symbols-outlined text-sm"
+                  >add_circle</span
+                >
+                添加子任务
+              </button>
+            </div>
+            <!-- Add New Category Placeholder -->
+            <div
+              class="border-2 border-dashed border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center gap-3 hover:border-slate-700 hover:bg-slate-800/20 transition-all cursor-pointer group"
+            >
+              <div
+                class="size-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform"
+              >
+                <span class="material-symbols-outlined">add</span>
+              </div>
+              <p class="text-sm font-medium text-slate-500">创建新任务分组</p>
+            </div>
+          </div>
+        </div>
+        <!-- AI Assistant Floating Button -->
+        <div class="absolute bottom-8 right-8">
+          <button
+            class="bg-primary hover:bg-primary/90 text-white flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl shadow-primary/30 transition-all transform hover:scale-105 active:scale-95 group"
+          >
+            <span
+              class="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform"
+              >auto_awesome</span
+            >
+            <span class="font-bold tracking-wide">AI 助手</span>
+            <div class="ml-2 flex items-center gap-0.5">
+              <span class="w-1 h-1 bg-white/40 rounded-full"></span>
+              <span class="w-1 h-1 bg-white rounded-full animate-pulse"></span>
+              <span class="w-1 h-1 bg-white/40 rounded-full"></span>
+            </div>
+          </button>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

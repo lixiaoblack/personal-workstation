@@ -1,0 +1,349 @@
+<!doctype html>
+
+<html class="dark" lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#137fec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#0f172a",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .material-symbols-outlined {
+        font-size: 20px;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(19, 127, 236, 0.2);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(19, 127, 236, 0.4);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display"
+  >
+    <div class="flex h-screen w-full flex-col overflow-hidden">
+      <header
+        class="flex h-14 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark px-4 shrink-0"
+      >
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-2 text-primary">
+            <span class="material-symbols-outlined text-3xl">edit_note</span>
+            <h2
+              class="text-slate-900 dark:text-slate-100 text-lg font-bold tracking-tight"
+            >
+              智能笔记
+            </h2>
+          </div>
+          <div
+            class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-1.5 w-64"
+          >
+            <span class="material-symbols-outlined text-slate-500 mr-2"
+              >search</span
+            >
+            <input
+              class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-500 text-slate-100"
+              placeholder="搜索笔记..."
+              type="text"
+            />
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div
+            class="flex items-center gap-6 mr-4 border-r border-slate-800 pr-6"
+          >
+            <a
+              class="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
+              href="#"
+              >文件</a
+            >
+            <a
+              class="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
+              href="#"
+              >编辑</a
+            >
+            <a
+              class="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
+              href="#"
+              >视图</a
+            >
+            <a
+              class="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
+              href="#"
+              >工具</a
+            >
+          </div>
+          <button
+            class="flex items-center justify-center p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-primary/20"
+          >
+            <span class="material-symbols-outlined">settings</span>
+          </button>
+          <div
+            class="size-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center overflow-hidden"
+          >
+            <img
+              class="w-full h-full object-cover"
+              data-alt="User profile avatar icon"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqtC_jV-2bZKxK3IJeAOfBTUgY3b0T8RyZmZV2GV2wDfk76g51aFVLukiXezj9ufzwK0y0873faIm27rcQXf6hPULwy5sEpm57wjibUpMeYs29DBHopTA4WVqT3w9-fl8HXUYU-kMzb4dWWuXIlOoo9-_C5Hfi-e1yRUSsJDzykqsfOOGXsAWoWlDPi7CaV09YtrNAXmYjNTj2wQDrLcTlT5aZby0v9nlod6wtJXuwooffiEoNDgCZzrFuv20K_w6H9BG-lWPzYeA"
+            />
+          </div>
+        </div>
+      </header>
+      <main class="flex flex-1 overflow-hidden">
+        <aside
+          class="w-64 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-background-light dark:bg-background-dark shrink-0"
+        >
+          <div class="p-4">
+            <button
+              class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white py-2 rounded-lg font-medium text-sm transition-all shadow-lg shadow-primary/20"
+            >
+              <span class="material-symbols-outlined">add</span>
+              新建笔记
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto px-2">
+            <div class="space-y-1">
+              <div
+                class="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 text-primary cursor-pointer"
+              >
+                <span class="material-symbols-outlined">folder_open</span>
+                <span class="text-sm font-medium">我的文档</span>
+              </div>
+              <div class="ml-4 space-y-1">
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-400 hover:bg-slate-800 cursor-pointer"
+                >
+                  <span class="material-symbols-outlined">chevron_right</span>
+                  <span class="material-symbols-outlined">folder</span>
+                  <span class="text-sm">项目草案</span>
+                </div>
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-100 bg-slate-800/50 cursor-pointer"
+                >
+                  <span class="material-symbols-outlined">expand_more</span>
+                  <span class="material-symbols-outlined">folder</span>
+                  <span class="text-sm">2024年计划</span>
+                </div>
+                <div class="ml-6 space-y-1">
+                  <div
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-primary border-l-2 border-primary bg-primary/5 cursor-pointer"
+                  >
+                    <span class="material-symbols-outlined">description</span>
+                    <span class="text-sm">产品需求文档.md</span>
+                  </div>
+                  <div
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-400 hover:bg-slate-800 cursor-pointer"
+                  >
+                    <span class="material-symbols-outlined">description</span>
+                    <span class="text-sm">市场调研报告.md</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 cursor-pointer"
+              >
+                <span class="material-symbols-outlined">star</span>
+                <span class="text-sm font-medium">快速访问</span>
+              </div>
+              <div
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 cursor-pointer"
+              >
+                <span class="material-symbols-outlined">tag</span>
+                <span class="text-sm font-medium">标签列表</span>
+              </div>
+              <div
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 cursor-pointer"
+              >
+                <span class="material-symbols-outlined">delete</span>
+                <span class="text-sm font-medium">回收站</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 border-t border-slate-800">
+            <div
+              class="flex items-center justify-between text-xs text-slate-500 mb-2"
+            >
+              <span>存储空间</span>
+              <span>75%</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-primary h-full w-3/4"></div>
+            </div>
+          </div>
+        </aside>
+        <section
+          class="flex-1 flex flex-col bg-background-light dark:bg-[#0f172a] overflow-hidden"
+        >
+          <div
+            class="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900/30"
+          >
+            <div class="flex items-center gap-4">
+              <span class="text-slate-400 text-sm">主目录 / 2024年计划 / </span>
+              <h1 class="text-slate-100 font-semibold">产品需求文档.md</h1>
+              <span
+                class="bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded uppercase font-bold"
+                >Markdown</span
+              >
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="p-1.5 text-slate-400 hover:text-slate-100">
+                <span class="material-symbols-outlined">history</span>
+              </button>
+              <button class="p-1.5 text-slate-400 hover:text-slate-100">
+                <span class="material-symbols-outlined">share</span>
+              </button>
+              <button
+                class="flex items-center gap-2 bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-700"
+              >
+                <span class="material-symbols-outlined text-sm">save</span>
+                保存
+              </button>
+            </div>
+          </div>
+          <div
+            class="flex-1 flex flex-col overflow-y-auto p-8 max-w-4xl mx-auto w-full"
+          >
+            <div class="flex items-center gap-4 mb-8">
+              <div class="p-4 bg-slate-800 rounded-xl">
+                <span class="material-symbols-outlined text-primary text-3xl"
+                  >article</span
+                >
+              </div>
+              <div>
+                <input
+                  class="bg-transparent border-none focus:ring-0 text-3xl font-bold text-slate-100 w-full p-0"
+                  type="text"
+                  value="产品需求文档：智能笔记系统 2.0"
+                />
+                <div
+                  class="flex items-center gap-4 mt-2 text-sm text-slate-500"
+                >
+                  <span class="flex items-center gap-1"
+                    ><span class="material-symbols-outlined text-sm"
+                      >calendar_today</span
+                    >
+                    2024-05-20</span
+                  >
+                  <span class="flex items-center gap-1"
+                    ><span class="material-symbols-outlined text-sm"
+                      >person</span
+                    >
+                    张三</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="prose prose-invert max-w-none">
+              <h2
+                class="text-xl font-bold text-primary mb-4 border-b border-slate-800 pb-2"
+              >
+                1. 项目背景
+              </h2>
+              <p class="text-slate-300 leading-relaxed mb-6">
+                随着个人知识管理（PKM）需求的增长，用户需要一个不仅能记录文字，还能通过人工智能辅助创作、整理和检索的智能系统。本项目旨在通过
+                AI 技术的整合，提升用户的写作效率。
+              </p>
+              <h2
+                class="text-xl font-bold text-primary mb-4 border-b border-slate-800 pb-2"
+              >
+                2. 核心功能描述
+              </h2>
+              <ul class="list-disc list-inside text-slate-300 space-y-2 mb-6">
+                <li>
+                  <strong class="text-slate-100">AI 辅助写作：</strong>
+                  实时提供续写建议和润色服务。
+                </li>
+                <li>
+                  <strong class="text-slate-100">多级目录管理：</strong>
+                  树状结构无限层级，方便组织大型项目。
+                </li>
+                <li>
+                  <strong class="text-slate-100">Markdown 实时预览：</strong>
+                  支持所见即所得的编辑体验。
+                </li>
+                <li>
+                  <strong class="text-slate-100">云端同步：</strong>
+                  跨设备无缝衔接。
+                </li>
+              </ul>
+              <h2
+                class="text-xl font-bold text-primary mb-4 border-b border-slate-800 pb-2"
+              >
+                3. 界面设计规范
+              </h2>
+              <p class="text-slate-300 leading-relaxed">
+                采用深色模式（#0f172a）作为主要背景色，文字使用淡灰色以减少视觉疲劳。强调色使用品牌蓝（#137fec）。
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer
+        class="h-8 border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 flex items-center justify-between px-4 text-[10px] text-slate-500 shrink-0"
+      >
+        <div class="flex items-center gap-4">
+          <span>字符数: 1,240</span>
+          <span>词数: 452</span>
+          <span>行数: 32</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1"
+            ><span class="w-2 h-2 rounded-full bg-green-500"></span>
+            已同步</span
+          >
+          <span>UTF-8</span>
+          <span>Markdown</span>
+        </div>
+      </footer>
+      <button
+        class="fixed bottom-12 right-6 flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-full shadow-2xl transition-all hover:scale-105 z-50 font-medium text-sm"
+      >
+        <span class="material-symbols-outlined">auto_awesome</span>
+        AI 助手
+      </button>
+    </div>
+  </body>
+</html>

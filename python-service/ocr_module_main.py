@@ -90,12 +90,28 @@ except ImportError:
                     # 禁用模型源检查，加快启动速度
                     os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
                     logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
-                    # 注意：不指定 ocr_version，让 PaddleOCR 自动选择可用版本
-                    self._ocr = PaddleOCR(
-                        use_angle_cls=True,
-                        lang='ch'
-                    )
-                    logger.info("[OcrService] PaddleOCR 模型初始化完成")
+
+                    # 尝试多种初始化方式，兼容不同版本的 PaddleOCR
+                    init_attempts = [
+                        {'use_angle_cls': True, 'lang': 'ch'},
+                        {'use_angle_cls': True, 'lang': 'ch', 'ocr_version': 'PP-OCRv4'},
+                        {'use_angle_cls': True, 'lang': 'ch', 'ocr_version': 'PP-OCRv3'},
+                    ]
+
+                    last_error = None
+                    for params in init_attempts:
+                        try:
+                            logger.info(f"[OcrService] 尝试初始化参数: {params}")
+                            self._ocr = PaddleOCR(**params)
+                            logger.info("[OcrService] PaddleOCR 模型初始化完成")
+                            break
+                        except Exception as e:
+                            last_error = e
+                            logger.warning(f"[OcrService] 初始化参数 {params} 失败: {e}")
+                            continue
+
+                    if self._ocr is None:
+                        raise last_error or Exception("所有初始化方式都失败")
                 except ImportError as e:
                     self._init_error = f"PaddleOCR 未安装: {e}"
                     logger.error(self._init_error)

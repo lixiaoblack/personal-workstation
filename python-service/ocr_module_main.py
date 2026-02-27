@@ -94,8 +94,7 @@ except ImportError:
                     self._ocr = PaddleOCR(
                         use_angle_cls=True,
                         lang='ch',
-                        ocr_version='PP-OCRv4',
-                        use_space_char=True
+                        ocr_version='PP-OCRv4'
                     )
                     logger.info("[OcrService] PaddleOCR 模型初始化完成")
                 except ImportError as e:

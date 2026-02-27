@@ -132,10 +132,20 @@ export async function parseSwaggerFromUrl(
   url: string
 ): Promise<SwaggerParseResult> {
   try {
+    console.log("[Swagger] 开始解析 URL:", url);
     // 使用 swagger-parser 解析和验证
     const api = await SwaggerParser.validate(url);
-    return parseApiDocument(api, "url", url);
+    console.log("[Swagger] swagger-parser 验证成功, 开始解析文档");
+    const result = parseApiDocument(api, "url", url);
+    console.log("[Swagger] 文档解析完成, 成功:", result.success);
+    return result;
   } catch (error) {
+    console.error("[Swagger] URL 解析错误:", error);
+    // 打印更详细的错误信息
+    if (error instanceof Error) {
+      console.error("[Swagger] 错误消息:", error.message);
+      console.error("[Swagger] 错误堆栈:", error.stack);
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : "解析失败",
@@ -222,6 +232,7 @@ function parseApiDocument(
   sourceLocation: string
 ): SwaggerParseResult {
   try {
+    console.log("[Swagger] parseApiDocument 开始");
     // 判断 OpenAPI 版本
     const isOpenAPI3 = api.openapi && api.openapi.startsWith("3");
     const specVersion = isOpenAPI3
@@ -229,6 +240,7 @@ function parseApiDocument(
         ? "3.1"
         : "3.0"
       : "2.0";
+    console.log("[Swagger] 检测到版本:", specVersion, "isOpenAPI3:", isOpenAPI3);
 
     // 解析基本信息
     const info: ParsedApiInfo = {
@@ -256,6 +268,7 @@ function parseApiDocument(
     // 解析端点
     const endpoints: ParsedEndpoint[] = [];
     const paths = api.paths || {};
+    console.log("[Swagger] 开始解析 paths, 共", Object.keys(paths).length, "个路径");
 
     for (const [path, pathItem] of Object.entries(paths)) {
       const methods = [
@@ -276,44 +289,53 @@ function parseApiDocument(
 
         if (!operation) continue;
 
-        const endpoint: ParsedEndpoint = {
-          path,
-          method: method.toUpperCase(),
-          summary: operation.summary as string,
-          description: operation.description as string,
-          operationId: operation.operationId as string,
-          tags: (operation.tags as string[]) || [],
-          deprecated: (operation.deprecated as boolean) || false,
-          parameters: parseParameters(operation.parameters, pathItem),
-          responses: parseResponses(
-            operation.responses as Record<string, unknown>
-          ),
-          security: operation.security as Array<Record<string, unknown>>,
-        };
+        try {
+          const endpoint: ParsedEndpoint = {
+            path,
+            method: method.toUpperCase(),
+            summary: operation.summary as string,
+            description: operation.description as string,
+            operationId: operation.operationId as string,
+            tags: (operation.tags as string[]) || [],
+            deprecated: (operation.deprecated as boolean) || false,
+            parameters: parseParameters(operation.parameters, pathItem),
+            responses: parseResponses(
+              operation.responses as Record<string, unknown>
+            ),
+            security: operation.security as Array<Record<string, unknown>>,
+          };
 
-        // OpenAPI 3.x requestBody
-        if (isOpenAPI3 && operation.requestBody) {
-          endpoint.requestBody = parseRequestBody(
-            operation.requestBody as Record<string, unknown>,
-            api
-          );
-        }
-
-        // Swagger 2.0 body parameter
-        if (!isOpenAPI3) {
-          const bodyParam = (operation.parameters as unknown[])?.find(
-            (p) => (p as Record<string, unknown>).in === "body"
-          );
-          if (bodyParam) {
-            endpoint.requestBody = parseSwagger2BodyParameter(
-              bodyParam as Record<string, unknown>
+          // OpenAPI 3.x requestBody
+          if (isOpenAPI3 && operation.requestBody) {
+            endpoint.requestBody = parseRequestBody(
+              operation.requestBody as Record<string, unknown>,
+              api
             );
           }
-        }
 
-        endpoints.push(endpoint);
+          // Swagger 2.0 body parameter
+          if (!isOpenAPI3) {
+            const bodyParam = (operation.parameters as unknown[])?.find(
+              (p) => (p as Record<string, unknown>).in === "body"
+            );
+            if (bodyParam) {
+              endpoint.requestBody = parseSwagger2BodyParameter(
+                bodyParam as Record<string, unknown>
+              );
+            }
+          }
+
+          endpoints.push(endpoint);
+        } catch (endpointError) {
+          console.error(
+            `[Swagger] 解析端点失败: ${method.toUpperCase()} ${path}`,
+            endpointError
+          );
+          // 继续解析其他端点
+        }
       }
     }
+    console.log("[Swagger] 端点解析完成, 共", endpoints.length, "个端点");
 
     // 解析标签
     const tags = api.tags?.map((t: { name: string; description?: string }) => ({
@@ -346,6 +368,11 @@ function parseApiDocument(
       components,
     };
   } catch (error) {
+    console.error("[Swagger] parseApiDocument 错误:", error);
+    if (error instanceof Error) {
+      console.error("[Swagger] 错误消息:", error.message);
+      console.error("[Swagger] 错误堆栈:", error.stack);
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : "解析失败",
@@ -404,6 +431,7 @@ function resolveRef(
   api: ApiDocument
 ): Record<string, unknown> | undefined {
   if (!ref || !ref.startsWith("#/")) {
+    console.warn("[Swagger] 无效的 $ref 引用:", ref);
     return undefined;
   }
 
@@ -414,6 +442,14 @@ function resolveRef(
     if (current && typeof current === "object" && part in current) {
       current = (current as Record<string, unknown>)[part];
     } else {
+      console.warn(
+        "[Swagger] $ref 引用解析失败:",
+        ref,
+        "- 找不到路径部分:",
+        part,
+        "可用键:",
+        current && typeof current === "object" ? Object.keys(current) : "N/A"
+      );
       return undefined;
     }
   }
@@ -431,17 +467,24 @@ function generateExampleFromSchema(
 ): unknown {
   // 防止循环引用导致的无限递归
   if (depth > 10) {
+    console.warn("[Swagger] generateExampleFromSchema 深度超过 10, 停止递归");
     return {};
   }
 
-  // 如果有 $ref，先解析引用
-  if (schema.$ref) {
-    const resolved = resolveRef(schema.$ref as string, api);
-    if (resolved) {
-      return generateExampleFromSchema(resolved, api, depth + 1);
+  try {
+    // 如果有 $ref，先解析引用
+    if (schema.$ref) {
+      const resolved = resolveRef(schema.$ref as string, api);
+      if (resolved) {
+        return generateExampleFromSchema(resolved, api, depth + 1);
+      }
+      console.warn(
+        "[Swagger] 无法解析 $ref:",
+        schema.$ref,
+        "返回空对象"
+      );
+      return {};
     }
-    return {};
-  }
 
   // 如果有 example，直接使用
   if (schema.example !== undefined) {
@@ -545,6 +588,10 @@ function generateExampleFromSchema(
         );
       }
       return null;
+  }
+  } catch (error) {
+    console.error("[Swagger] generateExampleFromSchema 错误:", error, "schema:", schema);
+    return null;
   }
 }
 

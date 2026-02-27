@@ -2,11 +2,16 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 import electron from "vite-plugin-electron/simple";
+import monacoEditorPlugin from "vite-plugin-monaco-editor";
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    // 配置 Monaco Editor 插件，将编辑器打包到本地
+    monacoEditorPlugin({
+      languageWorkers: ["json"],
+    }),
     electron({
       main: {
         entry: "electron/main.ts",

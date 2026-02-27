@@ -13,6 +13,9 @@ import {
   getMonacoThemeName,
 } from "@/styles/themes/monaco-theme";
 
+// Monaco Editor 已通过 vite-plugin-monaco-editor 打包到本地
+// 无需额外配置 CDN
+
 const JsonBeautify: React.FC = () => {
   const { message } = App.useApp();
   const { resolvedTheme } = useTheme();

@@ -21,7 +21,16 @@ SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
 # 收集数据文件
 datas = []
 
-# 收集 RapidOCR 数据文件
+# 收集 RapidOCR 数据文件（包括 config.yaml 和模型文件）
+try:
+    import rapidocr_onnxruntime
+    package_path = os.path.dirname(rapidocr_onnxruntime.__file__)
+    # 收集整个 rapidocr_onnxruntime 包目录
+    datas.append((package_path, 'rapidocr_onnxruntime'))
+except Exception as e:
+    print(f"Warning: Could not find RapidOCR package: {e}")
+
+# 使用 collect_data_files 作为备份
 try:
     rapidocr_datas = collect_data_files('rapidocr_onnxruntime')
     datas.extend(rapidocr_datas)

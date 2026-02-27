@@ -22,6 +22,30 @@ datas = [
     ('skills', 'skills'),
 ]
 
+# 收集 RapidOCR 数据文件（配置文件、模型等）
+# 首先尝试收集整个包目录
+try:
+    import rapidocr_onnxruntime
+    package_path = os.path.dirname(rapidocr_onnxruntime.__file__)
+    # 收集整个 rapidocr_onnxruntime 包目录
+    datas.append((package_path, 'rapidocr_onnxruntime'))
+except Exception as e:
+    print(f"Warning: Could not find RapidOCR package: {e}")
+
+# 使用 collect_data_files 作为备份
+try:
+    rapidocr_datas = collect_data_files('rapidocr_onnxruntime')
+    datas.extend(rapidocr_datas)
+except Exception as e:
+    print(f"Warning: Could not collect RapidOCR data files: {e}")
+
+# 收集 ONNX Runtime 数据文件
+try:
+    onnx_datas = collect_data_files('onnxruntime')
+    datas.extend(onnx_datas)
+except Exception:
+    pass
+
 # 收集隐式导入
 hiddenimports = [
     # FastAPI 和 uvicorn

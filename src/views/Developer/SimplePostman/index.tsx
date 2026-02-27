@@ -359,6 +359,20 @@ const SimplePostman: React.FC = () => {
       const apiDescription = parseResult.info?.description;
 
       // 创建 tag 信息映射
+      // 判断字符串是否包含中文
+      const containsChinese = (str: string): boolean => /[\u4e00-\u9fa5]/.test(str);
+      
+      // 获取优先显示名称：优先中文，都是中文优先 name
+      const getPreferredDisplayName = (name: string, description?: string): string => {
+        const nameHasChinese = containsChinese(name);
+        const descHasChinese = description ? containsChinese(description) : false;
+        
+        if (nameHasChinese && !descHasChinese) return name;
+        if (!nameHasChinese && descHasChinese) return description!;
+        if (nameHasChinese && descHasChinese) return name; // 都是中文优先 name
+        return name; // 都是英文用 name
+      };
+      
       const tagInfoMap = new Map<
         string,
         { description: string; displayName: string }
@@ -367,7 +381,7 @@ const SimplePostman: React.FC = () => {
         parseResult.tags.forEach((tag) => {
           tagInfoMap.set(tag.name, {
             description: tag.description || "",
-            displayName: tag.description || tag.name,
+            displayName: getPreferredDisplayName(tag.name, tag.description),
           });
         });
       }

@@ -244,7 +244,12 @@ function parseApiDocument(
         ? "3.1"
         : "3.0"
       : "2.0";
-    console.log("[Swagger] 检测到版本:", specVersion, "isOpenAPI3:", isOpenAPI3);
+    console.log(
+      "[Swagger] 检测到版本:",
+      specVersion,
+      "isOpenAPI3:",
+      isOpenAPI3
+    );
 
     // 解析基本信息
     const info: ParsedApiInfo = {
@@ -272,7 +277,11 @@ function parseApiDocument(
     // 解析端点
     const endpoints: ParsedEndpoint[] = [];
     const paths = api.paths || {};
-    console.log("[Swagger] 开始解析 paths, 共", Object.keys(paths).length, "个路径");
+    console.log(
+      "[Swagger] 开始解析 paths, 共",
+      Object.keys(paths).length,
+      "个路径"
+    );
 
     for (const [path, pathItem] of Object.entries(paths)) {
       const methods = [
@@ -482,119 +491,128 @@ function generateExampleFromSchema(
       if (resolved) {
         return generateExampleFromSchema(resolved, api, depth + 1);
       }
-      console.warn(
-        "[Swagger] 无法解析 $ref:",
-        schema.$ref,
-        "返回空对象"
-      );
+      console.warn("[Swagger] 无法解析 $ref:", schema.$ref, "返回空对象");
       return {};
     }
 
-  // 如果有 example，直接使用
-  if (schema.example !== undefined) {
-    return schema.example;
-  }
-
-  // 如果有 default，使用默认值
-  if (schema.default !== undefined) {
-    return schema.default;
-  }
-
-  const type = schema.type as string;
-
-  switch (type) {
-    case "string":
-      if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
-        return schema.enum[0];
-      }
-      if (schema.format === "date") return "2024-01-01";
-      if (schema.format === "date-time") return "2024-01-01T00:00:00Z";
-      if (schema.format === "email") return "user@example.com";
-      if (schema.format === "uri" || schema.format === "url")
-        return "https://example.com";
-      if (schema.format === "uuid")
-        return "00000000-0000-0000-0000-000000000000";
-      if (schema.format === "password") return "********";
-      return schema.description ? `示例: ${schema.description}` : "string";
-
-    case "number":
-    case "integer":
-      if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
-        return schema.enum[0];
-      }
-      if (schema.minimum !== undefined) {
-        return schema.maximum !== undefined
-          ? Math.min((schema.minimum as number) + 1, schema.maximum as number)
-          : (schema.minimum as number) + 1;
-      }
-      return 0;
-
-    case "boolean":
-      return false;
-
-    case "array": {
-      const items = schema.items as Record<string, unknown> | undefined;
-      if (items) {
-        const exampleItem = generateExampleFromSchema(items, api, depth + 1);
-        return [exampleItem];
-      }
-      return [];
+    // 如果有 example，直接使用
+    if (schema.example !== undefined) {
+      return schema.example;
     }
 
-    case "object": {
-      const result: Record<string, unknown> = {};
-      const properties = schema.properties as
-        | Record<string, Record<string, unknown>>
-        | undefined;
+    // 如果有 default，使用默认值
+    if (schema.default !== undefined) {
+      return schema.default;
+    }
 
-      if (properties) {
-        for (const [propName, propSchema] of Object.entries(properties)) {
-          // 检查是否是必填字段
-          const required =
-            Array.isArray(schema.required) &&
-            schema.required.includes(propName);
-          // 只为必填字段生成示例，可选字段可以留空
-          if (required || depth < 2) {
-            result[propName] = generateExampleFromSchema(
-              propSchema,
+    const type = schema.type as string;
+
+    switch (type) {
+      case "string":
+        if (
+          schema.enum &&
+          Array.isArray(schema.enum) &&
+          schema.enum.length > 0
+        ) {
+          return schema.enum[0];
+        }
+        if (schema.format === "date") return "2024-01-01";
+        if (schema.format === "date-time") return "2024-01-01T00:00:00Z";
+        if (schema.format === "email") return "user@example.com";
+        if (schema.format === "uri" || schema.format === "url")
+          return "https://example.com";
+        if (schema.format === "uuid")
+          return "00000000-0000-0000-0000-000000000000";
+        if (schema.format === "password") return "********";
+        return schema.description ? `示例: ${schema.description}` : "string";
+
+      case "number":
+      case "integer":
+        if (
+          schema.enum &&
+          Array.isArray(schema.enum) &&
+          schema.enum.length > 0
+        ) {
+          return schema.enum[0];
+        }
+        if (schema.minimum !== undefined) {
+          return schema.maximum !== undefined
+            ? Math.min((schema.minimum as number) + 1, schema.maximum as number)
+            : (schema.minimum as number) + 1;
+        }
+        return 0;
+
+      case "boolean":
+        return false;
+
+      case "array": {
+        const items = schema.items as Record<string, unknown> | undefined;
+        if (items) {
+          const exampleItem = generateExampleFromSchema(items, api, depth + 1);
+          return [exampleItem];
+        }
+        return [];
+      }
+
+      case "object": {
+        const result: Record<string, unknown> = {};
+        const properties = schema.properties as
+          | Record<string, Record<string, unknown>>
+          | undefined;
+
+        if (properties) {
+          for (const [propName, propSchema] of Object.entries(properties)) {
+            // 检查是否是必填字段
+            const required =
+              Array.isArray(schema.required) &&
+              schema.required.includes(propName);
+            // 只为必填字段生成示例，可选字段可以留空
+            if (required || depth < 2) {
+              result[propName] = generateExampleFromSchema(
+                propSchema,
+                api,
+                depth + 1
+              );
+            }
+          }
+        }
+
+        // 处理 additionalProperties
+        if (
+          schema.additionalProperties &&
+          typeof schema.additionalProperties === "object"
+        ) {
+          // 如果对象没有固定属性，添加一个示例属性
+          if (Object.keys(result).length === 0) {
+            result["additionalProperty"] = generateExampleFromSchema(
+              schema.additionalProperties as Record<string, unknown>,
               api,
               depth + 1
             );
           }
         }
+
+        return result;
       }
 
-      // 处理 additionalProperties
-      if (
-        schema.additionalProperties &&
-        typeof schema.additionalProperties === "object"
-      ) {
-        // 如果对象没有固定属性，添加一个示例属性
-        if (Object.keys(result).length === 0) {
-          result["additionalProperty"] = generateExampleFromSchema(
-            schema.additionalProperties as Record<string, unknown>,
+      default:
+        // 如果没有 type，但有 properties，当作 object 处理
+        if (schema.properties) {
+          return generateExampleFromSchema(
+            { ...schema, type: "object" },
             api,
-            depth + 1
+            depth
           );
         }
-      }
-
-      return result;
+        return null;
     }
-
-    default:
-      // 如果没有 type，但有 properties，当作 object 处理
-      if (schema.properties) {
-        return generateExampleFromSchema(
-          { ...schema, type: "object" },
-          api,
-          depth
-        );
-      }
-      return null;
-  }
   } catch (error) {
-    console.error("[Swagger] generateExampleFromSchema 错误:", error, "schema:", schema);
+    console.error(
+      "[Swagger] generateExampleFromSchema 错误:",
+      error,
+      "schema:",
+      schema
+    );
     return null;
   }
 }

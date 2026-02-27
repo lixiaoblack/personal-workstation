@@ -110,6 +110,15 @@ class OcrService:
                 # 禁用模型源检查，加快启动速度
                 os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
 
+                # 检测打包后的模型目录
+                if getattr(__import__('sys'), 'frozen', False):
+                    # 打包后运行
+                    root_dir = os.path.dirname(sys.executable)
+                    packaged_models = os.path.join(root_dir, 'paddleocr_models')
+                    if os.path.exists(packaged_models):
+                        logger.info(f"[OcrService] 使用打包的模型目录: {packaged_models}")
+                        os.environ['PADDLEOCR_MODEL_DIR'] = packaged_models
+
                 # 尝试多种初始化方式，兼容不同版本的 PaddleOCR
                 init_attempts = [
                     # 方式1: 最简单的初始化（兼容大多数版本）

@@ -174,22 +174,27 @@ const SimplePostman: React.FC = () => {
   const SIDEBAR_MAX_WIDTH = 500; // 最大宽度
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MIN_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // 拖拽开始
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    dragStartX.current = e.clientX;
+    dragStartWidth.current = sidebarWidth;
     setIsDragging(true);
-  }, []);
+  }, [sidebarWidth]);
 
   // 拖拽移动
   const handleDragMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging) return;
-      const newWidth = e.clientX;
-      if (newWidth >= SIDEBAR_MIN_WIDTH && newWidth <= SIDEBAR_MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
+      const deltaX = e.clientX - dragStartX.current;
+      const newWidth = dragStartWidth.current + deltaX;
+      // 限制在最小和最大宽度之间
+      const clampedWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, newWidth));
+      setSidebarWidth(clampedWidth);
     },
     [isDragging]
   );

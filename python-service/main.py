@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 AI Agent Python Service
 WebSocket 桥接服务 + HTTP 数据服务
@@ -7,14 +8,22 @@ WebSocket 桥接服务 + HTTP 数据服务
 1. WebSocket 服务 - 用于 Agent 流式响应和实时通信
 2. HTTP API 服务 - 用于数据操作（知识库、对话、记忆等）
 """
+import sys
+import os
+
+# Windows 控制台编码设置（解决乱码问题）
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 # 在导入其他模块前禁用代理（解决 SOCKS 代理问题）
 from message_handler import MessageHandler
 from ws_client import WebSocketClient
 from typing import Optional
 import logging
 import asyncio
-import sys
-import os
 import threading
 _proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY',
                'all_proxy', 'ALL_PROXY', 'socks_proxy', 'SOCKS_PROXY']

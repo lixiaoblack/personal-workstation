@@ -24,6 +24,13 @@ import sys
 import tempfile
 from typing import Optional, Dict, Any, List
 
+# Windows 控制台编码设置（解决乱码问题）
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -83,10 +90,10 @@ except ImportError:
                     # 禁用模型源检查，加快启动速度
                     os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
                     logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
+                    # 注意：新版 PaddleOCR 不再支持 show_log 参数
                     self._ocr = PaddleOCR(
                         use_angle_cls=True,
-                        lang='ch',
-                        show_log=False
+                        lang='ch'
                     )
                     logger.info("[OcrService] PaddleOCR 模型初始化完成")
                 except ImportError as e:

@@ -17,6 +17,11 @@
   - 如果 name 和 description 都包含中文，优先使用 name
   - 如果只有 description 包含中文，使用 description
 
+- SimplePostman 左侧边栏支持拖拽调整宽度
+  - 可通过拖拽分割线调整侧边栏宽度
+  - 最小宽度限制为 256px（默认宽度）
+  - 最大宽度限制为 500px
+
 ### 修复 (Fixed)
 
 - 修复 Swagger 2.0 解析时 body/formData 参数类型不匹配问题

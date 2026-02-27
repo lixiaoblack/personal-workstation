@@ -113,12 +113,11 @@ class OcrService:
                 # 初始化 PaddleOCR
                 # use_angle_cls=True: 支持倾斜文字识别
                 # lang='ch': 中英文混合模型
-                # 注意：新版 PaddleOCR 不再支持 use_gpu 和 show_log 参数，默认使用 CPU
-                # 新版需要指定 ocr_version 参数避免 pipeline 错误
+                # 注意：不指定 ocr_version，让 PaddleOCR 自动选择可用版本
+                # 这样可以兼容不同版本的 PaddleOCR
                 self._ocr = PaddleOCR(
                     use_angle_cls=True,
-                    lang='ch',
-                    ocr_version='PP-OCRv4'
+                    lang='ch'
                 )
 
                 logger.info("[OcrService] PaddleOCR 模型初始化完成")

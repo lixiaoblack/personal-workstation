@@ -148,8 +148,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
-          # OCR 模块专用依赖（使用单独的 requirements 文件）
-          pip install -r python-service/requirements-ocr.txt
+          # 安装 HTTP 服务依赖
+          pip install fastapi uvicorn python-multipart
+          # 安装图像处理依赖
+          pip install paddlepaddle Pillow opencv-python-headless numpy
+          # 安装 PaddleOCR（跳过 PyMuPDF 依赖）
+          pip install paddleocr==2.6.1.3 --no-deps
 
       - name: Download OCR models
         run: |
@@ -201,8 +205,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
-          # OCR 模块专用依赖（使用单独的 requirements 文件）
-          pip install -r python-service/requirements-ocr.txt
+          # 安装 HTTP 服务依赖
+          pip install fastapi uvicorn python-multipart
+          # 安装图像处理依赖
+          pip install paddlepaddle Pillow opencv-python-headless numpy
+          # 安装 PaddleOCR（跳过 PyMuPDF 依赖）
+          pip install paddleocr==2.6.1.3 --no-deps
 
       - name: Download OCR models
         run: |

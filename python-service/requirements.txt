@@ -43,7 +43,7 @@ pydantic>=2.0.0      # 数据验证
 duckduckgo-search>=6.0.0  # DuckDuckGo 搜索（无需 API 密钥）
 
 # ==================== OCR 识别 ====================
-# 注意：PaddleOCR 与 PyMuPDF 有版本冲突
-# OCR 功能通过独立的 ocr-module 提供，此处不包含 PaddleOCR 依赖
-# 如果需要在主服务中使用 OCR，请手动安装：pip install paddlepaddle paddleocr==2.6.1.3
+# RapidOCR：轻量级OCR引擎，基于ONNX Runtime，移除PaddlePaddle依赖
+# 优势：跨平台兼容性好，打包简单，识别效果与PaddleOCR相当
+rapidocr-onnxruntime>=1.3.0  # 轻量级OCR引擎
 Pillow>=10.0.0            # 图片处理

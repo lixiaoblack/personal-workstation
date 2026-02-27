@@ -1,11 +1,16 @@
 """
 OCR 识别服务
 
-基于 PaddleOCR 实现图片文字识别功能，支持：
+基于 RapidOCR 实现图片文字识别功能，支持：
 - 中英文混合识别
 - Base64 图片数据识别
 - 文件路径识别
 - 结构化返回结果（文字内容、置信度、位置坐标）
+
+RapidOCR 优势：
+- 移除 PaddlePaddle 依赖，改用 ONNX Runtime
+- 跨平台兼容性好，打包简单
+- 识别效果与 PaddleOCR 相当（使用相同模型）
 
 使用示例：
     from ocr_service import OcrService
@@ -63,7 +68,7 @@ class OcrService:
     """
     OCR 识别服务（单例模式）
 
-    封装 PaddleOCR 的初始化和识别逻辑，支持：
+    封装 RapidOCR 的初始化和识别逻辑，支持：
     - 延迟加载模型（首次使用时加载）
     - 单例模式避免重复初始化
     - 中英文混合识别
@@ -89,79 +94,39 @@ class OcrService:
 
     def _get_ocr(self):
         """
-        延迟加载 PaddleOCR 模型
+        延迟加载 RapidOCR 模型
 
-        首次调用时加载模型，模型文件会自动下载到 ~/.paddleocr/
-        模型大小约 100MB，首次加载可能需要几秒钟
+        首次调用时加载模型，模型文件会自动下载到用户目录。
+        模型大小约 100MB，首次加载可能需要几秒钟。
 
-        注意：在打包环境下，PaddleOCR 可能不可用，此时返回 None
+        注意：在打包环境下，如果 ONNX Runtime 不可用，返回 None
         """
         if self._ocr is None and self._init_error is None:
             try:
-                # 抑制 PaddleOCR 的日志输出
-                import logging as paddle_logging
-                paddle_logging.getLogger(
-                    "ppocr").setLevel(paddle_logging.ERROR)
+                logger.info("[OcrService] 正在初始化 RapidOCR 模型...")
 
-                from paddleocr import PaddleOCR
+                from rapidocr_onnxruntime import RapidOCR
 
-                logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
+                # 初始化 RapidOCR
+                # 默认使用 PP-OCRv4 模型，支持中英文混合识别
+                self._ocr = RapidOCR()
 
-                # 禁用模型源检查，加快启动速度
-                os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
-
-                # 检测打包后的模型目录
-                if getattr(__import__('sys'), 'frozen', False):
-                    # 打包后运行
-                    root_dir = os.path.dirname(sys.executable)
-                    packaged_models = os.path.join(root_dir, 'paddleocr_models')
-                    if os.path.exists(packaged_models):
-                        logger.info(f"[OcrService] 使用打包的模型目录: {packaged_models}")
-                        os.environ['PADDLEOCR_MODEL_DIR'] = packaged_models
-
-                # 尝试多种初始化方式，兼容不同版本的 PaddleOCR
-                init_attempts = [
-                    # 方式1: 最简单的初始化（兼容大多数版本）
-                    {'use_angle_cls': True, 'lang': 'ch'},
-                    # 方式2: 指定 PP-OCRv4
-                    {'use_angle_cls': True, 'lang': 'ch', 'ocr_version': 'PP-OCRv4'},
-                    # 方式3: 指定 PP-OCRv3
-                    {'use_angle_cls': True, 'lang': 'ch', 'ocr_version': 'PP-OCRv3'},
-                ]
-
-                last_error = None
-                for params in init_attempts:
-                    try:
-                        logger.info(f"[OcrService] 尝试初始化参数: {params}")
-                        self._ocr = PaddleOCR(**params)
-                        logger.info("[OcrService] PaddleOCR 模型初始化完成")
-                        break
-                    except Exception as e:
-                        last_error = e
-                        logger.warning(f"[OcrService] 初始化参数 {params} 失败: {e}")
-                        continue
-
-                if self._ocr is None:
-                    raise last_error or Exception("所有初始化方式都失败")
+                logger.info("[OcrService] RapidOCR 模型初始化完成")
 
             except ImportError as e:
-                error_msg = f"PaddleOCR 未安装: {e}"
+                error_msg = f"RapidOCR 未安装: {e}"
                 logger.warning(f"[OcrService] {error_msg}")
-                self._init_error = "OCR 功能不可用：PaddleOCR 未安装。打包版本不包含 OCR 功能。"
+                self._init_error = "OCR 功能不可用：RapidOCR 未安装。请运行: pip install rapidocr-onnxruntime"
             except Exception as e:
                 error_msg = str(e)
-                # 检查是否是 langchain.docstore 缺失问题
-                if "langchain.docstore" in error_msg or "docstore" in error_msg:
-                    logger.warning(f"[OcrService] langchain 版本兼容性问题: {e}")
-                    self._init_error = "OCR 功能不可用：依赖版本不兼容"
-                elif "No module named" in error_msg:
+                if "No module named" in error_msg:
                     logger.warning(f"[OcrService] 模块缺失: {e}")
                     self._init_error = f"OCR 功能不可用：缺少依赖 - {error_msg}"
-                elif "pipeline" in error_msg.lower():
-                    logger.warning(f"[OcrService] PaddleOCR pipeline 错误: {e}")
-                    self._init_error = "OCR 功能不可用：PaddleOCR 版本不兼容，请检查安装"
+                elif "onnxruntime" in error_msg.lower():
+                    logger.warning(f"[OcrService] ONNX Runtime 错误: {e}")
+                    self._init_error = "OCR 功能不可用：ONNX Runtime 初始化失败"
                 else:
-                    logger.error(f"[OcrService] PaddleOCR 初始化失败: {e}")
+                    logger.error(f"[OcrService] RapidOCR 初始化失败: {e}")
                     self._init_error = f"OCR 初始化失败: {error_msg}"
 
         return self._ocr
@@ -208,7 +173,9 @@ class OcrService:
             logger.info(f"[OcrService] 正在识别图片: {image_path}")
 
             # 执行 OCR 识别
-            result = ocr.ocr(image_path, cls=True)
+            # RapidOCR 返回格式: (result, elapsed_time)
+            # result 是一个列表，每个元素是 [box, text, confidence]
+            result, elapsed = ocr(image_path)
 
             # 解析结果
             return self._parse_ocr_result(result)
@@ -241,7 +208,7 @@ class OcrService:
             # 解码 Base64
             image_bytes = base64.b64decode(base64_data)
 
-            # 保存为临时文件（PaddleOCR 需要文件路径）
+            # 保存为临时文件
             with tempfile.NamedTemporaryFile(
                 suffix='.png',
                 delete=False
@@ -296,24 +263,22 @@ class OcrService:
 
     def _parse_ocr_result(self, result: Any) -> OcrResult:
         """
-        解析 PaddleOCR 的原始输出结果
+        解析 RapidOCR 的原始输出结果
 
-        PaddleOCR 返回格式：
+        RapidOCR 返回格式：
         [
-            [
-                [[x1, y1], [x2, y2], [x3, y3], [x4, y4]],  # 边界框
-                ('识别的文字', 置信度)
-            ],
+            [box, text, confidence],
             ...
         ]
+        其中 box 是 numpy 数组: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
 
         Args:
-            result: PaddleOCR 原始输出
+            result: RapidOCR 原始输出（列表或 None）
 
         Returns:
             OcrResult: 标准化的识别结果
         """
-        if not result or result[0] is None:
+        if not result:
             return OcrResult(
                 success=True,
                 text="",
@@ -323,25 +288,28 @@ class OcrService:
         blocks = []
         text_parts = []
 
-        for line in result[0]:
-            if line is None:
+        for item in result:
+            if item is None or len(item) < 3:
                 continue
 
             # 解析边界框和文字
-            box = line[0]  # [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
-            text_info = line[1]  # ('文字', 置信度)
+            box = item[0]  # numpy 数组 [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+            text = item[1]  # 文字内容
+            confidence = item[2]  # 置信度
 
-            if text_info and len(text_info) >= 2:
-                text = text_info[0]
-                confidence = float(text_info[1])
+            # 转换 box 为列表格式
+            if hasattr(box, 'tolist'):
+                box_list = box.tolist()
+            else:
+                box_list = list(box)
 
-                blocks.append({
-                    "text": text,
-                    "confidence": confidence,
-                    "box": box
-                })
+            blocks.append({
+                "text": text,
+                "confidence": float(confidence),
+                "box": box_list
+            })
 
-                text_parts.append(text)
+            text_parts.append(text)
 
         # 合并所有文字，用换行分隔
         full_text = "\n".join(text_parts)

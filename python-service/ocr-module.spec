@@ -7,6 +7,8 @@ OCR 模块 PyInstaller 打包配置
 
 输出:
     dist/ocr-module/ 目录下的可执行文件
+
+基于 RapidOCR（轻量级，跨平台兼容性好）
 """
 
 import sys
@@ -19,44 +21,19 @@ SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
 # 收集数据文件
 datas = []
 
-# 收集 PaddleOCR 数据文件（包括模型配置、推理模型等）
+# 收集 RapidOCR 数据文件
 try:
-    paddle_datas = collect_data_files('paddleocr', include_py_files=False)
-    datas.extend(paddle_datas)
-    print(f"[OCR Spec] 收集 paddleocr 数据文件: {len(paddle_datas)} 个")
-except Exception as e:
-    print(f"[OCR Spec] 收集 paddleocr 数据文件失败: {e}")
+    rapidocr_datas = collect_data_files('rapidocr_onnxruntime')
+    datas.extend(rapidocr_datas)
+except Exception:
+    pass
 
+# 收集 ONNX Runtime 数据文件
 try:
-    paddle_datas = collect_data_files('paddle', include_py_files=False)
-    datas.extend(paddle_datas)
-    print(f"[OCR Spec] 收集 paddle 数据文件: {len(paddle_datas)} 个")
-except Exception as e:
-    print(f"[OCR Spec] 收集 paddle 数据文件失败: {e}")
-
-# 收集 paddleocr 的所有子模块
-try:
-    paddle_modules = collect_submodules('paddleocr')
-    print(f"[OCR Spec] 收集 paddleocr 子模块: {len(paddle_modules)} 个")
-except Exception as e:
-    print(f"[OCR Spec] 收集 paddleocr 子模块失败: {e}")
-
-# 收集 PaddleOCR 预训练模型目录（如果存在）
-model_dirs = [
-    os.path.expanduser('~/.paddleocr'),  # 用户目录下的模型
-    os.path.expanduser('~/.paddle'),      # PaddlePaddle 数据
-]
-for model_dir in model_dirs:
-    if os.path.exists(model_dir):
-        print(f"[OCR Spec] 发现模型目录: {model_dir}")
-        # 收集目录下的所有文件
-        for root, dirs, files in os.walk(model_dir):
-            for f in files:
-                if f.endswith(('.pdmodel', '.pdiparams', '.yml', '.yaml', '.json')):
-                    src = os.path.join(root, f)
-                    dst = os.path.relpath(root, model_dir)
-                    datas.append((src, os.path.join('paddleocr_models', dst)))
-                    print(f"[OCR Spec] 添加模型文件: {src}")
+    onnx_datas = collect_data_files('onnxruntime')
+    datas.extend(onnx_datas)
+except Exception:
+    pass
 
 # 收集隐式导入
 hiddenimports = [
@@ -84,24 +61,14 @@ hiddenimports = [
     'PIL',
     'PIL.Image',
 
-    # PaddleOCR 相关 - 完整模块列表
-    'paddle',
-    'paddle.fluid',
-    'paddle.dataset',
-    'paddleocr',
-    'paddleocr.ppocr',
-    'paddleocr.ppocr.utils',
-    'paddleocr.ppocr.utils.logging',
-    'paddleocr.ppocr.utils.utility',
-    'paddleocr.ppocr.data',
-    'paddleocr.ppocr.data.img_aug',
-    'paddleocr.ppocr.postprocess',
-    'paddleocr.ppocr.architectures',
-    'paddleocr.ppocr.modeling',
-    'paddleocr.ppocr.modeling.architectures',
-    'paddleocr.ppocr.modeling.backbones',
-    'paddleocr.ppocr.modeling.necks',
-    'paddleocr.ppocr.modeling.heads',
+    # RapidOCR 相关
+    'rapidocr_onnxruntime',
+    'rapidocr_onnxruntime.ch_ppocr_rec',
+    'rapidocr_onnxruntime.ch_ppocr_det',
+    'rapidocr_onnxruntime.ch_ppocr_cls',
+
+    # ONNX Runtime
+    'onnxruntime',
 
     # 图像处理
     'cv2',
@@ -110,22 +77,12 @@ hiddenimports = [
     'scipy.ndimage',
     'scipy.spatial',
 
-    # PaddlePaddle 核心模块
-    'paddle.nn',
-    'paddle.nn.functional',
-    'paddle.optimizer',
-    'paddle.io',
-    'paddle.vision',
-    'paddle.tensor',
-    'paddle.onnx',
-    'paddle.hapi',
+    # RapidOCR 依赖
+    'pyclipper',
+    'shapely',
+    'shapely.geometry',
+    'shapely.ops',
 ]
-
-# 扩展 hiddenimports
-try:
-    hiddenimports.extend(paddle_modules)
-except:
-    pass
 
 # 分析入口文件
 a = Analysis(
@@ -136,7 +93,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[os.path.join(SPEC_DIR, 'ocr_runtime_hook.py')],  # 添加运行时钩子
+    runtime_hooks=[],
     excludes=[
         'tkinter',
         'matplotlib',
@@ -162,6 +119,11 @@ a = Analysis(
         'langchain_community',
         'langgraph',
         'lancedb',
+        # 排除 PaddlePaddle（已迁移到 RapidOCR）
+        'paddle',
+        'paddle.fluid',
+        'paddle.dataset',
+        'paddleocr',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

@@ -6,6 +6,11 @@ OCR 模块独立入口
 这是一个独立的 OCR 服务，可以单独打包为可执行文件。
 提供 HTTP API 接口供主 Python 服务调用。
 
+基于 RapidOCR 实现，优势：
+- 移除 PaddlePaddle 依赖，改用 ONNX Runtime
+- 跨平台兼容性好，打包简单
+- 识别效果与 PaddleOCR 相当
+
 使用方法:
     python ocr_module_main.py --port 8767
 
@@ -86,37 +91,15 @@ except ImportError:
         def _get_ocr(self):
             if self._ocr is None and self._init_error is None:
                 try:
-                    from paddleocr import PaddleOCR
-                    # 禁用模型源检查，加快启动速度
-                    os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
-                    logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
-
-                    # 尝试多种初始化方式，兼容不同版本的 PaddleOCR
-                    init_attempts = [
-                        {'use_angle_cls': True, 'lang': 'ch'},
-                        {'use_angle_cls': True, 'lang': 'ch', 'ocr_version': 'PP-OCRv4'},
-                        {'use_angle_cls': True, 'lang': 'ch', 'ocr_version': 'PP-OCRv3'},
-                    ]
-
-                    last_error = None
-                    for params in init_attempts:
-                        try:
-                            logger.info(f"[OcrService] 尝试初始化参数: {params}")
-                            self._ocr = PaddleOCR(**params)
-                            logger.info("[OcrService] PaddleOCR 模型初始化完成")
-                            break
-                        except Exception as e:
-                            last_error = e
-                            logger.warning(f"[OcrService] 初始化参数 {params} 失败: {e}")
-                            continue
-
-                    if self._ocr is None:
-                        raise last_error or Exception("所有初始化方式都失败")
+                    from rapidocr_onnxruntime import RapidOCR
+                    logger.info("[OcrService] 正在初始化 RapidOCR 模型...")
+                    self._ocr = RapidOCR()
+                    logger.info("[OcrService] RapidOCR 模型初始化完成")
                 except ImportError as e:
-                    self._init_error = f"PaddleOCR 未安装: {e}"
+                    self._init_error = f"RapidOCR 未安装: {e}"
                     logger.error(self._init_error)
                 except Exception as e:
-                    self._init_error = f"PaddleOCR 初始化失败: {e}"
+                    self._init_error = f"RapidOCR 初始化失败: {e}"
                     logger.error(self._init_error)
             return self._ocr
 
@@ -129,7 +112,7 @@ except ImportError:
                 return OcrResult(success=False, error=f"图片文件不存在: {image_path}")
 
             try:
-                result = ocr.ocr(image_path, cls=True)
+                result, elapsed = ocr(image_path)
                 return self._parse_ocr_result(result)
             except Exception as e:
                 return OcrResult(success=False, error=f"OCR 识别失败: {e}")
@@ -154,29 +137,31 @@ except ImportError:
                 return OcrResult(success=False, error=f"Base64 解析失败: {e}")
 
         def _parse_ocr_result(self, result) -> OcrResult:
-            if not result or result[0] is None:
+            if not result:
                 return OcrResult(success=True, text="", blocks=[])
 
             blocks = []
             text_parts = []
 
-            for line in result[0]:
-                if line is None:
+            for item in result:
+                if item is None or len(item) < 3:
                     continue
 
-                box = line[0]
-                text_info = line[1]
+                box = item[0]
+                text = item[1]
+                confidence = item[2]
 
-                if text_info and len(text_info) >= 2:
-                    text = text_info[0]
-                    confidence = float(text_info[1])
+                if hasattr(box, 'tolist'):
+                    box_list = box.tolist()
+                else:
+                    box_list = list(box)
 
-                    blocks.append({
-                        "text": text,
-                        "confidence": confidence,
-                        "box": box
-                    })
-                    text_parts.append(text)
+                blocks.append({
+                    "text": text,
+                    "confidence": float(confidence),
+                    "box": box_list
+                })
+                text_parts.append(text)
 
             return OcrResult(
                 success=True,
@@ -195,8 +180,8 @@ except ImportError:
 
 app = FastAPI(
     title="OCR Module",
-    description="OCR 文字识别模块 - 基于 PaddleOCR",
-    version="1.0.0"
+    description="OCR 文字识别模块 - 基于 RapidOCR",
+    version="2.0.0"
 )
 
 

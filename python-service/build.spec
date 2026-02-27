@@ -60,15 +60,19 @@ hiddenimports = [
     'pydantic',
     'yaml',
     
-    # OCR 相关（可选，如果打包失败会优雅降级）
+    # OCR 相关（RapidOCR + ONNX Runtime）
     'ocr_service',
     'PIL',
     'PIL.Image',
-    # PaddleOCR 相关（体积大，可能打包失败）
-    # 'paddle',
-    # 'paddleocr',
-    # 'paddle.fluid',
-    # 'paddle.dataset',
+    # RapidOCR 相关（轻量级，跨平台兼容性好）
+    'rapidocr_onnxruntime',
+    'rapidocr_onnxruntime.ch_ppocr_rec',
+    'rapidocr_onnxruntime.ch_ppocr_det',
+    'rapidocr_onnxruntime.ch_ppocr_cls',
+    # ONNX Runtime
+    'onnxruntime',
+    # OpenCV（RapidOCR 依赖）
+    'cv2',
     
     # 自定义模块
     'db_service',

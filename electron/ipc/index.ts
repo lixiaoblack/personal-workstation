@@ -19,6 +19,7 @@ import { registerPythonIpc } from "./registerPythonIpc";
 import { registerSwaggerIpc } from "./registerSwaggerIpc";
 import { registerPostmanIpc } from "./registerPostmanIpc";
 import { registerModuleIpc } from "./registerModuleIpc";
+import { registerNotesIpc } from "./registerNotesIpc";
 
 // 导出用户认证相关函数
 export { getCurrentToken, setCurrentToken, getCurrentUser };
@@ -55,6 +56,9 @@ export function registerAllIpcHandlers(mainWindow: BrowserWindow | null): void {
 
   // 模块管理（OCR 等可选模块）
   registerModuleIpc();
+
+  // Notes 笔记模块
+  registerNotesIpc();
 
   console.log("[IPC] 所有 IPC 处理器已注册");
 }

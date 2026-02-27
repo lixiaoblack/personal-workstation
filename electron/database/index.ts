@@ -456,6 +456,46 @@ function runMigrations(database: Database.Database): void {
   } catch (error) {
     console.error("[Database] 添加 llm_types 列失败:", error);
   }
+
+  // ========== Notes 笔记模块数据表 ==========
+
+  // 笔记设置表（存储根目录路径等配置）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS notes_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  // 笔记文件缓存表（用于快速加载文件树和 RAG 同步）
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS notes_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      path TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      parent_path TEXT,
+      type TEXT NOT NULL,
+      content_hash TEXT,
+      file_mtime INTEGER,
+      vector_doc_ids TEXT,
+      chunk_count INTEGER DEFAULT 0,
+      last_synced_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  // Notes 索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_notes_settings_key ON notes_settings(key);
+    CREATE INDEX IF NOT EXISTS idx_notes_files_path ON notes_files(path);
+    CREATE INDEX IF NOT EXISTS idx_notes_files_parent_path ON notes_files(parent_path);
+    CREATE INDEX IF NOT EXISTS idx_notes_files_type ON notes_files(type);
+  `);
+
+  console.log("[Database] Notes 模块数据表已创建");
 }
 
 export default {

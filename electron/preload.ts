@@ -181,6 +181,32 @@ export interface OcrSaveToKnowledgeResult {
   error?: string;
 }
 
+// Notes 笔记模块相关类型
+export interface NotesFile {
+  id: number;
+  path: string;
+  name: string;
+  parentPath: string | null;
+  type: "file" | "folder";
+  contentHash: string | null;
+  fileMtime: number | null;
+  vectorDocIds: string | null;
+  chunkCount: number;
+  lastSyncedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface FileTreeNode {
+  id: string;
+  name: string;
+  type: "file" | "folder";
+  path: string;
+  children?: FileTreeNode[];
+  expanded?: boolean;
+  active?: boolean;
+}
+
 // SimplePostman 相关类型
 export interface PostmanProject {
   id: number;
@@ -824,6 +850,46 @@ contextBridge.exposeInMainWorld("electronAPI", {
   moduleStopOcr: () => ipcRenderer.invoke("module:stopOcr"),
   moduleOcrStatus: () => ipcRenderer.invoke("module:ocrStatus"),
 
+  // ========== Notes 笔记模块 ==========
+
+  // 设置管理
+  notesGetSetting: (key: string) => ipcRenderer.invoke("notes:getSetting", key),
+  notesSaveSetting: (key: string, value: string) =>
+    ipcRenderer.invoke("notes:saveSetting", key, value),
+  notesGetRootPath: () => ipcRenderer.invoke("notes:getRootPath"),
+  notesSetRootPath: (rootPath: string) =>
+    ipcRenderer.invoke("notes:setRootPath", rootPath),
+  notesHasRootPath: () => ipcRenderer.invoke("notes:hasRootPath"),
+
+  // 文件夹选择
+  notesSelectFolder: () => ipcRenderer.invoke("notes:selectFolder"),
+  notesValidateFolder: (folderPath: string) =>
+    ipcRenderer.invoke("notes:validateFolder", folderPath),
+
+  // 文件扫描
+  notesScanFolder: (rootPath: string) =>
+    ipcRenderer.invoke("notes:scanFolder", rootPath),
+  notesGetFileTree: () => ipcRenderer.invoke("notes:getFileTree"),
+
+  // 文件操作
+  notesCreateFolder: (parentPath: string | null, folderName: string) =>
+    ipcRenderer.invoke("notes:createFolder", parentPath, folderName),
+  notesCreateNote: (
+    parentPath: string | null,
+    fileName: string,
+    content?: string
+  ) => ipcRenderer.invoke("notes:createNote", parentPath, fileName, content),
+  notesReadFile: (filePath: string) =>
+    ipcRenderer.invoke("notes:readFile", filePath),
+  notesSaveFile: (filePath: string, content: string) =>
+    ipcRenderer.invoke("notes:saveFile", filePath, content),
+  notesRenameItem: (oldPath: string, newName: string) =>
+    ipcRenderer.invoke("notes:renameItem", oldPath, newName),
+  notesDeleteItem: (itemPath: string) =>
+    ipcRenderer.invoke("notes:deleteItem", itemPath),
+  notesGetFileInfo: (filePath: string) =>
+    ipcRenderer.invoke("notes:getFileInfo", filePath),
+
   // 模块下载进度监听
   onModuleDownloadProgress: (
     callback: (progress: {
@@ -1213,6 +1279,60 @@ export interface ElectronAPI {
     ocrAvailable?: boolean;
     error?: string;
   }>;
+
+  // ========== Notes 笔记模块 ==========
+
+  // 设置管理
+  notesGetSetting: (key: string) => Promise<string | null>;
+  notesSaveSetting: (key: string, value: string) => Promise<boolean>;
+  notesGetRootPath: () => Promise<string | null>;
+  notesSetRootPath: (rootPath: string) => Promise<boolean>;
+  notesHasRootPath: () => Promise<boolean>;
+
+  // 文件夹选择
+  notesSelectFolder: () => Promise<{ canceled: boolean; filePaths: string[] }>;
+  notesValidateFolder: (
+    folderPath: string
+  ) => Promise<{ valid: boolean; error?: string }>;
+
+  // 文件扫描
+  notesScanFolder: (
+    rootPath: string
+  ) => Promise<{
+    success: boolean;
+    fileCount: number;
+    folderCount: number;
+    error?: string;
+  }>;
+  notesGetFileTree: () => Promise<FileTreeNode[]>;
+
+  // 文件操作
+  notesCreateFolder: (
+    parentPath: string | null,
+    folderName: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  notesCreateNote: (
+    parentPath: string | null,
+    fileName: string,
+    content?: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  notesReadFile: (
+    filePath: string
+  ) => Promise<{ success: boolean; content?: string; error?: string }>;
+  notesSaveFile: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  notesRenameItem: (
+    oldPath: string,
+    newName: string
+  ) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+  notesDeleteItem: (
+    itemPath: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  notesGetFileInfo: (
+    filePath: string
+  ) => Promise<{ success: boolean; file?: NotesFile; error?: string }>;
 
   // 模块下载进度监听
   onModuleDownloadProgress: (

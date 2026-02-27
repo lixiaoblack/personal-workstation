@@ -9,3 +9,4 @@ export * from "./model";
 export * from "./router";
 export * from "./conversation";
 export * from "./ollama";
+export * from "./notes";

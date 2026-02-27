@@ -14,68 +14,32 @@ const Journal: React.FC = () => {
 
   const handleTaskContentChange = (id: string, content: string) => {
     setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, content } : task
-      )
+      prev.map((task) => (task.id === id ? { ...task, content } : task))
     );
   };
 
   return (
     <div className="journal flex h-full flex-col">
       {/* 顶部导航栏 */}
-      <header className="journal-header flex items-center justify-between border-b border-border bg-bg-secondary px-6 py-3">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3 text-primary">
-            <span className="material-symbols-outlined text-3xl">
-              auto_awesome_motion
-            </span>
-            <h2 className="text-lg font-bold leading-tight tracking-tight text-text-primary">
-              工作日志
-            </h2>
-          </div>
-          <nav className="hidden items-center gap-6 md:flex">
-            <a className="border-b-2 border-primary pb-1 text-sm font-semibold text-primary">
-              首页
-            </a>
-            <a className="text-sm font-medium text-text-secondary transition-colors hover:text-primary">
-              日志
-            </a>
-            <a className="text-sm font-medium text-text-secondary transition-colors hover:text-primary">
-              团队
-            </a>
-            <a className="text-sm font-medium text-text-secondary transition-colors hover:text-primary">
-              设置
-            </a>
-          </nav>
-        </div>
-        <div className="flex flex-1 items-center justify-end gap-6">
-          <label className="hidden h-10 min-w-40 max-w-64 sm:flex flex-col">
-            <div className="flex h-full w-full flex-1 items-stretch overflow-hidden rounded-lg border border-border">
-              <div className="flex items-center justify-center bg-bg-tertiary pl-3 text-text-tertiary">
-                <span className="material-symbols-outlined text-xl">
-                  search
-                </span>
-              </div>
-              <input
-                className="form-input min-w-0 flex-1 border-none bg-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:ring-0"
-                placeholder="搜索任务或日志..."
-              />
+      {/* <header className="journal-header flex items-center justify-between border-b border-border bg-bg-secondary px-6 py-3">
+        <label className="hidden h-10 min-w-40 max-w-64 sm:flex flex-col">
+          <div className="flex h-full w-full flex-1 items-stretch overflow-hidden rounded-lg border border-border">
+            <div className="flex items-center justify-center bg-bg-tertiary pl-3 text-text-tertiary">
+              <span className="material-symbols-outlined text-xl">search</span>
             </div>
-          </label>
-          <div className="flex items-center gap-4">
-            <span className="cursor-pointer text-text-secondary hover:text-primary material-symbols-outlined">
-              notifications
-            </span>
-            <div className="size-9 rounded-full border-2 border-primary/20 bg-center bg-no-repeat bg-cover" />
+            <input
+              className="form-input min-w-0 flex-1 border-none bg-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:ring-0"
+              placeholder="搜索任务或日志..."
+            />
           </div>
-        </div>
-      </header>
+        </label>
+      </header> */}
 
       <main className="flex flex-1 overflow-hidden">
         {/* 左侧边栏：日历和导航 */}
         <aside className="journal-sidebar w-80 flex-shrink-0 border-r border-border bg-bg-secondary/50 flex flex-col gap-6 overflow-y-auto p-4">
           <JournalCalendar data={CALENDAR_DATA} />
-          
+
           <div className="border-t border-border pt-6">
             <h3 className="mb-4 px-2 text-sm font-bold uppercase tracking-wider text-text-primary">
               导航菜单
@@ -137,9 +101,7 @@ const Journal: React.FC = () => {
               <span className="material-symbols-outlined mb-2 text-4xl transition-transform group-hover:scale-110">
                 post_add
               </span>
-              <p className="text-sm font-medium">
-                点击添加下午的工作记录...
-              </p>
+              <p className="text-sm font-medium">点击添加下午的工作记录...</p>
             </div>
           </div>
         </section>

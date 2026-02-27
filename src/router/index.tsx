@@ -16,6 +16,9 @@ import { Settings } from "@/views/Settings";
 import { AISettings } from "@/views/Settings/AISettings";
 import { AIChat } from "@/views/AIChat";
 import Knowledge from "@/views/Knowledge";
+import Journal from "@/views/Journal";
+import Notes from "@/views/Notes";
+import Todo from "@/views/Todo";
 
 // 开发者工具页面
 import Developer from "@/views/Developer";
@@ -104,29 +107,17 @@ const protectedRoutes: RouteObject[] = [
           // 工作日志
           {
             path: "/journal",
-            element: (
-              <div className="flex items-center justify-center h-full text-text-secondary">
-                工作日志 - 开发中
-              </div>
-            ),
+            element: <Journal />,
           },
           // 记事本
           {
             path: "/notes",
-            element: (
-              <div className="flex items-center justify-center h-full text-text-secondary">
-                记事本 - 开发中
-              </div>
-            ),
+            element: <Notes />,
           },
           // 待办提醒
           {
             path: "/todo",
-            element: (
-              <div className="flex items-center justify-center h-full text-text-secondary">
-                待办提醒 - 开发中
-              </div>
-            ),
+            element: <Todo />,
           },
           // 设置页面
           {

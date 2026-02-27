@@ -959,17 +959,25 @@ const AISettings: React.FC = () => {
             </div>
 
             {/* 显示错误信息 */}
-            {ocrModuleStatus.running && !ocrModuleStatus.ocrAvailable && ocrModuleStatus.error && (
-              <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-warning text-base">warning</span>
-                  <div className="flex-1">
-                    <p className="text-sm text-warning font-medium">OCR 初始化失败</p>
-                    <p className="text-xs text-text-secondary mt-1">{ocrModuleStatus.error}</p>
+            {ocrModuleStatus.running &&
+              !ocrModuleStatus.ocrAvailable &&
+              ocrModuleStatus.error && (
+                <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <span className="material-symbols-outlined text-warning text-base">
+                      warning
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm text-warning font-medium">
+                        OCR 初始化失败
+                      </p>
+                      <p className="text-xs text-text-secondary mt-1">
+                        {ocrModuleStatus.error}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <div className="flex items-center gap-3">
               {ocrModuleStatus.running ? (

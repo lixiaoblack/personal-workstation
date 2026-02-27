@@ -5,7 +5,7 @@
  */
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { App } from "antd";
-import Editor, { OnMount } from "@monaco-editor/react";
+import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import { useTheme } from "@/contexts";
 import {
@@ -36,16 +36,19 @@ const JsonBeautify: React.FC = () => {
   // Monaco 主题名称
   const monacoTheme = getMonacoThemeName(resolvedTheme);
 
-  // 编辑器挂载处理
-  const handleLeftEditorMount: OnMount = (editor, monaco) => {
-    leftEditorRef.current = editor;
-    monacoRef.current = monaco;
-
-    // 初始化主题（只执行一次）
+  // 编辑器挂载前处理 - 初始化主题
+  const handleBeforeMount: BeforeMount = (monaco) => {
+    // 在编辑器创建前初始化主题，确保主题已注册
     if (!themesInitializedRef.current) {
       initMonacoThemes(monaco);
       themesInitializedRef.current = true;
     }
+  };
+
+  // 编辑器挂载处理
+  const handleLeftEditorMount: OnMount = (editor, monaco) => {
+    leftEditorRef.current = editor;
+    monacoRef.current = monaco;
 
     // 配置 JSON 语言特性
     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -61,12 +64,6 @@ const JsonBeautify: React.FC = () => {
     rightEditorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
-    }
-
-    // 初始化主题（只执行一次）
-    if (!themesInitializedRef.current) {
-      initMonacoThemes(monaco);
-      themesInitializedRef.current = true;
     }
   };
 
@@ -520,8 +517,14 @@ const JsonBeautify: React.FC = () => {
               language="json"
               value={leftJson}
               onChange={handleLeftChange}
+              beforeMount={handleBeforeMount}
               onMount={handleLeftEditorMount}
               theme={monacoTheme}
+              loading={
+                <div className="w-full h-full bg-bg-primary flex items-center justify-center">
+                  <span className="text-text-tertiary">加载编辑器...</span>
+                </div>
+              }
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,
@@ -569,8 +572,14 @@ const JsonBeautify: React.FC = () => {
               language="json"
               value={rightJson}
               onChange={handleRightChange}
+              beforeMount={handleBeforeMount}
               onMount={handleRightEditorMount}
               theme={monacoTheme}
+              loading={
+                <div className="w-full h-full bg-bg-primary flex items-center justify-center">
+                  <span className="text-text-tertiary">加载编辑器...</span>
+                </div>
+              }
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,

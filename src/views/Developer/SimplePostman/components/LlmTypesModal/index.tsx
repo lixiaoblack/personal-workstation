@@ -4,7 +4,7 @@
  */
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Modal, Button, Select, Spin } from "antd";
-import Editor, { OnMount } from "@monaco-editor/react";
+import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import * as prettier from "prettier/standalone";
 import * as parserEstree from "prettier/plugins/estree";
@@ -91,16 +91,20 @@ const LlmTypesModal: React.FC<Props> = ({
     }
   }, [visible, jsonData, handleGenerate]);
 
+  // 编辑器挂载前处理 - 初始化主题
+  const handleBeforeMount: BeforeMount = (monaco) => {
+    // 在编辑器创建前初始化主题，确保主题已注册
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
+    }
+  };
+
   // 编辑器挂载
   const handleEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
-    }
-
-    if (!themesInitializedRef.current) {
-      initMonacoThemes(monaco);
-      themesInitializedRef.current = true;
     }
   };
 
@@ -201,6 +205,7 @@ const LlmTypesModal: React.FC<Props> = ({
               language="typescript"
               value={generatedTypes}
               onChange={handleEditorChange}
+              beforeMount={handleBeforeMount}
               onMount={handleEditorMount}
               theme={monacoTheme}
               options={{

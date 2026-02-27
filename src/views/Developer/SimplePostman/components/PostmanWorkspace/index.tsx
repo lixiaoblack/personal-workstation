@@ -3,7 +3,7 @@
  */
 import React, { useState, useRef, useCallback, useMemo } from "react";
 import { Select, Input, Button, Table, Tooltip, Spin, App } from "antd";
-import Editor, { OnMount } from "@monaco-editor/react";
+import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import * as prettier from "prettier/standalone";
 import * as parserEstree from "prettier/plugins/estree";
@@ -146,17 +146,20 @@ const PostmanWorkspace: React.FC<Props> = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // 编辑器挂载前处理 - 初始化主题
+  const handleBeforeMount: BeforeMount = (monaco) => {
+    // 在编辑器创建前初始化主题，确保主题已注册
+    if (!themesInitializedRef.current) {
+      initMonacoThemes(monaco);
+      themesInitializedRef.current = true;
+    }
+  };
+
   // 响应编辑器挂载处理
   const handleResponseEditorMount: OnMount = (editor, monaco) => {
     responseEditorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
-    }
-
-    // 初始化主题（只执行一次）
-    if (!themesInitializedRef.current) {
-      initMonacoThemes(monaco);
-      themesInitializedRef.current = true;
     }
 
     // 配置 JSON 语言特性
@@ -174,12 +177,6 @@ const PostmanWorkspace: React.FC<Props> = ({
     bodyEditorRef.current = editor;
     if (!monacoRef.current) {
       monacoRef.current = monaco;
-    }
-
-    // 初始化主题（只执行一次）
-    if (!themesInitializedRef.current) {
-      initMonacoThemes(monaco);
-      themesInitializedRef.current = true;
     }
 
     // 配置 JSON 语言特性
@@ -447,6 +444,7 @@ const PostmanWorkspace: React.FC<Props> = ({
               language={getBodyLanguage()}
               value={request.body || ""}
               onChange={handleBodyEditorChange}
+              beforeMount={handleBeforeMount}
               onMount={handleBodyEditorMount}
               theme={monacoTheme}
               options={{
@@ -1181,11 +1179,6 @@ const PostmanWorkspace: React.FC<Props> = ({
     if (!monacoRef.current) {
       monacoRef.current = monaco;
     }
-
-    if (!themesInitializedRef.current) {
-      initMonacoThemes(monaco);
-      themesInitializedRef.current = true;
-    }
   };
 
   // 复制类型定义
@@ -1275,6 +1268,7 @@ const PostmanWorkspace: React.FC<Props> = ({
             height="100%"
             language="typescript"
             value={typeDefinitions}
+            beforeMount={handleBeforeMount}
             onMount={handleTypesEditorMount}
             theme={monacoTheme}
             options={{

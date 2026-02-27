@@ -356,6 +356,7 @@ function parseApiDocument(
 
 /**
  * 解析参数
+ * 注意：Swagger 2.0 的 body 和 formData 参数由专门的 requestBody 处理，这里过滤掉
  */
 function parseParameters(
   operationParams: unknown,
@@ -370,9 +371,15 @@ function parseParameters(
   >;
 
   for (const param of allParams) {
+    // 跳过 Swagger 2.0 的 body 和 formData 参数，这些由 requestBody 处理
+    const paramIn = param.in as string;
+    if (paramIn === "body" || paramIn === "formData") {
+      continue;
+    }
+
     parameters.push({
       name: param.name as string,
-      in: param.in as ParsedParameter["in"],
+      in: paramIn as ParsedParameter["in"],
       description: param.description as string,
       required: param.required as boolean,
       type:

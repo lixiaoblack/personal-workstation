@@ -625,33 +625,38 @@ class ModuleManager {
   /**
    * 检查 OCR 服务是否真正可用（调用 /health 端点）
    */
-  async checkOcrHealth(): Promise<{ running: boolean; ocrAvailable: boolean; error?: string }> {
+  async checkOcrHealth(): Promise<{
+    running: boolean;
+    ocrAvailable: boolean;
+    error?: string;
+  }> {
     if (!this.ocrProcess) {
       return { running: false, ocrAvailable: false, error: "OCR 模块未启动" };
     }
 
     return new Promise((resolve) => {
-      const req = http.get(
-        `http://127.0.0.1:${this.ocrPort}/health`,
-        (res) => {
-          let data = "";
-          res.on("data", (chunk) => {
-            data += chunk;
-          });
-          res.on("end", () => {
-            try {
-              const health = JSON.parse(data);
-              resolve({
-                running: true,
-                ocrAvailable: health.ocr_available === true,
-                error: health.error,
-              });
-            } catch {
-              resolve({ running: true, ocrAvailable: false, error: "解析健康检查响应失败" });
-            }
-          });
-        }
-      );
+      const req = http.get(`http://127.0.0.1:${this.ocrPort}/health`, (res) => {
+        let data = "";
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          try {
+            const health = JSON.parse(data);
+            resolve({
+              running: true,
+              ocrAvailable: health.ocr_available === true,
+              error: health.error,
+            });
+          } catch {
+            resolve({
+              running: true,
+              ocrAvailable: false,
+              error: "解析健康检查响应失败",
+            });
+          }
+        });
+      });
 
       req.on("error", (err) => {
         resolve({ running: false, ocrAvailable: false, error: err.message });

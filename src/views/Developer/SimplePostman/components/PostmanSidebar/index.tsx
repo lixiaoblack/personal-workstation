@@ -196,7 +196,7 @@ const PostmanSidebar: React.FC<Props> = ({
   };
 
   return (
-    <aside className="w-64 border-r border-border flex flex-col bg-bg-primary">
+    <aside className="w-full flex flex-col bg-bg-primary">
       {/* 环境选择器 */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-2">

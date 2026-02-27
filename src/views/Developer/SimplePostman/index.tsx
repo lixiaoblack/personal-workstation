@@ -7,7 +7,7 @@
  * 3. 多环境配置支持
  * 4. 全局配置和文件夹级别配置
  */
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { App, Modal, Upload, Button, Input, Select, Form } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 
@@ -168,6 +168,55 @@ const SimplePostman: React.FC = () => {
   const [globalConfigModalVisible, setGlobalConfigModalVisible] =
     useState(false);
   const [globalConfigForm] = Form.useForm();
+
+  // 侧边栏宽度拖拽
+  const SIDEBAR_MIN_WIDTH = 256; // 最小宽度 = w-64
+  const SIDEBAR_MAX_WIDTH = 500; // 最大宽度
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MIN_WIDTH);
+  const [isDragging, setIsDragging] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // 拖拽开始
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  // 拖拽移动
+  const handleDragMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+      const newWidth = e.clientX;
+      if (newWidth >= SIDEBAR_MIN_WIDTH && newWidth <= SIDEBAR_MAX_WIDTH) {
+        setSidebarWidth(newWidth);
+      }
+    },
+    [isDragging]
+  );
+
+  // 拖拽结束
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // 添加/移除拖拽事件监听
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleDragMove);
+      document.addEventListener("mouseup", handleDragEnd);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      document.removeEventListener("mousemove", handleDragMove);
+      document.removeEventListener("mouseup", handleDragEnd);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    return () => {
+      document.removeEventListener("mousemove", handleDragMove);
+      document.removeEventListener("mouseup", handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   // ==================== 数据加载 ====================
 
@@ -360,19 +409,25 @@ const SimplePostman: React.FC = () => {
 
       // 创建 tag 信息映射
       // 判断字符串是否包含中文
-      const containsChinese = (str: string): boolean => /[\u4e00-\u9fa5]/.test(str);
-      
+      const containsChinese = (str: string): boolean =>
+        /[\u4e00-\u9fa5]/.test(str);
+
       // 获取优先显示名称：优先中文，都是中文优先 name
-      const getPreferredDisplayName = (name: string, description?: string): string => {
+      const getPreferredDisplayName = (
+        name: string,
+        description?: string
+      ): string => {
         const nameHasChinese = containsChinese(name);
-        const descHasChinese = description ? containsChinese(description) : false;
-        
+        const descHasChinese = description
+          ? containsChinese(description)
+          : false;
+
         if (nameHasChinese && !descHasChinese) return name;
         if (!nameHasChinese && descHasChinese) return description!;
         if (nameHasChinese && descHasChinese) return name; // 都是中文优先 name
         return name; // 都是英文用 name
       };
-      
+
       const tagInfoMap = new Map<
         string,
         { description: string; displayName: string }
@@ -1031,33 +1086,47 @@ const SimplePostman: React.FC = () => {
     <div className="flex flex-col h-full min-h-full bg-bg-primary overflow-hidden">
       {/* 主内容区 */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 左侧边栏 */}
-        <PostmanSidebar
-          swaggerUrl={swaggerUrl}
-          swaggerLoading={swaggerLoading}
-          onSwaggerUrlChange={setSwaggerUrl}
-          onParseSwagger={handleParseSwagger}
-          onUploadSwagger={handleUploadSwagger}
-          folders={folders}
-          requests={requestsForSidebar}
-          activeRequestId={
-            activeRequestId !== undefined ? String(activeRequestId) : undefined
-          }
-          onRequestSelect={(id) => handleRequestSelect(Number(id))}
-          syncing={syncing}
-          syncStatus={syncStatus}
-          onEditFolder={handleEditFolder}
-          onDeleteFolder={handleDeleteFolder}
-          globalConfig={globalConfig}
-          currentEnvironment={globalConfig.currentEnvironment}
-          onEnvironmentChange={handleEnvironmentChange}
-          onOpenGlobalConfig={handleOpenGlobalConfig}
-          activeProjectId={
-            activeProjectId !== undefined ? String(activeProjectId) : undefined
-          }
-          onProjectChange={(id) => setActiveProjectId(Number(id))}
-          onUpdateProject={handleUpdateProject}
-          onReparseProject={handleReparseProject}
+        {/* 左侧边栏容器 */}
+        <div
+          ref={sidebarRef}
+          style={{ width: sidebarWidth }}
+          className="flex-shrink-0 flex"
+        >
+          <PostmanSidebar
+            swaggerUrl={swaggerUrl}
+            swaggerLoading={swaggerLoading}
+            onSwaggerUrlChange={setSwaggerUrl}
+            onParseSwagger={handleParseSwagger}
+            onUploadSwagger={handleUploadSwagger}
+            folders={folders}
+            requests={requestsForSidebar}
+            activeRequestId={
+              activeRequestId !== undefined ? String(activeRequestId) : undefined
+            }
+            onRequestSelect={(id) => handleRequestSelect(Number(id))}
+            syncing={syncing}
+            syncStatus={syncStatus}
+            onEditFolder={handleEditFolder}
+            onDeleteFolder={handleDeleteFolder}
+            globalConfig={globalConfig}
+            currentEnvironment={globalConfig.currentEnvironment}
+            onEnvironmentChange={handleEnvironmentChange}
+            onOpenGlobalConfig={handleOpenGlobalConfig}
+            activeProjectId={
+              activeProjectId !== undefined ? String(activeProjectId) : undefined
+            }
+            onProjectChange={(id) => setActiveProjectId(Number(id))}
+            onUpdateProject={handleUpdateProject}
+            onReparseProject={handleReparseProject}
+          />
+        </div>
+
+        {/* 可拖拽分割线 */}
+        <div
+          className={`w-1 flex-shrink-0 bg-border hover:bg-primary cursor-col-resize transition-colors ${
+            isDragging ? "bg-primary" : ""
+          }`}
+          onMouseDown={handleDragStart}
         />
 
         {/* 主工作区 */}

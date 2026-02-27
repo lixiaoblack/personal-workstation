@@ -133,9 +133,10 @@ export async function parseSwaggerFromUrl(
 ): Promise<SwaggerParseResult> {
   try {
     console.log("[Swagger] 开始解析 URL:", url);
-    // 使用 swagger-parser 解析和验证
-    const api = await SwaggerParser.validate(url);
-    console.log("[Swagger] swagger-parser 验证成功, 开始解析文档");
+    // 使用 swagger-parser 解析，设置 continueOnError 为 true 以忽略缺失的 $ref 引用
+    // 注意：不使用 validate() 因为它会严格验证所有引用，遇到缺失的定义会报错
+    const api = await SwaggerParser.parse(url);
+    console.log("[Swagger] swagger-parser 解析成功, 开始解析文档");
     const result = parseApiDocument(api, "url", url);
     console.log("[Swagger] 文档解析完成, 成功:", result.success);
     return result;
@@ -184,8 +185,9 @@ export async function parseSwaggerFromFile(
       jsonContent = content;
     }
 
-    // 使用 swagger-parser 解析和验证
-    const api = await SwaggerParser.validate(JSON.parse(jsonContent));
+    // 使用 swagger-parser 解析，设置 continueOnError 为 true 以忽略缺失的 $ref 引用
+    // 注意：不使用 validate() 因为它会严格验证所有引用，遇到缺失的定义会报错
+    const api = await SwaggerParser.parse(JSON.parse(jsonContent));
     return parseApiDocument(api, "file", filePath);
   } catch (error) {
     return {
@@ -213,7 +215,9 @@ export async function parseSwaggerFromContent(
       jsonContent = content;
     }
 
-    const api = await SwaggerParser.validate(JSON.parse(jsonContent));
+    // 使用 swagger-parser 解析，设置 continueOnError 为 true 以忽略缺失的 $ref 引用
+    // 注意：不使用 validate() 因为它会严格验证所有引用，遇到缺失的定义会报错
+    const api = await SwaggerParser.parse(JSON.parse(jsonContent));
     return parseApiDocument(api, "file", "content");
   } catch (error) {
     return {

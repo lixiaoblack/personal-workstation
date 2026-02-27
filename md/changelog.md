@@ -12,6 +12,15 @@
   - 前端可检测当前是否为打包环境
   - 用于区分开发环境和生产环境的 UI 展示
 
+### 修复 (Fixed)
+
+- 修复 Swagger 2.0 解析时 body/formData 参数类型不匹配问题
+  - Swagger 2.0 的 `in: "body"` 和 `in: "formData"` 参数与 OpenAPI 3.x 的参数类型定义冲突
+  - 在 `parseParameters` 函数中过滤掉这两类参数，由专门的 requestBody 处理逻辑转换
+
+- 修复 JsonBeautify 页面首次加载时编辑器背景白色闪烁问题
+  - 为 Monaco Editor 添加 `loading` 属性，显示与主题匹配的加载状态
+
 ### 修改 (Changed)
 
 - AI 设置页面优化打包环境体验

@@ -90,10 +90,12 @@ except ImportError:
                     # 禁用模型源检查，加快启动速度
                     os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
                     logger.info("[OcrService] 正在初始化 PaddleOCR 模型...")
-                    # 注意：新版 PaddleOCR 不再支持 show_log 参数
+                    # 注意：新版 PaddleOCR 需要指定 ocr_version 参数
                     self._ocr = PaddleOCR(
                         use_angle_cls=True,
-                        lang='ch'
+                        lang='ch',
+                        ocr_version='PP-OCRv4',
+                        use_space_char=True
                     )
                     logger.info("[OcrService] PaddleOCR 模型初始化完成")
                 except ImportError as e:

@@ -114,9 +114,12 @@ class OcrService:
                 # use_angle_cls=True: 支持倾斜文字识别
                 # lang='ch': 中英文混合模型
                 # 注意：新版 PaddleOCR 不再支持 use_gpu 和 show_log 参数，默认使用 CPU
+                # 新版需要指定 ocr_version 参数避免 pipeline 错误
                 self._ocr = PaddleOCR(
                     use_angle_cls=True,
-                    lang='ch'
+                    lang='ch',
+                    ocr_version='PP-OCRv4',
+                    use_space_char=True
                 )
 
                 logger.info("[OcrService] PaddleOCR 模型初始化完成")
@@ -134,6 +137,9 @@ class OcrService:
                 elif "No module named" in error_msg:
                     logger.warning(f"[OcrService] 模块缺失: {e}")
                     self._init_error = f"OCR 功能不可用：缺少依赖 - {error_msg}"
+                elif "pipeline" in error_msg.lower():
+                    logger.warning(f"[OcrService] PaddleOCR pipeline 错误: {e}")
+                    self._init_error = "OCR 功能不可用：PaddleOCR 版本不兼容，请检查安装"
                 else:
                     logger.error(f"[OcrService] PaddleOCR 初始化失败: {e}")
                     self._init_error = f"OCR 初始化失败: {error_msg}"

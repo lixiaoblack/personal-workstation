@@ -46,5 +46,5 @@ duckduckgo-search>=6.0.0  # DuckDuckGo 搜索（无需 API 密钥）
 # 注意：PaddleOCR 在 Windows 上可能需要 Visual C++ Redistributable
 # 如果 OCR 功能不可用，可以跳过安装，应用仍可正常运行
 paddlepaddle>=2.5.0       # PaddleOCR 依赖
-paddleocr>=2.7.0          # OCR 引擎（中文识别优秀）
+paddleocr>=2.7.0,<2.9.0   # OCR 引擎（中文识别优秀），锁定版本避免 API 变化
 Pillow>=10.0.0            # 图片处理

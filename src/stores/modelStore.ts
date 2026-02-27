@@ -29,10 +29,11 @@ class ModelStore {
     this.models = models;
     this.lastUpdated = Date.now();
 
-    // 如果当前模型不在列表中，重新选择
+    // 如果当前模型不在列表中，或当前模型是嵌入模型，重新选择
     if (this.currentModel) {
       const stillExists = models.find((m) => m.id === this.currentModel?.id);
-      if (!stillExists) {
+      // 如果当前模型不存在，或当前模型是嵌入模型（不应该被选中）
+      if (!stillExists || this.currentModel.usageType === "embedding") {
         this.currentModel = this.getDefaultModel(models);
       }
     } else {
@@ -74,14 +75,22 @@ class ModelStore {
   };
 
   /**
-   * 获取默认模型
+   * 获取默认模型（仅返回 LLM 模型）
    */
   private getDefaultModel = (models: ModelConfig[]): ModelConfig | null => {
-    const defaultModel = models.find((m) => m.isDefault);
+    // 先过滤出 LLM 模型（usageType 为 'llm' 或为空）
+    const llmModels = models.filter(
+      (m) => m.usageType === "llm" || !m.usageType
+    );
+
+    // 优先选择标记为默认的 LLM 模型
+    const defaultModel = llmModels.find((m) => m.isDefault);
     if (defaultModel) {
       return defaultModel;
     }
-    return models.length > 0 ? models[0] : null;
+
+    // 否则返回第一个 LLM 模型
+    return llmModels.length > 0 ? llmModels[0] : null;
   };
 
   /**

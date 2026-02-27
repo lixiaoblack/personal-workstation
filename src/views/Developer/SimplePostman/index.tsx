@@ -7,7 +7,13 @@
  * 3. 多环境配置支持
  * 4. 全局配置和文件夹级别配置
  */
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { App, Modal, Upload, Button, Input, Select, Form } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 
@@ -179,12 +185,15 @@ const SimplePostman: React.FC = () => {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // 拖拽开始
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragStartX.current = e.clientX;
-    dragStartWidth.current = sidebarWidth;
-    setIsDragging(true);
-  }, [sidebarWidth]);
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragStartX.current = e.clientX;
+      dragStartWidth.current = sidebarWidth;
+      setIsDragging(true);
+    },
+    [sidebarWidth]
+  );
 
   // 拖拽移动
   const handleDragMove = useCallback(
@@ -193,7 +202,10 @@ const SimplePostman: React.FC = () => {
       const deltaX = e.clientX - dragStartX.current;
       const newWidth = dragStartWidth.current + deltaX;
       // 限制在最小和最大宽度之间
-      const clampedWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, newWidth));
+      const clampedWidth = Math.max(
+        SIDEBAR_MIN_WIDTH,
+        Math.min(SIDEBAR_MAX_WIDTH, newWidth)
+      );
       setSidebarWidth(clampedWidth);
     },
     [isDragging]
@@ -1106,7 +1118,9 @@ const SimplePostman: React.FC = () => {
             folders={folders}
             requests={requestsForSidebar}
             activeRequestId={
-              activeRequestId !== undefined ? String(activeRequestId) : undefined
+              activeRequestId !== undefined
+                ? String(activeRequestId)
+                : undefined
             }
             onRequestSelect={(id) => handleRequestSelect(Number(id))}
             syncing={syncing}
@@ -1118,7 +1132,9 @@ const SimplePostman: React.FC = () => {
             onEnvironmentChange={handleEnvironmentChange}
             onOpenGlobalConfig={handleOpenGlobalConfig}
             activeProjectId={
-              activeProjectId !== undefined ? String(activeProjectId) : undefined
+              activeProjectId !== undefined
+                ? String(activeProjectId)
+                : undefined
             }
             onProjectChange={(id) => setActiveProjectId(Number(id))}
             onUpdateProject={handleUpdateProject}

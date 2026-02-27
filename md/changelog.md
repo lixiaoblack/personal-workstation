@@ -12,6 +12,11 @@
   - 前端可检测当前是否为打包环境
   - 用于区分开发环境和生产环境的 UI 展示
 
+- Swagger tags 分组名称中文优先显示
+  - 解析 Swagger 文档时，分组名称优先显示中文
+  - 如果 name 和 description 都包含中文，优先使用 name
+  - 如果只有 description 包含中文，使用 description
+
 ### 修复 (Fixed)
 
 - 修复 Swagger 2.0 解析时 body/formData 参数类型不匹配问题

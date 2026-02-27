@@ -18,6 +18,10 @@
   - Swagger 2.0 的 `in: "body"` 和 `in: "formData"` 参数与 OpenAPI 3.x 的参数类型定义冲突
   - 在 `parseParameters` 函数中过滤掉这两类参数，由专门的 requestBody 处理逻辑转换
 
+- 修复 Swagger 文档解析时缺失 $ref 定义导致的错误
+  - 使用 `parse` 代替 `validate` 方法，避免严格验证缺失的 `$ref` 引用
+  - 支持解析有缺陷的 Swagger 文档（如引用了不存在的 definitions）
+
 - 修复 JsonBeautify 页面首次加载时编辑器背景白色闪烁问题
   - 为 Monaco Editor 添加 `loading` 属性，显示与主题匹配的加载状态
 

@@ -52,13 +52,13 @@ const FileTreeItem: React.FC<{
   // 当被选中时滚动到可见区域
   useEffect(() => {
     if (isSelected && itemRef.current) {
-      // 使用 setTimeout 确保 DOM 已渲染
-      setTimeout(() => {
+      // 使用 requestAnimationFrame 确保 DOM 已渲染
+      requestAnimationFrame(() => {
         itemRef.current?.scrollIntoView({
           behavior: "smooth",
-          block: "nearest",
+          block: "center",
         });
-      }, 100);
+      });
     }
   }, [isSelected]);
 

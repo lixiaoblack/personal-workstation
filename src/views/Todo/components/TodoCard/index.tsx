@@ -263,6 +263,11 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                     <span className="text-[10px] uppercase tracking-wider text-green-500 flex items-center gap-1 mt-1">
                       <span className="material-symbols-outlined text-xs">check_circle</span>
                       已完成
+                      {todo.completedAt && (
+                        <span className="text-text-tertiary ml-1">
+                          {dayjs(todo.completedAt).format("MM-DD HH:mm")}
+                        </span>
+                      )}
                     </span>
                   ) : timeInfo ? (
                     <span

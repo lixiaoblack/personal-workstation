@@ -203,3 +203,19 @@
 .w-markdown-editor .vditor-preview ul ul ul {
   list-style: square;
 }
+
+/* ============================================
+   禁用 Tab 键焦点切换（按钮、链接等）
+   ============================================ */
+button,
+a,
+input:not([type="text"]):not([type="search"]):not([type="textarea"]),
+select,
+[tabindex]:not([tabindex="-1"]) {
+  outline: none;
+}
+
+/* Vditor 编辑器内部元素保持 Tab 焦点 */
+.w-markdown-editor * {
+  outline: revert;
+}

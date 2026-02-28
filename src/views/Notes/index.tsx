@@ -3,13 +3,15 @@
  * 用于编辑和管理 Markdown 笔记
  */
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useNotes } from "@/hooks/useNotes";
 import { FolderSelectModal } from "./components/FolderSelectModal";
 import { NotesSidebar } from "./components/NotesSidebar";
 import { NotesEditor } from "./components/NotesEditor";
 
 const Notes: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   const {
     hasRootPath,
     fileTree,
@@ -29,17 +31,45 @@ const Notes: React.FC = () => {
     clearError,
   } = useNotes();
 
+  // 处理 Tab 键，防止焦点切换到外部按钮
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        const activeElement = document.activeElement;
+        // 检查焦点是否在编辑器内
+        const editorArea = containerRef.current?.querySelector(
+          '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
+        );
+        
+        if (editorArea && editorArea.contains(activeElement)) {
+          // 焦点在编辑器内，阻止事件冒泡但允许默认行为
+          e.stopPropagation();
+        } else {
+          // 焦点不在编辑器内，阻止默认的焦点切换
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    };
+
+    // 使用捕获阶段确保在其他处理器之前执行
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, []);
+
   // 未设置根目录时显示选择弹窗
   if (!hasRootPath) {
     return (
-      <div className="notes flex h-screen w-full flex-col overflow-hidden">
+      <div ref={containerRef} className="notes flex h-screen w-full flex-col overflow-hidden">
         <FolderSelectModal onSelect={selectRootFolder} loading={loading} />
       </div>
     );
   }
 
   return (
-    <div className="notes flex h-screen w-full flex-col overflow-hidden">
+    <div ref={containerRef} className="notes flex h-screen w-full flex-col overflow-hidden">
       {/* 错误提示 */}
       {error && (
         <div className="flex items-center justify-between bg-error/10 px-4 py-2 text-sm text-error">

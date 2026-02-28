@@ -241,5 +241,18 @@ export function registerTodoIpc(): void {
     }
   });
 
+  // 完成重复任务并创建下一次任务
+  ipcMain.handle(
+    "todo:completeAndCreateNext",
+    (_event, id: number): Todo | null => {
+      try {
+        return todoService.completeAndCreateNextTodo(id);
+      } catch (error) {
+        console.error("[TodoIpc] 完成重复任务失败:", error);
+        return null;
+      }
+    }
+  );
+
   console.log("[TodoIpc] Todo IPC 处理器已注册");
 }

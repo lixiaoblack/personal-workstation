@@ -16,9 +16,10 @@ import { Settings } from "@/views/Settings";
 import { AISettings } from "@/views/Settings/AISettings";
 import { AIChat } from "@/views/AIChat";
 import Knowledge from "@/views/Knowledge";
-import Journal from "@/views/Journal";
 import Notes from "@/views/Notes";
 import Todo from "@/views/Todo";
+import TodoFloat from "@/views/Todo/TodoFloat";
+import CategoryFloat from "@/views/Todo/CategoryFloat";
 
 // 开发者工具页面
 import Developer from "@/views/Developer";
@@ -41,6 +42,14 @@ const publicRoutes: RouteObject[] = [
   {
     path: "/forgot-password",
     element: <ForgotPassword />,
+  },
+  {
+    path: "/todo-float",
+    element: <TodoFloat />,
+  },
+  {
+    path: "/category-float/:categoryId",
+    element: <CategoryFloat />,
   },
 ];
 

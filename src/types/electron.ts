@@ -711,6 +711,42 @@ export interface ElectronAPI {
   todoGetUpcomingTodos: (days?: number) => Promise<Todo[]>;
   todoGetStats: () => Promise<TodoStats>;
   todoTestNotification: () => Promise<boolean>;
+  todoCompleteAndCreateNext: (id: number) => Promise<Todo | null>;
+
+  // 分组浮窗操作
+  categoryFloatToggle: (
+    categoryId: number,
+    categoryData: TodoCategory
+  ) => Promise<{ success: boolean }>;
+  categoryFloatClose: (categoryId: number) => Promise<{ success: boolean }>;
+  categoryFloatSetAlwaysOnTop: (
+    categoryId: number,
+    alwaysOnTop: boolean
+  ) => Promise<{ success: boolean }>;
+  categoryFloatGetFloatedCategories: () => Promise<TodoCategory[]>;
+  categoryFloatNotifyThemeChange: (
+    theme: "light" | "dark"
+  ) => Promise<{ success: boolean }>;
+  categoryFloatGetCurrentTheme: () => Promise<"light" | "dark">;
+
+  // 窗口控制
+  windowMinimize: () => Promise<void>;
+  windowToggleMaximize: () => Promise<boolean>;
+  windowClose: () => Promise<void>;
+  windowShow: () => Promise<void>;
+  windowIsMaximized: () => Promise<boolean>;
+
+  // 浮窗操作
+  floatWindowHide: () => Promise<void>;
+  floatWindowShow: () => Promise<void>;
+  floatWindowToggle: () => Promise<void>;
+  floatWindowShowWithCategory: (categoryId: number) => Promise<void>;
+
+  // 导航事件监听
+  onNavigate: (callback: (event: unknown, route: string) => void) => void;
+  removeNavigateListener: (
+    callback: (event: unknown, route: string) => void
+  ) => void;
 
   // 模块下载进度监听
   onModuleDownloadProgress: (
@@ -721,6 +757,9 @@ export interface ElectronAPI {
       percent: number;
     }) => void
   ) => () => void;
+
+  // 主题变更监听（用于浮窗）
+  onThemeChanged: (callback: (theme: "light" | "dark") => void) => () => void;
 }
 
 // Swagger 解析结果类型
@@ -988,6 +1027,13 @@ export interface TodoCategory {
   color: string;
   icon: string;
   sortOrder: number;
+  // 浮窗配置
+  floatWindowEnabled?: boolean;
+  floatWindowX?: number;
+  floatWindowY?: number;
+  floatWindowWidth?: number;
+  floatWindowHeight?: number;
+  floatWindowAlwaysOnTop?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -998,6 +1044,13 @@ export interface TodoCategoryInput {
   color?: string;
   icon?: string;
   sortOrder?: number;
+  // 浮窗配置
+  floatWindowEnabled?: boolean;
+  floatWindowX?: number;
+  floatWindowY?: number;
+  floatWindowWidth?: number;
+  floatWindowHeight?: number;
+  floatWindowAlwaysOnTop?: boolean;
 }
 
 export interface Todo {

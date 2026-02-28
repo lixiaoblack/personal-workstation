@@ -3,9 +3,10 @@
  * 按分类分组展示待办事项
  */
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Modal, Form, Input, Select, DatePicker, App } from "antd";
 import dayjs from "dayjs";
+import { useSearchParams } from "react-router-dom";
 import { useTodos, useTodoCategories } from "@/hooks/useTodos";
 import type {
   Todo,
@@ -13,7 +14,12 @@ import type {
   TodoUpdateInput,
   TodoCategory,
 } from "@/types/electron";
-import { PRIORITY_CONFIG, STATUS_CONFIG, ICON_OPTIONS } from "./config";
+import {
+  PRIORITY_CONFIG,
+  STATUS_CONFIG,
+  ICON_OPTIONS,
+  REPEAT_CONFIG,
+} from "./config";
 import { TodoCard } from "./components/TodoCard";
 
 const { TextArea } = Input;
@@ -33,6 +39,7 @@ const COLOR_OPTIONS = [
 
 const Todo: React.FC = () => {
   const { message } = App.useApp();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // 状态
   const [searchText, setSearchText] = useState("");
@@ -47,6 +54,19 @@ const Todo: React.FC = () => {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [todoForm] = Form.useForm();
   const [categoryForm] = Form.useForm();
+
+  // 处理 URL 参数，如 action=new
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "new") {
+      // 打开新建待办弹窗
+      setEditingTodo(null);
+      todoForm.resetFields();
+      setTodoModalVisible(true);
+      // 清除 URL 参数
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, todoForm]);
 
   // 使用 hooks
   const { categories, createCategory, updateCategory, deleteCategory } =
@@ -113,6 +133,8 @@ const Todo: React.FC = () => {
         priority: todo.priority,
         status: todo.status,
         dueDate: todo.dueDate ? dayjs(todo.dueDate) : undefined,
+        reminderTime: todo.reminderTime ? dayjs(todo.reminderTime) : undefined,
+        repeatType: todo.repeatType || "none",
       });
       setTodoModalVisible(true);
     },
@@ -142,6 +164,8 @@ const Todo: React.FC = () => {
         priority: values.priority,
         status: values.status,
         dueDate: values.dueDate?.valueOf(),
+        reminderTime: values.reminderTime?.valueOf(),
+        repeatType: values.repeatType || "none",
       };
 
       let result;
@@ -177,7 +201,11 @@ const Todo: React.FC = () => {
   // 切换完成状态
   const handleToggleComplete = useCallback(
     async (todo: Todo) => {
-      const result = await toggleComplete(todo.id, todo.status);
+      const result = await toggleComplete(
+        todo.id,
+        todo.status,
+        todo.repeatType
+      );
       if (result) {
         message.success(todo.status === "completed" ? "已恢复" : "已完成");
       }
@@ -233,10 +261,10 @@ const Todo: React.FC = () => {
     <div className="todo flex h-full overflow-hidden">
       <main className="relative flex flex-1 flex-col overflow-hidden">
         {/* 头部 - 匹配设计稿样式 */}
-        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-bg-primary/50 backdrop-blur-md sticky top-0 z-10">
+        <header className="h-16 border-b border-border flex items-center justify-between px-8 bg-bg-primary/50 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-semibold">任务看板</h2>
-            <div className="flex items-center gap-1 bg-slate-800/50 rounded-full px-3 py-1">
+            <div className="flex items-center gap-1 bg-bg-tertiary/50 rounded-full px-3 py-1">
               <span className="size-2 rounded-full bg-green-500" />
               <span className="text-xs text-text-tertiary">系统已连接</span>
             </div>
@@ -247,7 +275,7 @@ const Todo: React.FC = () => {
                 search
               </span>
               <input
-                className="bg-slate-800/50 border-none rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary"
+                className="bg-bg-tertiary/50 border-none rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary"
                 placeholder="搜索任务..."
                 type="text"
                 value={searchText}
@@ -256,7 +284,7 @@ const Todo: React.FC = () => {
             </div>
             <button
               onClick={() => setCategoryModalVisible(true)}
-              className="bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              className="bg-primary hover:bg-primary-hover text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">add</span>
               新建分类
@@ -273,7 +301,7 @@ const Todo: React.FC = () => {
           </div>
 
           {/* Tab 切换 - 匹配设计稿样式 */}
-          <div className="flex gap-8 border-b border-slate-800 mb-8">
+          <div className="flex gap-8 border-b border-border mb-8">
             <button
               onClick={() => setActiveTab("in_progress")}
               className={`pb-4 text-sm font-semibold ${
@@ -368,9 +396,9 @@ const Todo: React.FC = () => {
               {/* 创建新分类占位 - 匹配设计稿样式 */}
               <div
                 onClick={() => setCategoryModalVisible(true)}
-                className="border-2 border-dashed border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center gap-3 hover:border-slate-700 hover:bg-slate-800/20 transition-all cursor-pointer group"
+                className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center gap-3 hover:border-text-tertiary hover:bg-bg-secondary/20 transition-all cursor-pointer group"
               >
-                <div className="size-12 rounded-full bg-slate-800 flex items-center justify-center text-text-tertiary group-hover:scale-110 transition-transform">
+                <div className="size-12 rounded-full bg-bg-tertiary flex items-center justify-center text-text-tertiary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">add</span>
                 </div>
                 <p className="text-sm font-medium text-text-tertiary">
@@ -383,7 +411,7 @@ const Todo: React.FC = () => {
 
         {/* AI 助手按钮 - 匹配设计稿样式 */}
         <div className="absolute bottom-8 right-8">
-          <button className="bg-primary hover:bg-primary/90 text-white flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl shadow-primary/30 transition-all transform hover:scale-105 active:scale-95 group">
+          <button className="bg-primary hover:bg-primary-hover text-white flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl shadow-primary/30 transition-all transform hover:scale-105 active:scale-95 group">
             <span className="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">
               auto_awesome
             </span>
@@ -465,6 +493,32 @@ const Todo: React.FC = () => {
                 showTime
                 format="YYYY-MM-DD HH:mm"
               />
+            </Form.Item>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item name="reminderTime" label="提醒时间">
+              <DatePicker
+                className="w-full"
+                showTime
+                format="YYYY-MM-DD HH:mm"
+                placeholder="提前提醒"
+              />
+            </Form.Item>
+
+            <Form.Item name="repeatType" label="重复" initialValue="none">
+              <Select>
+                {Object.entries(REPEAT_CONFIG).map(([key, config]) => (
+                  <Option key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">
+                        {config.icon}
+                      </span>
+                      {config.label}
+                    </div>
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           </div>
         </Form>

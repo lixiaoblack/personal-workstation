@@ -1,11 +1,15 @@
 /**
  * Todo 提醒服务
- * 
+ *
  * 管理待办事项的系统通知提醒
  */
 
 import { Notification } from "electron";
-import { getTodoWithCategory, listUpcomingReminders } from "./todoService";
+import {
+  getTodoWithCategory,
+  listUpcomingReminders,
+  listUpcomingDueTodos,
+} from "./todoService";
 import type { Todo } from "./todoService";
 
 // 提醒检查定时器
@@ -52,24 +56,29 @@ export function stopReminderService(): void {
 function checkReminders(): void {
   try {
     const now = Date.now();
-    // 获取接下来 5 分钟内的提醒
-    const upcomingReminders = listUpcomingReminders(now, now + 5 * 60 * 1000);
 
+    // 1. 检查设置了提醒时间的待办
+    const upcomingReminders = listUpcomingReminders(now, now + 5 * 60 * 1000);
     for (const todo of upcomingReminders) {
-      // 跳过已发送的提醒
       if (sentReminders.has(todo.id)) {
         continue;
       }
-
-      // 发送通知
-      sendNotification(todo);
-      
-      // 记录已发送
+      sendNotification(todo, "reminder");
       sentReminders.add(todo.id);
     }
 
-    // 清理过期的提醒记录（超过 1 小时的）
-    // 如果 Set 太大，可以定期清理
+    // 2. 检查截止时间到了的待办（没有设置提醒时间的）
+    const upcomingDueTodos = listUpcomingDueTodos(now, now + 60 * 1000);
+    for (const todo of upcomingDueTodos) {
+      // 如果已经有提醒时间的提醒，跳过
+      if (sentReminders.has(todo.id)) {
+        continue;
+      }
+      sendNotification(todo, "due");
+      sentReminders.add(todo.id);
+    }
+
+    // 清理过期的提醒记录
     if (sentReminders.size > 1000) {
       sentReminders.clear();
     }
@@ -81,7 +90,7 @@ function checkReminders(): void {
 /**
  * 发送系统通知
  */
-function sendNotification(todo: Todo): void {
+function sendNotification(todo: Todo, type: "reminder" | "due"): void {
   if (!Notification.isSupported()) {
     console.log("[ReminderService] 系统不支持通知");
     return;
@@ -91,9 +100,17 @@ function sendNotification(todo: Todo): void {
   const todoWithCategory = getTodoWithCategory(todo.id);
   const categoryInfo = todoWithCategory?.category;
 
+  const title =
+    type === "reminder" ? `提醒: ${todo.title}` : `即将到期: ${todo.title}`;
+
+  const body =
+    type === "reminder"
+      ? todo.description || "该任务即将到期"
+      : "该任务已到达截止时间";
+
   const notification = new Notification({
-    title: `待办提醒: ${todo.title}`,
-    body: todo.description || "该任务即将到期",
+    title,
+    body,
     subtitle: categoryInfo?.name || "待办事项",
     silent: false,
     hasReply: false,
@@ -104,28 +121,22 @@ function sendNotification(todo: Todo): void {
         text: "标记完成",
       },
       {
-        type: "button", 
+        type: "button",
         text: "稍后提醒",
       },
     ],
   });
 
   notification.on("click", () => {
-    // 点击通知时，可以打开主窗口并定位到该任务
     console.log(`[ReminderService] 用户点击了通知: ${todo.title}`);
-    // 这里可以发送 IPC 消息给渲染进程
     notification.close();
   });
 
   notification.on("action", (event, index) => {
     if (index === 0) {
-      // 标记完成
       console.log(`[ReminderService] 用户选择标记完成: ${todo.title}`);
-      // 这里可以调用 todoService 标记完成
     } else if (index === 1) {
-      // 稍后提醒 - 10 分钟后再次提醒
       console.log(`[ReminderService] 用户选择稍后提醒: ${todo.title}`);
-      // 从已发送集合中移除，10 分钟后会再次提醒
       sentReminders.delete(todo.id);
     }
   });

@@ -508,10 +508,64 @@ function runMigrations(database: Database.Database): void {
       color TEXT DEFAULT '#3C83F6',
       icon TEXT DEFAULT 'FolderOutlined',
       sort_order INTEGER DEFAULT 0,
+      float_window_enabled INTEGER DEFAULT 0,
+      float_window_x INTEGER,
+      float_window_y INTEGER,
+      float_window_width INTEGER DEFAULT 320,
+      float_window_height INTEGER DEFAULT 400,
+      float_window_always_on_top INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
   `);
+
+  // 迁移：为旧表添加新字段
+  try {
+    // 检查并添加浮窗相关字段
+    const columns = database
+      .prepare("PRAGMA table_info(todo_categories)")
+      .all() as Array<{ name: string }>;
+    const columnNames = columns.map((c) => c.name);
+
+    if (!columnNames.includes("float_window_enabled")) {
+      database.exec(
+        "ALTER TABLE todo_categories ADD COLUMN float_window_enabled INTEGER DEFAULT 0"
+      );
+      console.log("[Database] 添加字段 float_window_enabled");
+    }
+    if (!columnNames.includes("float_window_x")) {
+      database.exec(
+        "ALTER TABLE todo_categories ADD COLUMN float_window_x INTEGER"
+      );
+      console.log("[Database] 添加字段 float_window_x");
+    }
+    if (!columnNames.includes("float_window_y")) {
+      database.exec(
+        "ALTER TABLE todo_categories ADD COLUMN float_window_y INTEGER"
+      );
+      console.log("[Database] 添加字段 float_window_y");
+    }
+    if (!columnNames.includes("float_window_width")) {
+      database.exec(
+        "ALTER TABLE todo_categories ADD COLUMN float_window_width INTEGER DEFAULT 320"
+      );
+      console.log("[Database] 添加字段 float_window_width");
+    }
+    if (!columnNames.includes("float_window_height")) {
+      database.exec(
+        "ALTER TABLE todo_categories ADD COLUMN float_window_height INTEGER DEFAULT 400"
+      );
+      console.log("[Database] 添加字段 float_window_height");
+    }
+    if (!columnNames.includes("float_window_always_on_top")) {
+      database.exec(
+        "ALTER TABLE todo_categories ADD COLUMN float_window_always_on_top INTEGER DEFAULT 0"
+      );
+      console.log("[Database] 添加字段 float_window_always_on_top");
+    }
+  } catch (error) {
+    console.warn("[Database] 迁移字段时出现警告:", error);
+  }
 
   // 待办事项表
   database.exec(`

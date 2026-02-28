@@ -19,6 +19,13 @@ export interface TodoCategory {
   color: string;
   icon: string;
   sortOrder: number;
+  // 浮窗配置
+  floatWindowEnabled?: boolean;
+  floatWindowX?: number;
+  floatWindowY?: number;
+  floatWindowWidth?: number;
+  floatWindowHeight?: number;
+  floatWindowAlwaysOnTop?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -29,6 +36,13 @@ export interface TodoCategoryInput {
   color?: string;
   icon?: string;
   sortOrder?: number;
+  // 浮窗配置
+  floatWindowEnabled?: boolean;
+  floatWindowX?: number;
+  floatWindowY?: number;
+  floatWindowWidth?: number;
+  floatWindowHeight?: number;
+  floatWindowAlwaysOnTop?: boolean;
 }
 
 export interface Todo {
@@ -126,8 +140,12 @@ export function createCategory(input: TodoCategoryInput): TodoCategory {
   const now = Date.now();
 
   const stmt = db.prepare(`
-    INSERT INTO todo_categories (name, description, color, icon, sort_order, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO todo_categories (
+      name, description, color, icon, sort_order,
+      float_window_enabled, float_window_x, float_window_y,
+      float_window_width, float_window_height, float_window_always_on_top,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -136,20 +154,17 @@ export function createCategory(input: TodoCategoryInput): TodoCategory {
     input.color || "#3C83F6",
     input.icon || "FolderOutlined",
     input.sortOrder || 0,
+    input.floatWindowEnabled ? 1 : 0,
+    input.floatWindowX ?? null,
+    input.floatWindowY ?? null,
+    input.floatWindowWidth || 320,
+    input.floatWindowHeight || 400,
+    input.floatWindowAlwaysOnTop ? 1 : 0,
     now,
     now
   );
 
-  return {
-    id: result.lastInsertRowid as number,
-    name: input.name,
-    description: input.description,
-    color: input.color || "#3C83F6",
-    icon: input.icon || "FolderOutlined",
-    sortOrder: input.sortOrder || 0,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return getCategory(result.lastInsertRowid as number)!;
 }
 
 /**
@@ -188,6 +203,31 @@ export function updateCategory(
   if (input.sortOrder !== undefined) {
     updates.push("sort_order = ?");
     values.push(input.sortOrder);
+  }
+  // 浮窗配置
+  if (input.floatWindowEnabled !== undefined) {
+    updates.push("float_window_enabled = ?");
+    values.push(input.floatWindowEnabled ? 1 : 0);
+  }
+  if (input.floatWindowX !== undefined) {
+    updates.push("float_window_x = ?");
+    values.push(input.floatWindowX ?? null);
+  }
+  if (input.floatWindowY !== undefined) {
+    updates.push("float_window_y = ?");
+    values.push(input.floatWindowY ?? null);
+  }
+  if (input.floatWindowWidth !== undefined) {
+    updates.push("float_window_width = ?");
+    values.push(input.floatWindowWidth);
+  }
+  if (input.floatWindowHeight !== undefined) {
+    updates.push("float_window_height = ?");
+    values.push(input.floatWindowHeight);
+  }
+  if (input.floatWindowAlwaysOnTop !== undefined) {
+    updates.push("float_window_always_on_top = ?");
+    values.push(input.floatWindowAlwaysOnTop ? 1 : 0);
   }
 
   values.push(id);
@@ -596,6 +636,13 @@ function transformCategoryRow(row: Record<string, unknown>): TodoCategory {
     color: (row.color as string) || "#3C83F6",
     icon: (row.icon as string) || "FolderOutlined",
     sortOrder: (row.sort_order as number) || 0,
+    // 浮窗配置
+    floatWindowEnabled: Boolean(row.float_window_enabled),
+    floatWindowX: row.float_window_x as number | undefined,
+    floatWindowY: row.float_window_y as number | undefined,
+    floatWindowWidth: (row.float_window_width as number) || 320,
+    floatWindowHeight: (row.float_window_height as number) || 400,
+    floatWindowAlwaysOnTop: Boolean(row.float_window_always_on_top),
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
   };
@@ -656,7 +703,10 @@ export function getTodoWithCategory(id: number): Todo | null {
 /**
  * 获取指定时间范围内需要提醒的待办
  */
-export function listUpcomingReminders(startTime: number, endTime: number): Todo[] {
+export function listUpcomingReminders(
+  startTime: number,
+  endTime: number
+): Todo[] {
   const db = getDatabase();
   const stmt = db.prepare(`
     SELECT * FROM todos
@@ -667,6 +717,112 @@ export function listUpcomingReminders(startTime: number, endTime: number): Todo[
   `);
   const rows = stmt.all(startTime, endTime) as Array<Record<string, unknown>>;
   return rows.map(transformTodoRow);
+}
+
+/**
+ * 获取指定时间范围内截止的待办（未设置提醒时间的）
+ * 用于在截止时间到了时发送通知
+ */
+export function listUpcomingDueTodos(
+  startTime: number,
+  endTime: number
+): Todo[] {
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT * FROM todos
+    WHERE status != 'completed' AND status != 'cancelled'
+    AND due_date IS NOT NULL
+    AND reminder_time IS NULL
+    AND due_date >= ? AND due_date <= ?
+    ORDER BY due_date ASC
+  `);
+  const rows = stmt.all(startTime, endTime) as Array<Record<string, unknown>>;
+  return rows.map(transformTodoRow);
+}
+
+/**
+ * 计算下一次重复时间
+ */
+function calculateNextDueDate(
+  currentDueDate: number,
+  repeatType: TodoRepeatType
+): number {
+  const date = new Date(currentDueDate);
+
+  switch (repeatType) {
+    case "daily":
+      date.setDate(date.getDate() + 1);
+      break;
+    case "weekly":
+      date.setDate(date.getDate() + 7);
+      break;
+    case "monthly":
+      date.setMonth(date.getMonth() + 1);
+      break;
+    case "yearly":
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    default:
+      return currentDueDate;
+  }
+
+  return date.getTime();
+}
+
+/**
+ * 完成重复任务并创建下一次任务
+ * 当重复任务完成时，创建新的任务实例
+ */
+export function completeAndCreateNextTodo(id: number): Todo | null {
+  const db = getDatabase();
+  const existing = getTodo(id);
+
+  if (!existing) {
+    return null;
+  }
+
+  // 如果不是重复任务，直接标记完成
+  if (!existing.repeatType || existing.repeatType === "none") {
+    return updateTodo(id, { status: "completed" });
+  }
+
+  // 如果没有截止时间，无法计算下一次时间
+  if (!existing.dueDate) {
+    return updateTodo(id, { status: "completed" });
+  }
+
+  const now = Date.now();
+
+  // 标记当前任务完成
+  const updateStmt = db.prepare(`
+    UPDATE todos SET status = 'completed', completed_at = ?, updated_at = ?
+    WHERE id = ?
+  `);
+  updateStmt.run(now, now, id);
+
+  // 计算下一次截止时间
+  const nextDueDate = calculateNextDueDate(
+    existing.dueDate,
+    existing.repeatType
+  );
+
+  // 创建新任务
+  const newTodoInput: TodoInput = {
+    title: existing.title,
+    description: existing.description,
+    categoryId: existing.categoryId,
+    priority: existing.priority,
+    status: "pending",
+    dueDate: nextDueDate,
+    reminderTime: existing.reminderTime
+      ? calculateNextDueDate(existing.reminderTime, existing.repeatType)
+      : undefined,
+    repeatType: existing.repeatType,
+    repeatConfig: existing.repeatConfig,
+    tags: existing.tags,
+  };
+
+  return createTodo(newTodoInput);
 }
 
 export default {
@@ -690,4 +846,8 @@ export default {
   getOverdueTodos,
   getUpcomingTodos,
   getTodoStats,
+  getTodoWithCategory,
+  listUpcomingReminders,
+  listUpcomingDueTodos,
+  completeAndCreateNextTodo,
 };

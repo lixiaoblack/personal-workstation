@@ -445,6 +445,13 @@ export interface TodoCategory {
   color: string;
   icon: string;
   sortOrder: number;
+  // 浮窗配置
+  floatWindowEnabled?: boolean;
+  floatWindowX?: number;
+  floatWindowY?: number;
+  floatWindowWidth?: number;
+  floatWindowHeight?: number;
+  floatWindowAlwaysOnTop?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -455,6 +462,13 @@ export interface TodoCategoryInput {
   color?: string;
   icon?: string;
   sortOrder?: number;
+  // 浮窗配置
+  floatWindowEnabled?: boolean;
+  floatWindowX?: number;
+  floatWindowY?: number;
+  floatWindowWidth?: number;
+  floatWindowHeight?: number;
+  floatWindowAlwaysOnTop?: boolean;
 }
 
 export interface Todo {
@@ -1051,6 +1065,51 @@ contextBridge.exposeInMainWorld("electronAPI", {
   todoGetStats: (): Promise<TodoStats> => ipcRenderer.invoke("todo:getStats"),
   todoTestNotification: (): Promise<boolean> =>
     ipcRenderer.invoke("todo:testNotification"),
+  todoCompleteAndCreateNext: (id: number): Promise<Todo | null> =>
+    ipcRenderer.invoke("todo:completeAndCreateNext", id),
+
+  // 分组浮窗操作
+  categoryFloatToggle: (categoryId: number, categoryData: TodoCategory) =>
+    ipcRenderer.invoke("categoryFloat:toggle", categoryId, categoryData),
+  categoryFloatClose: (categoryId: number) =>
+    ipcRenderer.invoke("categoryFloat:close", categoryId),
+  categoryFloatSetAlwaysOnTop: (categoryId: number, alwaysOnTop: boolean) =>
+    ipcRenderer.invoke("categoryFloat:setAlwaysOnTop", categoryId, alwaysOnTop),
+  categoryFloatGetFloatedCategories: (): Promise<TodoCategory[]> =>
+    ipcRenderer.invoke("categoryFloat:getFloatedCategories"),
+  categoryFloatNotifyThemeChange: (theme: "light" | "dark") =>
+    ipcRenderer.invoke("categoryFloat:notifyThemeChange", theme),
+  categoryFloatGetCurrentTheme: () =>
+    ipcRenderer.invoke("categoryFloat:getCurrentTheme"),
+
+  // 窗口控制
+  windowMinimize: (): Promise<void> => ipcRenderer.invoke("window:minimize"),
+  windowToggleMaximize: (): Promise<boolean> =>
+    ipcRenderer.invoke("window:toggleMaximize"),
+  windowClose: (): Promise<void> => ipcRenderer.invoke("window:close"),
+  windowShow: (): Promise<void> => ipcRenderer.invoke("window:show"),
+  windowIsMaximized: (): Promise<boolean> =>
+    ipcRenderer.invoke("window:isMaximized"),
+
+  // 浮窗操作
+  floatWindowHide: (): Promise<void> => ipcRenderer.invoke("floatWindow:hide"),
+  floatWindowShow: (): Promise<void> => ipcRenderer.invoke("floatWindow:show"),
+  floatWindowToggle: (): Promise<void> =>
+    ipcRenderer.invoke("floatWindow:toggle"),
+  floatWindowShowWithCategory: (categoryId: number): Promise<void> =>
+    ipcRenderer.invoke("floatWindow:showWithCategory", categoryId),
+
+  // 导航事件监听
+  onNavigate: (
+    callback: (event: Electron.IpcRendererEvent, route: string) => void
+  ) => {
+    ipcRenderer.on("app:navigate", callback);
+  },
+  removeNavigateListener: (
+    callback: (event: Electron.IpcRendererEvent, route: string) => void
+  ) => {
+    ipcRenderer.removeListener("app:navigate", callback);
+  },
 
   // 模块下载进度监听
   onModuleDownloadProgress: (
@@ -1073,6 +1132,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("module:downloadProgress", listener);
     return () =>
       ipcRenderer.removeListener("module:downloadProgress", listener);
+  },
+
+  // 主题变更监听（用于浮窗）
+  onThemeChanged: (callback: (theme: "light" | "dark") => void) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      theme: "light" | "dark"
+    ) => callback(theme);
+    ipcRenderer.on("theme-changed", listener);
+    return () => ipcRenderer.removeListener("theme-changed", listener);
   },
 });
 
@@ -1546,6 +1615,44 @@ export interface ElectronAPI {
   todoGetUpcomingTodos: (days?: number) => Promise<Todo[]>;
   todoGetStats: () => Promise<TodoStats>;
   todoTestNotification: () => Promise<boolean>;
+  todoCompleteAndCreateNext: (id: number) => Promise<Todo | null>;
+
+  // 分组浮窗操作
+  categoryFloatToggle: (
+    categoryId: number,
+    categoryData: TodoCategory
+  ) => Promise<{ success: boolean }>;
+  categoryFloatClose: (categoryId: number) => Promise<{ success: boolean }>;
+  categoryFloatSetAlwaysOnTop: (
+    categoryId: number,
+    alwaysOnTop: boolean
+  ) => Promise<{ success: boolean }>;
+  categoryFloatGetFloatedCategories: () => Promise<TodoCategory[]>;
+  categoryFloatNotifyThemeChange: (
+    theme: "light" | "dark"
+  ) => Promise<{ success: boolean }>;
+  categoryFloatGetCurrentTheme: () => Promise<"light" | "dark">;
+
+  // 窗口控制
+  windowMinimize: () => Promise<void>;
+  windowToggleMaximize: () => Promise<boolean>;
+  windowClose: () => Promise<void>;
+  windowShow: () => Promise<void>;
+  windowIsMaximized: () => Promise<boolean>;
+
+  // 浮窗操作
+  floatWindowHide: () => Promise<void>;
+  floatWindowShow: () => Promise<void>;
+  floatWindowToggle: () => Promise<void>;
+  floatWindowShowWithCategory: (categoryId: number) => Promise<void>;
+
+  // 导航事件监听
+  onNavigate: (
+    callback: (event: Electron.IpcRendererEvent, route: string) => void
+  ) => void;
+  removeNavigateListener: (
+    callback: (event: Electron.IpcRendererEvent, route: string) => void
+  ) => void;
 
   // 模块下载进度监听
   onModuleDownloadProgress: (
@@ -1556,6 +1663,9 @@ export interface ElectronAPI {
       percent: number;
     }) => void
   ) => () => void;
+
+  // 主题变更监听（用于浮窗）
+  onThemeChanged: (callback: (theme: "light" | "dark") => void) => () => void;
 }
 
 declare global {

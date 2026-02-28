@@ -9,7 +9,7 @@
  * - 管理应用生命周期
  */
 
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow, Menu, ipcMain, nativeTheme } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -23,6 +23,21 @@ import {
   stopReminderService,
   sendWelcomeNotification,
 } from "./services/reminderService";
+import {
+  startTrayService,
+  stopTrayService,
+  setMainWindow,
+} from "./services/trayService";
+import {
+  startFloatWindowService,
+  stopFloatWindowService,
+} from "./services/floatWindowService";
+import {
+  registerCategoryFloatIpc,
+  restoreAllFloatWindows,
+  stopCategoryFloatService,
+  notifyThemeChangeToAllFloats,
+} from "./services/categoryFloatService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +46,9 @@ const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 
 // 主窗口实例
 let mainWindow: BrowserWindow | null = null;
+
+// 是否正在退出应用
+let isQuitting = false;
 
 /**
  * 创建主窗口
@@ -41,6 +59,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    frame: false, // 无边框窗口
+    transparent: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -66,9 +86,44 @@ function createWindow(): void {
   // 禁用默认菜单，避免 Tab 键被菜单系统捕获
   Menu.setApplicationMenu(null);
 
+  // 窗口关闭时：如果正在退出则关闭，否则隐藏
+  mainWindow.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+      console.log("[Main] 窗口已隐藏（非退出）");
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+}
+
+/**
+ * 显示主窗口
+ */
+function showMainWindow(): void {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+    mainWindow.focus();
+  } else {
+    createWindow();
+  }
+}
+
+/**
+ * 隐藏主窗口
+ */
+function hideMainWindow(): void {
+  if (mainWindow) {
+    mainWindow.hide();
+  }
 }
 
 /**
@@ -155,6 +210,9 @@ app.whenReady().then(async () => {
   // 注册 IPC 处理器
   registerAllIpcHandlers(mainWindow);
 
+  // 注册窗口控制 IPC
+  registerWindowControlIpc();
+
   // 启动后端服务
   await startBackendServices();
 
@@ -165,24 +223,84 @@ app.whenReady().then(async () => {
   // 创建主窗口
   createWindow();
 
-  // macOS 激活应用时重新创建窗口
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
-
-// 所有窗口关闭
-app.on("window-all-closed", async () => {
-  await stopBackendServices();
-
-  if (process.platform !== "darwin") {
-    app.quit();
+  // 设置托盘服务的主窗口引用
+  if (mainWindow) {
+    setMainWindow(mainWindow);
   }
+
+  // 启动托盘服务
+  startTrayService();
+
+  // 启动浮窗服务
+  startFloatWindowService();
+
+  // 注册分组浮窗 IPC 处理器
+  registerCategoryFloatIpc();
+
+  // 延迟恢复分组浮窗（确保数据库已就绪）
+  setTimeout(() => {
+    restoreAllFloatWindows();
+  }, 500);
+
+  // 监听系统主题变化，通知所有浮窗
+  nativeTheme.on("updated", () => {
+    const theme = nativeTheme.shouldUseDarkColors ? "dark" : "light";
+    // 只有当用户设置为跟随系统时才通知（这里简化处理，总是通知）
+    notifyThemeChangeToAllFloats(theme);
+  });
+
+  // macOS 激活应用时显示窗口（点击 Dock 图标）
+  app.on("activate", () => {
+    showMainWindow();
+  });
 });
 
 // 应用退出前
 app.on("before-quit", async () => {
+  isQuitting = true;
+
+  // 停止托盘和浮窗服务
+  stopTrayService();
+  stopFloatWindowService();
+  stopCategoryFloatService();
+
   await stopBackendServices();
 });
+
+/**
+ * 注册窗口控制 IPC 处理器
+ */
+function registerWindowControlIpc(): void {
+  // 最小化窗口
+  ipcMain.handle("window:minimize", () => {
+    mainWindow?.minimize();
+  });
+
+  // 最大化/还原窗口
+  ipcMain.handle("window:toggleMaximize", () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize();
+      return false;
+    } else {
+      mainWindow?.maximize();
+      return true;
+    }
+  });
+
+  // 关闭窗口（隐藏）
+  ipcMain.handle("window:close", () => {
+    hideMainWindow();
+  });
+
+  // 显示窗口
+  ipcMain.handle("window:show", () => {
+    showMainWindow();
+  });
+
+  // 检查窗口是否最大化
+  ipcMain.handle("window:isMaximized", () => {
+    return mainWindow?.isMaximized() || false;
+  });
+
+  console.log("[Main] 窗口控制 IPC 已注册");
+}

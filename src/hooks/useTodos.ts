@@ -226,12 +226,27 @@ export function useTodos(initialFilter?: TodoFilter) {
 
   // 切换完成状态
   const toggleComplete = useCallback(
-    async (id: number, currentStatus: TodoStatus) => {
+    async (id: number, currentStatus: TodoStatus, repeatType?: string) => {
+      // 如果是标记完成且是重复任务，使用特殊处理
+      if (
+        currentStatus !== "completed" &&
+        repeatType &&
+        repeatType !== "none"
+      ) {
+        const result = await window.electronAPI.todoCompleteAndCreateNext(id);
+        if (result) {
+          await loadTodos();
+          await loadStats();
+        }
+        return result;
+      }
+
+      // 普通任务切换状态
       const newStatus: TodoStatus =
         currentStatus === "completed" ? "pending" : "completed";
       return updateTodo(id, { status: newStatus });
     },
-    [updateTodo]
+    [updateTodo, loadTodos, loadStats]
   );
 
   // 设置过滤条件

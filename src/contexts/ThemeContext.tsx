@@ -52,6 +52,9 @@ const applyTheme = (resolvedTheme: ResolvedTheme): void => {
   } else {
     root.classList.remove("dark");
   }
+
+  // 通知主进程，以便同步到所有浮窗
+  window.electronAPI?.categoryFloatNotifyThemeChange?.(resolvedTheme);
 };
 
 interface ThemeProviderProps {

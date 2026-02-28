@@ -2,7 +2,7 @@
  * @Author: wanglx
  * @Date: 2026-02-13 23:03:14
  * @LastEditors: wanglx
- * @LastEditTime: 2026-02-28 15:03:52
+ * @LastEditTime: 2026-02-28 15:24:40
  * @Description: 
  * 
  * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved. 
@@ -28,17 +28,17 @@
     - [x] Todo 页面重构
     - [x] 按分类分组展示卡片
     - [x] 任务完成状态与完成时间显示
-  - 阶段二：时间管理与通知（P1）进行中
+  - 阶段二：时间管理与通知（P1）✅
     - [x] 任务时间字段（截止时间、提醒时间）
     - [x] 时间选择器组件
-    - [ ] Electron Notification API 集成
+    - [x] Electron Notification API 集成
     - [x] 逾期状态检测与显示
-    - [ ] 重复任务功能（每日/每周/每月）
-  - 阶段三：系统集成（P1）
-    - [ ] Mac 菜单栏图标（Electron Tray）
-    - [ ] 菜单栏快捷操作（新建、查看、设置）
-    - [ ] 待办浮窗组件（置顶、透明、可拖拽）
-    - [ ] 浮窗快捷键唤起
+    - [x] 重复任务功能（每日/每周/每月）
+  - 阶段三：系统集成（P1）✅
+    - [x] Mac 菜单栏图标（Electron Tray）
+    - [x] 菜单栏快捷操作（新建、查看、设置）
+    - [x] 待办浮窗组件（置顶、透明、可拖拽）
+    - [x] 浮窗快捷键唤起
   - 阶段四：AI 语义化创建（P2）
     - [ ] Python Agent CreateTodoTool 工具
     - [ ] LLM 自然语言解析待办信息

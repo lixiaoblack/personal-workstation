@@ -39,7 +39,43 @@
 /* ============================================
    深色模式（默认）
    ============================================ */
-:root,
+/* 默认值（无 data-theme 时使用深色模式） */
+:root {
+  /* 背景色 */
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-bg-elevated: #1e293b;
+  --color-bg-hover: rgba(255, 255, 255, 0.05);
+  --color-bg-active: rgba(255, 255, 255, 0.1);
+  
+  /* 边框色 */
+  --color-border: #334155;
+  --color-border-light: #1e293b;
+  --color-border-focus: var(--color-primary);
+  
+  /* 文本色 */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #64748b;
+  --color-text-disabled: #475569;
+  --color-text-placeholder: #475569;
+  
+  /* 交互状态 */
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-hover);
+  
+  /* 特殊效果 */
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-skeleton: rgba(255, 255, 255, 0.1);
+  
+  /* 滚动条 */
+  --scrollbar-bg: transparent;
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #475569;
+}
+
+/* 深色模式（显式指定） */
 [data-theme="dark"] {
   /* 背景色 */
   --color-bg-primary: #0f172a;

@@ -8,7 +8,7 @@ import React, { useState, useCallback } from "react";
 import { Modal, Form, Input, Select, DatePicker, App } from "antd";
 import dayjs from "dayjs";
 import type { Todo, TodoCategory } from "@/types/electron";
-import { PRIORITY_CONFIG, ICON_OPTIONS } from "../../config";
+import { PRIORITY_CONFIG, ICON_OPTIONS, REPEAT_CONFIG } from "../../config";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -92,6 +92,8 @@ export const TodoCard: React.FC<TodoCardProps> = ({
         priority: values.priority || "medium",
         status: "pending",
         dueDate: values.dueDate?.valueOf(),
+        reminderTime: values.reminderTime?.valueOf(),
+        repeatType: values.repeatType || "none",
       });
       setAddModalVisible(false);
       todoForm.resetFields();
@@ -133,11 +135,18 @@ export const TodoCard: React.FC<TodoCardProps> = ({
     if (!timestamp) return null;
     const date = dayjs(timestamp);
     const now = dayjs();
+
+    // 判断是否已过期（精确到分钟）
+    if (date.isBefore(now)) {
+      return {
+        text: `已逾期 ${date.format("MM-DD HH:mm")}`,
+        status: "overdue",
+      };
+    }
+
     const diff = date.diff(now, "day");
 
-    if (diff < 0) {
-      return { text: "已逾期", status: "overdue" };
-    } else if (diff === 0) {
+    if (diff === 0) {
       return { text: `今天 ${date.format("HH:mm")}`, status: "today" };
     } else if (diff === 1) {
       return { text: `明天 ${date.format("HH:mm")}`, status: "tomorrow" };
@@ -156,14 +165,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
   return (
     <>
       {/* 卡片容器 - glass-card 样式 */}
-      <div
-        className="rounded-xl p-6 flex flex-col h-fit"
-        style={{
-          background: "rgba(30, 41, 59, 0.7)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-        }}
-      >
+      <div className="rounded-xl p-6 flex flex-col h-fit bg-bg-secondary/70 backdrop-blur-xl border border-border">
         {/* 头部 */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -188,12 +190,29 @@ export const TodoCard: React.FC<TodoCardProps> = ({
             </span>
             {/* 操作菜单 */}
             <div className="relative group">
-              <button className="p-1 rounded hover:bg-white/10 text-text-tertiary hover:text-text-primary transition-colors">
+              <button className="p-1 rounded hover:bg-bg-hover text-text-tertiary hover:text-text-primary transition-colors">
                 <span className="material-symbols-outlined text-lg">
                   more_vert
                 </span>
               </button>
               <div className="absolute right-0 top-full mt-1 w-32 py-1 rounded-lg bg-bg-secondary border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                <button
+                  onClick={() => {
+                    // 切换浮窗显示
+                    window.electronAPI?.categoryFloatToggle(
+                      category.id,
+                      category
+                    );
+                  }}
+                  className="w-full px-3 py-1.5 text-left text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors flex items-center justify-between"
+                >
+                  <span>浮窗显示</span>
+                  {category.floatWindowEnabled && (
+                    <span className="material-symbols-outlined text-xs text-primary">
+                      check
+                    </span>
+                  )}
+                </button>
                 <button
                   onClick={() => {
                     categoryForm.setFieldsValue({
@@ -204,13 +223,13 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                     setSelectedColor(category.color || "#3B82F6");
                     setEditCategoryModalVisible(true);
                   }}
-                  className="w-full px-3 py-1.5 text-left text-sm text-text-secondary hover:bg-white/10 hover:text-text-primary transition-colors"
+                  className="w-full px-3 py-1.5 text-left text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
                 >
                   编辑分类
                 </button>
                 <button
                   onClick={handleDeleteCategory}
-                  className="w-full px-3 py-1.5 text-left text-sm text-error hover:bg-error/10 transition-colors"
+                  className="w-full px-3 py-1.5 text-left text-sm text-error hover:bg-error-light transition-colors"
                 >
                   删除分类
                 </button>
@@ -234,7 +253,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                   className={`mt-1 size-4 rounded border flex items-center justify-center transition-colors ${
                     isCompleted
                       ? "bg-green-500 border-green-500 cursor-not-allowed"
-                      : "border-slate-700 bg-slate-800 hover:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                      : "border-border bg-bg-tertiary hover:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
                   }`}
                 >
                   {isCompleted && (
@@ -271,33 +290,46 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                         </span>
                       )}
                     </span>
-                  ) : timeInfo ? (
-                    <span
-                      className={`text-[10px] uppercase tracking-wider flex items-center gap-1 mt-1 ${
-                        timeInfo.status === "overdue"
-                          ? "text-red-400 font-semibold"
-                          : "text-text-tertiary"
-                      }`}
-                    >
-                      {timeInfo.status === "overdue" ? (
-                        <span className="material-symbols-outlined text-xs">
-                          priority_high
-                        </span>
-                      ) : (
-                        <span className="material-symbols-outlined text-xs">
-                          schedule
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      {timeInfo && (
+                        <span
+                          className={`text-[10px] uppercase tracking-wider flex items-center gap-1 ${
+                            timeInfo.status === "overdue"
+                              ? "text-error font-semibold"
+                              : "text-text-tertiary"
+                          }`}
+                        >
+                          {timeInfo.status === "overdue" ? (
+                            <span className="material-symbols-outlined text-xs">
+                              priority_high
+                            </span>
+                          ) : (
+                            <span className="material-symbols-outlined text-xs">
+                              schedule
+                            </span>
+                          )}
+                          {timeInfo.text}
                         </span>
                       )}
-                      {timeInfo.text}
-                    </span>
-                  ) : null}
+                      {/* 重复任务标识 */}
+                      {todo.repeatType && todo.repeatType !== "none" && (
+                        <span className="text-[10px] text-primary/70 flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-xs">
+                            {REPEAT_CONFIG[todo.repeatType]?.icon || "repeat"}
+                          </span>
+                          {REPEAT_CONFIG[todo.repeatType]?.label}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* 操作按钮 - 已完成的任务也可以编辑 */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => onEditTodo(todo)}
-                    className="p-1 rounded text-text-tertiary hover:text-primary hover:bg-white/10 transition-colors"
+                    className="p-1 rounded text-text-tertiary hover:text-primary hover:bg-primary/10 transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">
                       edit
@@ -305,7 +337,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                   </button>
                   <button
                     onClick={() => onDeleteTodo(todo.id)}
-                    className="p-1 rounded text-text-tertiary hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                    className="p-1 rounded text-text-tertiary hover:text-error hover:bg-error-light transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">
                       delete
@@ -329,7 +361,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
             todoForm.resetFields();
             setAddModalVisible(true);
           }}
-          className="mt-6 text-xs text-text-tertiary hover:text-white flex items-center gap-1 transition-colors"
+          className="mt-6 text-xs text-text-tertiary hover:text-text-primary flex items-center gap-1 transition-colors"
         >
           <span className="material-symbols-outlined text-sm">add_circle</span>
           添加待办
@@ -377,6 +409,32 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                 format="MM-DD HH:mm"
                 placeholder="选择时间"
               />
+            </Form.Item>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item name="reminderTime" label="提醒时间">
+              <DatePicker
+                className="w-full"
+                showTime
+                format="MM-DD HH:mm"
+                placeholder="提前提醒"
+              />
+            </Form.Item>
+
+            <Form.Item name="repeatType" label="重复" initialValue="none">
+              <Select>
+                {Object.entries(REPEAT_CONFIG).map(([key, config]) => (
+                  <Option key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">
+                        {config.icon}
+                      </span>
+                      {config.label}
+                    </div>
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           </div>
         </Form>

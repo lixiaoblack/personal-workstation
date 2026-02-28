@@ -34,11 +34,17 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const lastSavedContentRef = useRef(content);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentFilePathRef = useRef<string | null>(null);
 
-  // 当文件切换时重置状态
+  // 当文件切换时重置状态（只在文件路径变化时触发）
   useEffect(() => {
-    setIsDirty(false);
-    lastSavedContentRef.current = content;
+    const filePath = selectedFile?.path ?? null;
+    if (currentFilePathRef.current !== filePath) {
+      // 文件切换了，重置状态
+      currentFilePathRef.current = filePath;
+      setIsDirty(false);
+      lastSavedContentRef.current = content;
+    }
   }, [selectedFile?.path, content]);
 
   // 自动保存（防抖 2 秒）

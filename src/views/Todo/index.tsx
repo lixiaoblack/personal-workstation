@@ -68,12 +68,9 @@ const Todo: React.FC = () => {
     // 先按状态和搜索过滤
     let filtered = todos;
 
-    // Tab 过滤
-    if (activeTab === "in_progress") {
-      filtered = filtered.filter(
-        (t) => t.status !== "completed" && t.status !== "cancelled"
-      );
-    } else if (activeTab === "completed") {
+    // Tab 过滤 - "进行中"Tab 也包含已完成任务（在分类中显示）
+    // 只有"已完成"Tab 只显示已完成的任务
+    if (activeTab === "completed") {
       filtered = filtered.filter((t) => t.status === "completed");
     }
 

@@ -138,3 +138,68 @@
     text-wrap: balance;
   }
 }
+
+/* ============================================
+   Vditor Markdown 编辑器样式修复
+   ============================================ */
+.w-markdown-editor .vditor-ir ol,
+.w-markdown-editor .vditor-ir ul,
+.w-markdown-editor .vditor-sv ol,
+.w-markdown-editor .vditor-sv ul,
+.w-markdown-editor .vditor-wysiwyg ol,
+.w-markdown-editor .vditor-wysiwyg ul,
+.w-markdown-editor .vditor-preview ol,
+.w-markdown-editor .vditor-preview ul {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.w-markdown-editor .vditor-ir ol,
+.w-markdown-editor .vditor-sv ol,
+.w-markdown-editor .vditor-wysiwyg ol,
+.w-markdown-editor .vditor-preview ol {
+  list-style: decimal;
+}
+
+.w-markdown-editor .vditor-ir ul,
+.w-markdown-editor .vditor-sv ul,
+.w-markdown-editor .vditor-wysiwyg ul,
+.w-markdown-editor .vditor-preview ul {
+  list-style: disc;
+}
+
+.w-markdown-editor .vditor-ir ol li,
+.w-markdown-editor .vditor-ir ul li,
+.w-markdown-editor .vditor-sv ol li,
+.w-markdown-editor .vditor-sv ul li,
+.w-markdown-editor .vditor-wysiwyg ol li,
+.w-markdown-editor .vditor-wysiwyg ul li,
+.w-markdown-editor .vditor-preview ol li,
+.w-markdown-editor .vditor-preview ul li {
+  margin: 0.25em 0;
+}
+
+/* 嵌套列表样式 */
+.w-markdown-editor .vditor-ir ol ol,
+.w-markdown-editor .vditor-wysiwyg ol ol,
+.w-markdown-editor .vditor-preview ol ol {
+  list-style: lower-alpha;
+}
+
+.w-markdown-editor .vditor-ir ol ol ol,
+.w-markdown-editor .vditor-wysiwyg ol ol ol,
+.w-markdown-editor .vditor-preview ol ol ol {
+  list-style: lower-roman;
+}
+
+.w-markdown-editor .vditor-ir ul ul,
+.w-markdown-editor .vditor-wysiwyg ul ul,
+.w-markdown-editor .vditor-preview ul ul {
+  list-style: circle;
+}
+
+.w-markdown-editor .vditor-ir ul ul ul,
+.w-markdown-editor .vditor-wysiwyg ul ul ul,
+.w-markdown-editor .vditor-preview ul ul ul {
+  list-style: square;
+}

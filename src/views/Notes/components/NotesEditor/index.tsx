@@ -67,23 +67,29 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   }, [content, isDirty, selectedFile, onSave]);
 
   // 内容变化处理
-  const handleContentChange = useCallback((value: string) => {
-    onContentChange(value);
-    setIsDirty(value !== lastSavedContentRef.current);
-  }, [onContentChange]);
+  const handleContentChange = useCallback(
+    (value: string) => {
+      onContentChange(value);
+      setIsDirty(value !== lastSavedContentRef.current);
+    },
+    [onContentChange]
+  );
 
   // 保存处理
-  const handleSave = useCallback(async (value: string) => {
-    if (!selectedFile) return;
+  const handleSave = useCallback(
+    async (value: string) => {
+      if (!selectedFile) return;
 
-    setIsSaving(true);
-    const success = await onSave(value);
-    if (success) {
-      setIsDirty(false);
-      lastSavedContentRef.current = value;
-    }
-    setIsSaving(false);
-  }, [selectedFile, onSave]);
+      setIsSaving(true);
+      const success = await onSave(value);
+      if (success) {
+        setIsDirty(false);
+        lastSavedContentRef.current = value;
+      }
+      setIsSaving(false);
+    },
+    [selectedFile, onSave]
+  );
 
   // 未选择文件时的空状态
   if (!selectedFile) {
@@ -111,14 +117,18 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         <div className="flex items-center gap-4">
           {/* 文件路径 */}
           <div className="flex items-center gap-2 text-sm">
-            <span className="material-symbols-outlined text-primary">description</span>
-            <span className="font-medium text-text-primary">{selectedFile.name}</span>
-            {isDirty && (
-              <span className="text-xs text-warning">● 未保存</span>
-            )}
+            <span className="material-symbols-outlined text-primary">
+              description
+            </span>
+            <span className="font-medium text-text-primary">
+              {selectedFile.name}
+            </span>
+            {isDirty && <span className="text-xs text-warning">● 未保存</span>}
             {isSaving && (
               <span className="flex items-center gap-1 text-xs text-text-tertiary">
-                <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                <span className="material-symbols-outlined animate-spin text-sm">
+                  progress_activity
+                </span>
                 保存中...
               </span>
             )}

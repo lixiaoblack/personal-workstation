@@ -189,7 +189,23 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
 
     vditorRef.current = vditor;
 
+    // 处理 Tab 键事件，阻止 Electron 捕获
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        e.stopPropagation();
+        // Tab 增加缩进（插入2个空格）
+        if (!e.shiftKey) {
+          vditor.insertValue("  ");
+        }
+      }
+    };
+
+    const vditorElement = containerRef.current;
+    vditorElement?.addEventListener("keydown", handleKeyDown, true);
+
     return () => {
+      vditorElement?.removeEventListener("keydown", handleKeyDown, true);
       try {
         if (vditorRef.current) {
           vditorRef.current.destroy();
@@ -205,7 +221,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
   // 同步外部 value 到编辑器（仅在文件切换时）
   useEffect(() => {
     if (!vditorRef.current || !isReadyRef.current) return;
-    
+
     // 只有当值与上次不同时才更新
     if (value !== lastValueRef.current) {
       lastValueRef.current = value;

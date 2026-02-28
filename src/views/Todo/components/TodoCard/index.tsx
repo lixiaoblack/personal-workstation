@@ -43,6 +43,23 @@ export const TodoCard: React.FC<TodoCardProps> = ({
   // 待处理数量
   const pendingCount = todos.filter((t) => t.status !== "completed").length;
 
+  // 按时间排序：时间早的在前面，无时间的在最后
+  const sortedTodos = [...todos].sort((a, b) => {
+    // 已完成的排在最后
+    if (a.status === "completed" && b.status !== "completed") return 1;
+    if (a.status !== "completed" && b.status === "completed") return -1;
+    
+    // 都有截止时间，按时间升序
+    if (a.dueDate && b.dueDate) {
+      return a.dueDate - b.dueDate;
+    }
+    // 只有一个有截止时间，有时间的排前面
+    if (a.dueDate && !b.dueDate) return -1;
+    if (!a.dueDate && b.dueDate) return 1;
+    // 都没有截止时间，按创建时间排序
+    return a.createdAt - b.createdAt;
+  });
+
   // 颜色配置 - 匹配设计稿颜色
   const colorConfig = getColorConfig(category.color);
 
@@ -181,7 +198,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
 
         {/* 待办列表 */}
         <div className="space-y-4">
-          {todos.map((todo) => {
+          {sortedTodos.map((todo) => {
             const timeInfo = formatTime(todo.dueDate);
             const isCompleted = todo.status === "completed";
 
@@ -255,7 +272,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
             );
           })}
 
-          {todos.length === 0 && (
+          {sortedTodos.length === 0 && (
             <div className="py-4 text-center text-text-tertiary text-sm">
               暂无待办事项
             </div>

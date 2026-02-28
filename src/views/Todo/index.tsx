@@ -85,17 +85,6 @@ const Todo: React.FC = () => {
   const inProgressCount = todos.filter((t) => t.status !== "completed" && t.status !== "cancelled").length;
   const completedCount = todos.filter((t) => t.status === "completed").length;
 
-  // 打开创建待办弹窗（无分类）
-  const handleCreateTodo = useCallback(() => {
-    setEditingTodo(null);
-    todoForm.resetFields();
-    todoForm.setFieldsValue({
-      priority: "medium",
-      status: "pending",
-    });
-    setTodoModalVisible(true);
-  }, [todoForm]);
-
   // 打开编辑待办弹窗
   const handleEditTodo = useCallback(
     (todo: Todo) => {
@@ -225,47 +214,54 @@ const Todo: React.FC = () => {
   return (
     <div className="todo flex h-full overflow-hidden">
       <main className="relative flex flex-1 flex-col overflow-hidden">
-        {/* 头部 */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-bg-secondary/50 px-8 backdrop-blur-md">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-xl text-text-tertiary">
-              search
-            </span>
-            <input
-              className="w-64 rounded-full border-none bg-bg-tertiary/50 py-1.5 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary"
-              placeholder="搜索任务..."
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+        {/* 头部 - 匹配设计稿样式 */}
+        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-bg-primary/50 backdrop-blur-md sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold">任务看板</h2>
+            <div className="flex items-center gap-1 bg-slate-800/50 rounded-full px-3 py-1">
+              <span className="size-2 rounded-full bg-green-500" />
+              <span className="text-xs text-text-tertiary">系统已连接</span>
+            </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xl">
+                search
+              </span>
+              <input
+                className="bg-slate-800/50 border-none rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary"
+                placeholder="搜索任务..."
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+            </div>
             <button
               onClick={() => setCategoryModalVisible(true)}
-              className="flex items-center gap-2 rounded-lg border border-border px-4 py-1.5 text-sm font-medium text-text-secondary transition-all hover:border-primary/50 hover:text-primary"
+              className="bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">add</span>
               新建分类
             </button>
-            <button
-              onClick={handleCreateTodo}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-all hover:bg-primary-hover"
-            >
-              <span className="material-symbols-outlined text-sm">add</span>
-              新建待办
-            </button>
           </div>
         </header>
 
-        {/* Tab 切换 */}
-        <div className="border-b border-border px-8">
-          <div className="flex gap-8">
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-y-auto p-8">
+          {/* 标题 */}
+          <div className="mb-8">
+            <h3 className="text-3xl font-bold mb-2">我的提醒事项</h3>
+            <p className="text-text-tertiary">管理您的日常任务和分组记录</p>
+          </div>
+
+          {/* Tab 切换 - 匹配设计稿样式 */}
+          <div className="flex gap-8 border-b border-slate-800 mb-8">
             <button
               onClick={() => setActiveTab("in_progress")}
               className={`pb-4 text-sm font-semibold ${
                 activeTab === "in_progress"
                   ? "border-b-2 border-primary text-primary"
-                  : "border-b-2 border-transparent text-text-tertiary transition-colors hover:text-text-secondary"
+                  : "border-b-2 border-transparent text-text-tertiary hover:text-text-secondary transition-colors"
               }`}
             >
               进行中 ({inProgressCount})
@@ -275,7 +271,7 @@ const Todo: React.FC = () => {
               className={`pb-4 text-sm font-semibold ${
                 activeTab === "completed"
                   ? "border-b-2 border-primary text-primary"
-                  : "border-b-2 border-transparent text-text-tertiary transition-colors hover:text-text-secondary"
+                  : "border-b-2 border-transparent text-text-tertiary hover:text-text-secondary transition-colors"
               }`}
             >
               已完成 ({completedCount})
@@ -285,16 +281,12 @@ const Todo: React.FC = () => {
               className={`pb-4 text-sm font-semibold ${
                 activeTab === "all"
                   ? "border-b-2 border-primary text-primary"
-                  : "border-b-2 border-transparent text-text-tertiary transition-colors hover:text-text-secondary"
+                  : "border-b-2 border-transparent text-text-tertiary hover:text-text-secondary transition-colors"
               }`}
             >
               所有任务
             </button>
           </div>
-        </div>
-
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto p-8">
           {todosLoading ? (
             <div className="flex items-center justify-center h-full">
               <span className="material-symbols-outlined animate-spin text-4xl text-primary">
@@ -353,12 +345,12 @@ const Todo: React.FC = () => {
                 />
               )}
 
-              {/* 创建新分类占位 */}
+              {/* 创建新分类占位 - 匹配设计稿样式 */}
               <div
                 onClick={() => setCategoryModalVisible(true)}
-                className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border p-6 transition-all hover:border-primary/50 hover:bg-bg-hover group"
+                className="border-2 border-dashed border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center gap-3 hover:border-slate-700 hover:bg-slate-800/20 transition-all cursor-pointer group"
               >
-                <div className="flex size-12 items-center justify-center rounded-full bg-bg-tertiary text-text-tertiary transition-transform group-hover:scale-110">
+                <div className="size-12 rounded-full bg-slate-800 flex items-center justify-center text-text-tertiary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">add</span>
                 </div>
                 <p className="text-sm font-medium text-text-tertiary">创建新任务分组</p>
@@ -367,13 +359,18 @@ const Todo: React.FC = () => {
           )}
         </div>
 
-        {/* AI 助手按钮 */}
+        {/* AI 助手按钮 - 匹配设计稿样式 */}
         <div className="absolute bottom-8 right-8">
-          <button className="flex items-center gap-3 rounded-full bg-primary px-6 py-4 text-white shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 group">
-            <span className="material-symbols-outlined text-2xl transition-transform group-hover:rotate-12">
+          <button className="bg-primary hover:bg-primary/90 text-white flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl shadow-primary/30 transition-all transform hover:scale-105 active:scale-95 group">
+            <span className="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">
               auto_awesome
             </span>
             <span className="font-bold tracking-wide">AI 助手</span>
+            <div className="ml-2 flex items-center gap-0.5">
+              <span className="w-1 h-1 bg-white/40 rounded-full" />
+              <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+              <span className="w-1 h-1 bg-white/40 rounded-full" />
+            </div>
           </button>
         </div>
       </main>

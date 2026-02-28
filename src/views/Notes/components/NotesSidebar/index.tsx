@@ -3,7 +3,7 @@
  * 支持文件树展示、展开/收起、新建文件夹/笔记、重命名、删除等功能
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 // 文件树节点类型
 export interface FileTreeNode {
@@ -47,6 +47,20 @@ const FileTreeItem: React.FC<{
 }) => {
   const isExpanded = node.expanded ?? false;
   const isSelected = selectedFile?.path === node.path;
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  // 当被选中时滚动到可见区域
+  useEffect(() => {
+    if (isSelected && itemRef.current) {
+      // 使用 setTimeout 确保 DOM 已渲染
+      setTimeout(() => {
+        itemRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }, 100);
+    }
+  }, [isSelected]);
 
   const handleClick = () => {
     if (node.type === "folder") {
@@ -59,6 +73,7 @@ const FileTreeItem: React.FC<{
   return (
     <>
       <div
+        ref={itemRef}
         className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 transition-colors ${
           isSelected
             ? "border-l-2 border-primary bg-primary/5 text-primary"

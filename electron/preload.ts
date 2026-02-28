@@ -1010,7 +1010,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("todo:listCategories"),
   todoGetCategory: (id: number): Promise<TodoCategory | null> =>
     ipcRenderer.invoke("todo:getCategory", id),
-  todoCreateCategory: (input: TodoCategoryInput): Promise<TodoCategory | null> =>
+  todoCreateCategory: (
+    input: TodoCategoryInput
+  ): Promise<TodoCategory | null> =>
     ipcRenderer.invoke("todo:createCategory", input),
   todoUpdateCategory: (
     id: number,
@@ -1019,8 +1021,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("todo:updateCategory", id, input),
   todoDeleteCategory: (id: number): Promise<boolean> =>
     ipcRenderer.invoke("todo:deleteCategory", id),
-  todoGetCategoryStats: (): Promise<Array<{ categoryId: number | null; count: number }>> =>
-    ipcRenderer.invoke("todo:getCategoryStats"),
+  todoGetCategoryStats: (): Promise<
+    Array<{ categoryId: number | null; count: number }>
+  > => ipcRenderer.invoke("todo:getCategoryStats"),
 
   // Todo 管理
   todoListTodos: (filter?: TodoFilter): Promise<Todo[]> =>
@@ -1045,8 +1048,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("todo:getOverdueTodos"),
   todoGetUpcomingTodos: (days?: number): Promise<Todo[]> =>
     ipcRenderer.invoke("todo:getUpcomingTodos", days),
-  todoGetStats: (): Promise<TodoStats> =>
-    ipcRenderer.invoke("todo:getStats"),
+  todoGetStats: (): Promise<TodoStats> => ipcRenderer.invoke("todo:getStats"),
 
   // 模块下载进度监听
   onModuleDownloadProgress: (
@@ -1516,13 +1518,17 @@ export interface ElectronAPI {
   // 分类管理
   todoListCategories: () => Promise<TodoCategory[]>;
   todoGetCategory: (id: number) => Promise<TodoCategory | null>;
-  todoCreateCategory: (input: TodoCategoryInput) => Promise<TodoCategory | null>;
+  todoCreateCategory: (
+    input: TodoCategoryInput
+  ) => Promise<TodoCategory | null>;
   todoUpdateCategory: (
     id: number,
     input: Partial<TodoCategoryInput>
   ) => Promise<TodoCategory | null>;
   todoDeleteCategory: (id: number) => Promise<boolean>;
-  todoGetCategoryStats: () => Promise<Array<{ categoryId: number | null; count: number }>>;
+  todoGetCategoryStats: () => Promise<
+    Array<{ categoryId: number | null; count: number }>
+  >;
 
   // Todo 管理
   todoListTodos: (filter?: TodoFilter) => Promise<Todo[]>;

@@ -7,7 +7,12 @@ import React, { useState, useCallback, useMemo } from "react";
 import { Modal, Form, Input, Select, DatePicker, App } from "antd";
 import dayjs from "dayjs";
 import { useTodos, useTodoCategories } from "@/hooks/useTodos";
-import type { Todo, TodoInput, TodoUpdateInput, TodoCategory } from "@/types/electron";
+import type {
+  Todo,
+  TodoInput,
+  TodoUpdateInput,
+  TodoCategory,
+} from "@/types/electron";
 import { PRIORITY_CONFIG, STATUS_CONFIG, ICON_OPTIONS } from "./config";
 import { TodoCard } from "./components/TodoCard";
 
@@ -16,8 +21,14 @@ const { Option } = Select;
 
 // 颜色列表
 const COLOR_OPTIONS = [
-  "#3B82F6", "#F97316", "#A855F7", "#EF4444",
-  "#10B981", "#EC4899", "#06B6D4", "#84CC16"
+  "#3B82F6",
+  "#F97316",
+  "#A855F7",
+  "#EF4444",
+  "#10B981",
+  "#EC4899",
+  "#06B6D4",
+  "#84CC16",
 ];
 
 const Todo: React.FC = () => {
@@ -25,7 +36,9 @@ const Todo: React.FC = () => {
 
   // 状态
   const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState<"in_progress" | "completed" | "all">("in_progress");
+  const [activeTab, setActiveTab] = useState<
+    "in_progress" | "completed" | "all"
+  >("in_progress");
   const [newCategoryColor, setNewCategoryColor] = useState("#3B82F6");
 
   // 弹窗状态
@@ -36,12 +49,8 @@ const Todo: React.FC = () => {
   const [categoryForm] = Form.useForm();
 
   // 使用 hooks
-  const {
-    categories,
-    createCategory,
-    updateCategory,
-    deleteCategory,
-  } = useTodoCategories();
+  const { categories, createCategory, updateCategory, deleteCategory } =
+    useTodoCategories();
 
   const {
     todos,
@@ -55,17 +64,19 @@ const Todo: React.FC = () => {
   // 按分类分组待办
   const todosByCategory = useMemo(() => {
     const grouped: Record<number, Todo[]> = {};
-    
+
     // 先按状态和搜索过滤
     let filtered = todos;
-    
+
     // Tab 过滤
     if (activeTab === "in_progress") {
-      filtered = filtered.filter((t) => t.status !== "completed" && t.status !== "cancelled");
+      filtered = filtered.filter(
+        (t) => t.status !== "completed" && t.status !== "cancelled"
+      );
     } else if (activeTab === "completed") {
       filtered = filtered.filter((t) => t.status === "completed");
     }
-    
+
     // 搜索过滤
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
@@ -75,7 +86,7 @@ const Todo: React.FC = () => {
           t.description?.toLowerCase().includes(lowerSearch)
       );
     }
-    
+
     // 按分类分组
     filtered.forEach((todo) => {
       const catId = todo.categoryId || 0; // 0 表示未分类
@@ -84,12 +95,14 @@ const Todo: React.FC = () => {
       }
       grouped[catId].push(todo);
     });
-    
+
     return grouped;
   }, [todos, activeTab, searchText]);
 
   // 统计数量
-  const inProgressCount = todos.filter((t) => t.status !== "completed" && t.status !== "cancelled").length;
+  const inProgressCount = todos.filter(
+    (t) => t.status !== "completed" && t.status !== "cancelled"
+  ).length;
   const completedCount = todos.filter((t) => t.status === "completed").length;
 
   // 打开编辑待办弹窗
@@ -303,7 +316,9 @@ const Todo: React.FC = () => {
             </div>
           ) : categories.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-text-tertiary">
-              <span className="material-symbols-outlined text-6xl mb-4">checklist</span>
+              <span className="material-symbols-outlined text-6xl mb-4">
+                checklist
+              </span>
               <p className="text-lg">暂无分类</p>
               <button
                 onClick={() => setCategoryModalVisible(true)}
@@ -361,7 +376,9 @@ const Todo: React.FC = () => {
                 <div className="size-12 rounded-full bg-slate-800 flex items-center justify-center text-text-tertiary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">add</span>
                 </div>
-                <p className="text-sm font-medium text-text-tertiary">创建新任务分组</p>
+                <p className="text-sm font-medium text-text-tertiary">
+                  创建新任务分组
+                </p>
               </div>
             </div>
           )}
@@ -500,7 +517,9 @@ const Todo: React.FC = () => {
               {ICON_OPTIONS.map((icon) => (
                 <Option key={icon.value} value={icon.value}>
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">{icon.value}</span>
+                    <span className="material-symbols-outlined text-sm">
+                      {icon.value}
+                    </span>
                     {icon.label}
                   </div>
                 </Option>

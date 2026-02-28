@@ -685,13 +685,17 @@ export interface ElectronAPI {
   // 分类管理
   todoListCategories: () => Promise<TodoCategory[]>;
   todoGetCategory: (id: number) => Promise<TodoCategory | null>;
-  todoCreateCategory: (input: TodoCategoryInput) => Promise<TodoCategory | null>;
+  todoCreateCategory: (
+    input: TodoCategoryInput
+  ) => Promise<TodoCategory | null>;
   todoUpdateCategory: (
     id: number,
     input: Partial<TodoCategoryInput>
   ) => Promise<TodoCategory | null>;
   todoDeleteCategory: (id: number) => Promise<boolean>;
-  todoGetCategoryStats: () => Promise<Array<{ categoryId: number | null; count: number }>>;
+  todoGetCategoryStats: () => Promise<
+    Array<{ categoryId: number | null; count: number }>
+  >;
 
   // Todo 管理
   todoListTodos: (filter?: TodoFilter) => Promise<Todo[]>;

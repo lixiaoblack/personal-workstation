@@ -1,6 +1,6 @@
 /**
  * TodoCard 待办分类卡片组件
- * 
+ *
  * 展示单个分类下的所有待办事项
  */
 
@@ -15,8 +15,14 @@ const { Option } = Select;
 
 // 颜色列表
 const COLOR_OPTIONS = [
-  "#3B82F6", "#F97316", "#A855F7", "#EF4444",
-  "#10B981", "#EC4899", "#06B6D4", "#84CC16"
+  "#3B82F6",
+  "#F97316",
+  "#A855F7",
+  "#EF4444",
+  "#10B981",
+  "#EC4899",
+  "#06B6D4",
+  "#84CC16",
 ];
 
 interface TodoCardProps {
@@ -42,12 +48,15 @@ export const TodoCard: React.FC<TodoCardProps> = ({
 }) => {
   const { modal } = App.useApp();
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const [editCategoryModalVisible, setEditCategoryModalVisible] = useState(false);
+  const [editCategoryModalVisible, setEditCategoryModalVisible] =
+    useState(false);
   const [todoForm] = Form.useForm();
   const [categoryForm] = Form.useForm();
-  
+
   // 颜色状态
-  const [selectedColor, setSelectedColor] = useState(category.color || "#3B82F6");
+  const [selectedColor, setSelectedColor] = useState(
+    category.color || "#3B82F6"
+  );
 
   // 待处理数量
   const pendingCount = todos.filter((t) => t.status !== "completed").length;
@@ -57,7 +66,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
     // 已完成的排在最后
     if (a.status === "completed" && b.status !== "completed") return 1;
     if (a.status !== "completed" && b.status === "completed") return -1;
-    
+
     // 都有截止时间，按时间升序
     if (a.dueDate && b.dueDate) {
       return a.dueDate - b.dueDate;
@@ -135,7 +144,10 @@ export const TodoCard: React.FC<TodoCardProps> = ({
     } else if (diff <= 6) {
       // 显示周几
       const weekDays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-      return { text: `${weekDays[date.day()]} ${date.format("HH:mm")}`, status: "week" };
+      return {
+        text: `${weekDays[date.day()]} ${date.format("HH:mm")}`,
+        status: "week",
+      };
     } else {
       return { text: date.format("M月D日"), status: "later" };
     }
@@ -144,7 +156,7 @@ export const TodoCard: React.FC<TodoCardProps> = ({
   return (
     <>
       {/* 卡片容器 - glass-card 样式 */}
-      <div 
+      <div
         className="rounded-xl p-6 flex flex-col h-fit"
         style={{
           background: "rgba(30, 41, 59, 0.7)",
@@ -177,7 +189,9 @@ export const TodoCard: React.FC<TodoCardProps> = ({
             {/* 操作菜单 */}
             <div className="relative group">
               <button className="p-1 rounded hover:bg-white/10 text-text-tertiary hover:text-text-primary transition-colors">
-                <span className="material-symbols-outlined text-lg">more_vert</span>
+                <span className="material-symbols-outlined text-lg">
+                  more_vert
+                </span>
               </button>
               <div className="absolute right-0 top-full mt-1 w-32 py-1 rounded-lg bg-bg-secondary border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                 <button
@@ -213,13 +227,14 @@ export const TodoCard: React.FC<TodoCardProps> = ({
 
             return (
               <div key={todo.id} className="flex items-start gap-3 group">
-                {/* 复选框 - 匹配设计稿样式 */}
+                {/* 复选框 - 已完成的禁用 */}
                 <button
-                  onClick={() => onToggleComplete(todo)}
+                  onClick={() => !isCompleted && onToggleComplete(todo)}
+                  disabled={isCompleted}
                   className={`mt-1 size-4 rounded border flex items-center justify-center transition-colors ${
                     isCompleted
-                      ? "bg-green-500 border-green-500"
-                      : "border-slate-700 bg-slate-800 hover:border-primary focus:ring-1 focus:ring-primary"
+                      ? "bg-green-500 border-green-500 cursor-not-allowed"
+                      : "border-slate-700 bg-slate-800 hover:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
                   }`}
                 >
                   {isCompleted && (
@@ -231,20 +246,25 @@ export const TodoCard: React.FC<TodoCardProps> = ({
 
                 {/* 内容 */}
                 <div className="flex-1 min-w-0">
-                  {/* 标题 - 匹配设计稿样式 */}
+                  {/* 标题 - 已完成显示删除线 */}
                   <p
-                    className={`text-sm font-medium cursor-pointer transition-colors group-hover:text-primary ${
+                    className={`text-sm font-medium cursor-pointer transition-colors ${
                       isCompleted
                         ? "line-through text-text-tertiary"
-                        : "text-text-primary"
+                        : "text-text-primary group-hover:text-primary"
                     }`}
                     onClick={() => onEditTodo(todo)}
                   >
                     {todo.title}
                   </p>
-                  
-                  {/* 时间状态 - 匹配设计稿样式 */}
-                  {timeInfo && !isCompleted && (
+
+                  {/* 时间状态 */}
+                  {isCompleted ? (
+                    <span className="text-[10px] uppercase tracking-wider text-green-500 flex items-center gap-1 mt-1">
+                      <span className="material-symbols-outlined text-xs">check_circle</span>
+                      已完成
+                    </span>
+                  ) : timeInfo ? (
                     <span
                       className={`text-[10px] uppercase tracking-wider flex items-center gap-1 mt-1 ${
                         timeInfo.status === "overdue"
@@ -253,28 +273,36 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                       }`}
                     >
                       {timeInfo.status === "overdue" ? (
-                        <span className="material-symbols-outlined text-xs">priority_high</span>
+                        <span className="material-symbols-outlined text-xs">
+                          priority_high
+                        </span>
                       ) : (
-                        <span className="material-symbols-outlined text-xs">schedule</span>
+                        <span className="material-symbols-outlined text-xs">
+                          schedule
+                        </span>
                       )}
                       {timeInfo.text}
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
-                {/* 操作按钮 */}
+                {/* 操作按钮 - 已完成的任务也可以编辑 */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => onEditTodo(todo)}
                     className="p-1 rounded text-text-tertiary hover:text-primary hover:bg-white/10 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-sm">edit</span>
+                    <span className="material-symbols-outlined text-sm">
+                      edit
+                    </span>
                   </button>
                   <button
                     onClick={() => onDeleteTodo(todo.id)}
                     className="p-1 rounded text-text-tertiary hover:text-red-400 hover:bg-red-400/10 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-sm">delete</span>
+                    <span className="material-symbols-outlined text-sm">
+                      delete
+                    </span>
                   </button>
                 </div>
               </div>
@@ -391,7 +419,9 @@ export const TodoCard: React.FC<TodoCardProps> = ({
               {ICON_OPTIONS.map((icon) => (
                 <Option key={icon.value} value={icon.value}>
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">{icon.value}</span>
+                    <span className="material-symbols-outlined text-sm">
+                      {icon.value}
+                    </span>
                     {icon.label}
                   </div>
                 </Option>
@@ -406,46 +436,49 @@ export const TodoCard: React.FC<TodoCardProps> = ({
 
 // 获取颜色配置 - 匹配设计稿颜色方案
 function getColorConfig(color: string) {
-  const colorMap: Record<string, { bgClass: string; bgLightClass: string; textClass: string }> = {
-    "#3B82F6": { 
-      bgClass: "bg-blue-500/20", 
-      bgLightClass: "bg-blue-500/10", 
-      textClass: "text-blue-500" 
+  const colorMap: Record<
+    string,
+    { bgClass: string; bgLightClass: string; textClass: string }
+  > = {
+    "#3B82F6": {
+      bgClass: "bg-blue-500/20",
+      bgLightClass: "bg-blue-500/10",
+      textClass: "text-blue-500",
     },
-    "#F97316": { 
-      bgClass: "bg-orange-500/20", 
-      bgLightClass: "bg-orange-500/10", 
-      textClass: "text-orange-500" 
+    "#F97316": {
+      bgClass: "bg-orange-500/20",
+      bgLightClass: "bg-orange-500/10",
+      textClass: "text-orange-500",
     },
-    "#A855F7": { 
-      bgClass: "bg-purple-500/20", 
-      bgLightClass: "bg-purple-500/10", 
-      textClass: "text-purple-500" 
+    "#A855F7": {
+      bgClass: "bg-purple-500/20",
+      bgLightClass: "bg-purple-500/10",
+      textClass: "text-purple-500",
     },
-    "#EF4444": { 
-      bgClass: "bg-red-500/20", 
-      bgLightClass: "bg-red-500/10", 
-      textClass: "text-red-500" 
+    "#EF4444": {
+      bgClass: "bg-red-500/20",
+      bgLightClass: "bg-red-500/10",
+      textClass: "text-red-500",
     },
-    "#10B981": { 
-      bgClass: "bg-green-500/20", 
-      bgLightClass: "bg-green-500/10", 
-      textClass: "text-green-500" 
+    "#10B981": {
+      bgClass: "bg-green-500/20",
+      bgLightClass: "bg-green-500/10",
+      textClass: "text-green-500",
     },
-    "#EC4899": { 
-      bgClass: "bg-pink-500/20", 
-      bgLightClass: "bg-pink-500/10", 
-      textClass: "text-pink-500" 
+    "#EC4899": {
+      bgClass: "bg-pink-500/20",
+      bgLightClass: "bg-pink-500/10",
+      textClass: "text-pink-500",
     },
-    "#06B6D4": { 
-      bgClass: "bg-cyan-500/20", 
-      bgLightClass: "bg-cyan-500/10", 
-      textClass: "text-cyan-500" 
+    "#06B6D4": {
+      bgClass: "bg-cyan-500/20",
+      bgLightClass: "bg-cyan-500/10",
+      textClass: "text-cyan-500",
     },
-    "#84CC16": { 
-      bgClass: "bg-lime-500/20", 
-      bgLightClass: "bg-lime-500/10", 
-      textClass: "text-lime-500" 
+    "#84CC16": {
+      bgClass: "bg-lime-500/20",
+      bgLightClass: "bg-lime-500/10",
+      textClass: "text-lime-500",
     },
   };
 

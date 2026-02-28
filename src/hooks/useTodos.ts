@@ -49,14 +49,17 @@ export function useTodoCategories() {
   }, []);
 
   // 创建分类
-  const createCategory = useCallback(async (input: TodoCategoryInput) => {
-    const result = await window.electronAPI.todoCreateCategory(input);
-    if (result) {
-      await loadCategories();
-      await loadCategoryStats();
-    }
-    return result;
-  }, [loadCategories, loadCategoryStats]);
+  const createCategory = useCallback(
+    async (input: TodoCategoryInput) => {
+      const result = await window.electronAPI.todoCreateCategory(input);
+      if (result) {
+        await loadCategories();
+        await loadCategoryStats();
+      }
+      return result;
+    },
+    [loadCategories, loadCategoryStats]
+  );
 
   // 更新分类
   const updateCategory = useCallback(
@@ -127,19 +130,22 @@ export function useTodos(initialFilter?: TodoFilter) {
   });
 
   // 加载 Todo 列表
-  const loadTodos = useCallback(async (filterOverride?: TodoFilter) => {
-    setLoading(true);
-    try {
-      const result = await window.electronAPI.todoListTodos(
-        filterOverride || filter
-      );
-      setTodos(result);
-    } catch (error) {
-      console.error("[useTodos] 加载 Todo 列表失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
+  const loadTodos = useCallback(
+    async (filterOverride?: TodoFilter) => {
+      setLoading(true);
+      try {
+        const result = await window.electronAPI.todoListTodos(
+          filterOverride || filter
+        );
+        setTodos(result);
+      } catch (error) {
+        console.error("[useTodos] 加载 Todo 列表失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filter]
+  );
 
   // 加载统计信息
   const loadStats = useCallback(async () => {

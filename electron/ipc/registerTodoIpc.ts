@@ -33,29 +33,39 @@ export function registerTodoIpc(): void {
   });
 
   // 获取单个分类
-  ipcMain.handle("todo:getCategory", (_event, id: number): TodoCategory | null => {
-    try {
-      return todoService.getCategory(id);
-    } catch (error) {
-      console.error("[TodoIpc] 获取分类失败:", error);
-      return null;
+  ipcMain.handle(
+    "todo:getCategory",
+    (_event, id: number): TodoCategory | null => {
+      try {
+        return todoService.getCategory(id);
+      } catch (error) {
+        console.error("[TodoIpc] 获取分类失败:", error);
+        return null;
+      }
     }
-  });
+  );
 
   // 创建分类
-  ipcMain.handle("todo:createCategory", (_event, input: TodoCategoryInput): TodoCategory | null => {
-    try {
-      return todoService.createCategory(input);
-    } catch (error) {
-      console.error("[TodoIpc] 创建分类失败:", error);
-      return null;
+  ipcMain.handle(
+    "todo:createCategory",
+    (_event, input: TodoCategoryInput): TodoCategory | null => {
+      try {
+        return todoService.createCategory(input);
+      } catch (error) {
+        console.error("[TodoIpc] 创建分类失败:", error);
+        return null;
+      }
     }
-  });
+  );
 
   // 更新分类
   ipcMain.handle(
     "todo:updateCategory",
-    (_event, id: number, input: Partial<TodoCategoryInput>): TodoCategory | null => {
+    (
+      _event,
+      id: number,
+      input: Partial<TodoCategoryInput>
+    ): TodoCategory | null => {
       try {
         return todoService.updateCategory(id, input);
       } catch (error) {
@@ -118,14 +128,17 @@ export function registerTodoIpc(): void {
   });
 
   // 更新 Todo
-  ipcMain.handle("todo:updateTodo", (_event, id: number, input: TodoUpdateInput): Todo | null => {
-    try {
-      return todoService.updateTodo(id, input);
-    } catch (error) {
-      console.error("[TodoIpc] 更新 Todo 失败:", error);
-      return null;
+  ipcMain.handle(
+    "todo:updateTodo",
+    (_event, id: number, input: TodoUpdateInput): Todo | null => {
+      try {
+        return todoService.updateTodo(id, input);
+      } catch (error) {
+        console.error("[TodoIpc] 更新 Todo 失败:", error);
+        return null;
+      }
     }
-  });
+  );
 
   // 删除 Todo
   ipcMain.handle("todo:deleteTodo", (_event, id: number): boolean => {
@@ -138,14 +151,17 @@ export function registerTodoIpc(): void {
   });
 
   // 批量更新状态
-  ipcMain.handle("todo:batchUpdateStatus", (_event, ids: number[], status: TodoStatus): number => {
-    try {
-      return todoService.batchUpdateStatus(ids, status);
-    } catch (error) {
-      console.error("[TodoIpc] 批量更新状态失败:", error);
-      return 0;
+  ipcMain.handle(
+    "todo:batchUpdateStatus",
+    (_event, ids: number[], status: TodoStatus): number => {
+      try {
+        return todoService.batchUpdateStatus(ids, status);
+      } catch (error) {
+        console.error("[TodoIpc] 批量更新状态失败:", error);
+        return 0;
+      }
     }
-  });
+  );
 
   // 批量删除
   ipcMain.handle("todo:batchDelete", (_event, ids: number[]): number => {

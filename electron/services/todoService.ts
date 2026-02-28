@@ -212,7 +212,10 @@ export function deleteCategory(id: number): boolean {
 /**
  * 获取分类统计
  */
-export function getCategoryStats(): Array<{ categoryId: number | null; count: number }> {
+export function getCategoryStats(): Array<{
+  categoryId: number | null;
+  count: number;
+}> {
   const db = getDatabase();
   const stmt = db.prepare(`
     SELECT category_id, COUNT(*) as count
@@ -446,7 +449,9 @@ export function batchUpdateStatus(ids: number[], status: TodoStatus): number {
  */
 export function batchDelete(ids: number[]): number {
   const db = getDatabase();
-  const stmt = db.prepare(`DELETE FROM todos WHERE id IN (${ids.map(() => "?").join(", ")})`);
+  const stmt = db.prepare(
+    `DELETE FROM todos WHERE id IN (${ids.map(() => "?").join(", ")})`
+  );
   const result = stmt.run(...ids);
   return result.changes;
 }
@@ -470,7 +475,11 @@ export function getSubTasks(parentId: number): Todo[] {
 export function getTodayTodos(): Todo[] {
   const db = getDatabase();
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfDay = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
   const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
 
   const stmt = db.prepare(`
@@ -541,10 +550,18 @@ export function getTodoStats(): {
   endOfDay.setDate(endOfDay.getDate() + 1);
   endOfDay.setTime(endOfDay.getTime() - 1);
 
-  const totalStmt = db.prepare("SELECT COUNT(*) as count FROM todos WHERE status != 'cancelled'");
-  const pendingStmt = db.prepare("SELECT COUNT(*) as count FROM todos WHERE status = 'pending'");
-  const inProgressStmt = db.prepare("SELECT COUNT(*) as count FROM todos WHERE status = 'in_progress'");
-  const completedStmt = db.prepare("SELECT COUNT(*) as count FROM todos WHERE status = 'completed'");
+  const totalStmt = db.prepare(
+    "SELECT COUNT(*) as count FROM todos WHERE status != 'cancelled'"
+  );
+  const pendingStmt = db.prepare(
+    "SELECT COUNT(*) as count FROM todos WHERE status = 'pending'"
+  );
+  const inProgressStmt = db.prepare(
+    "SELECT COUNT(*) as count FROM todos WHERE status = 'in_progress'"
+  );
+  const completedStmt = db.prepare(
+    "SELECT COUNT(*) as count FROM todos WHERE status = 'completed'"
+  );
   const overdueStmt = db.prepare(`
     SELECT COUNT(*) as count FROM todos
     WHERE status = 'pending' AND due_date IS NOT NULL AND due_date < ?
@@ -561,7 +578,11 @@ export function getTodoStats(): {
     inProgress: (inProgressStmt.get() as { count: number }).count,
     completed: (completedStmt.get() as { count: number }).count,
     overdue: (overdueStmt.get(now) as { count: number }).count,
-    todayDue: (todayStmt.get(startOfDay.getTime(), endOfDay.getTime()) as { count: number }).count,
+    todayDue: (
+      todayStmt.get(startOfDay.getTime(), endOfDay.getTime()) as {
+        count: number;
+      }
+    ).count,
   };
 }
 

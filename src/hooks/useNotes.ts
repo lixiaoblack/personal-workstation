@@ -5,6 +5,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+// 本地存储 key
+const LAST_OPENED_FILE_KEY = "notes_last_opened_file";
+
 // 类型定义
 export interface FileTreeNode {
   id: string;
@@ -68,6 +71,23 @@ export function useNotes(): UseNotesReturn {
     new Set()
   );
 
+  // 在文件树中查找文件节点
+  const findFileInTree = useCallback(
+    (filePath: string, nodes: FileTreeNode[]): FileTreeNode | null => {
+      for (const node of nodes) {
+        if (node.path === filePath && node.type === "file") {
+          return node;
+        }
+        if (node.children) {
+          const found = findFileInTree(filePath, node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    []
+  );
+
   // 初始化检查根目录
   useEffect(() => {
     const initNotes = async () => {
@@ -84,6 +104,24 @@ export function useNotes(): UseNotesReturn {
             await window.electronAPI.notesScanFolder(root);
             const tree = await window.electronAPI.notesGetFileTree();
             setFileTree(tree);
+
+            // 恢复上次打开的文件
+            const lastOpenedFile = localStorage.getItem(LAST_OPENED_FILE_KEY);
+            if (lastOpenedFile) {
+              const fileNode = findFileInTree(lastOpenedFile, tree);
+              if (fileNode) {
+                // 自动选中上次打开的文件
+                const result =
+                  await window.electronAPI.notesReadFile(fileNode.path);
+                if (result.success && result.content !== undefined) {
+                  setFileContent(result.content);
+                  setSelectedFile(fileNode);
+                }
+              } else {
+                // 文件不存在了，清除记录
+                localStorage.removeItem(LAST_OPENED_FILE_KEY);
+              }
+            }
           }
         }
       } catch (err) {
@@ -93,7 +131,7 @@ export function useNotes(): UseNotesReturn {
     };
 
     initNotes();
-  }, []);
+  }, [findFileInTree]);
 
   // 选择根目录
   const selectRootFolder = useCallback(async (): Promise<boolean> => {
@@ -186,6 +224,8 @@ export function useNotes(): UseNotesReturn {
       if (result.success && result.content !== undefined) {
         setFileContent(result.content);
         setSelectedFile(file);
+        // 保存到本地存储
+        localStorage.setItem(LAST_OPENED_FILE_KEY, file.path);
       } else {
         setError(result.error || "读取文件失败");
       }
@@ -346,6 +386,7 @@ export function useNotes(): UseNotesReturn {
           if (selectedFile?.path === itemPath) {
             setSelectedFile(null);
             setFileContent("");
+            localStorage.removeItem(LAST_OPENED_FILE_KEY);
           }
 
           return true;

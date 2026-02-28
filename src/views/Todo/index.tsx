@@ -470,23 +470,33 @@ const Todo: React.FC = () => {
             <Input placeholder="输入分类描述（可选）" />
           </Form.Item>
 
-          <Form.Item name="color" label="颜色" initialValue="#3B82F6">
-            <div className="flex gap-2">
-              {["#3B82F6", "#F97316", "#A855F7", "#EF4444", "#10B981", "#EC4899"].map(
-                (color) => (
-                  <div
-                    key={color}
-                    className={`size-8 rounded-full cursor-pointer border-2 transition-all ${
-                      categoryForm.getFieldValue("color") === color
-                        ? "border-white scale-110"
-                        : "border-transparent"
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => categoryForm.setFieldsValue({ color })}
-                  />
-                )
-              )}
-            </div>
+          <Form.Item label="颜色">
+            <Form.Item name="color" noStyle initialValue="#3B82F6">
+              <input type="hidden" />
+            </Form.Item>
+            <Form.Item shouldUpdate noStyle>
+              {({ getFieldValue, setFieldsValue }) => {
+                const currentColor = getFieldValue("color") || "#3B82F6";
+                return (
+                  <div className="flex gap-2 flex-wrap">
+                    {["#3B82F6", "#F97316", "#A855F7", "#EF4444", "#10B981", "#EC4899", "#06B6D4", "#84CC16"].map(
+                      (color) => (
+                        <div
+                          key={color}
+                          className={`size-8 rounded-full cursor-pointer border-2 transition-all ${
+                            currentColor === color
+                              ? "border-white scale-110"
+                              : "border-transparent hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => setFieldsValue({ color })}
+                        />
+                      )
+                    )}
+                  </div>
+                );
+              }}
+            </Form.Item>
           </Form.Item>
 
           <Form.Item name="icon" label="图标" initialValue="folder">

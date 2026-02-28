@@ -1,19 +1,9 @@
 /**
  * WMarkdownEditor - 全局 Markdown 编辑器组件
  * 基于 Vditor 实现，支持实时预览，类似 Obsidian 体验
- * 
- * 使用方法：
- * import { WMarkdownEditor } from '@/components/WMarkdownEditor';
- * 
- * <WMarkdownEditor
- *   value={content}
- *   onChange={setContent}
- *   placeholder="请输入内容..."
- *   height={500}
- * />
  */
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useMemo } from "react";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 
@@ -32,24 +22,14 @@ export interface WMarkdownEditorProps {
   minHeight?: number;
   /** 是否只读 */
   readonly?: boolean;
-  /** 工具栏配置 */
-  toolbar?: boolean | (string | { name: string; tip: string })[];
   /** 预览模式：'sv' 分屏预览 | 'ir' 即时渲染 | 'wysiwyg' 所见即所得 */
   mode?: "sv" | "ir" | "wysiwyg";
   /** 主题：'classic' | 'dark' */
   theme?: "classic" | "dark";
-  /** 是否显示行号 */
-  lineNum?: boolean;
-  /** 是否启用自动保存 */
-  autoSave?: boolean;
-  /** 自动保存延迟（毫秒） */
-  autoSaveDelay?: number;
   /** 编辑器获取焦点时的回调 */
   onFocus?: () => void;
   /** 编辑器失去焦点时的回调 */
   onBlur?: () => void;
-  /** 编辑器就绪回调 */
-  onReady?: () => void;
   /** 上传图片回调 */
   onUpload?: (file: File) => Promise<string>;
   /** 额外的类名 */
@@ -64,46 +44,37 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
   height = "100%",
   minHeight = 300,
   readonly = false,
-  toolbar = true,
   mode = "ir",
   theme = "dark",
-  lineNum = true,
-  autoSave = false,
-  autoSaveDelay = 2000,
   onFocus,
   onBlur,
-  onReady,
   onUpload,
   className = "",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const vditorRef = useRef<Vditor | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const isInternalChange = useRef(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = useRef(false);
+  const isReadyRef = useRef(false);
+  const lastValueRef = useRef(value);
 
-  // 处理图片上传
-  const handleUpload = useCallback(
-    async (files: File[]): Promise<string | null> => {
-      if (!onUpload || files.length === 0) return null;
-      
-      try {
-        const url = await onUpload(files[0]);
-        return url;
-      } catch (error) {
-        console.error("[WMarkdownEditor] 上传图片失败:", error);
-        return null;
-      }
-    },
-    [onUpload]
-  );
+  // 稳定的回调引用
+  const onChangeRef = useRef(onChange);
+  const onSaveRef = useRef(onSave);
+  const onFocusRef = useRef(onFocus);
+  const onBlurRef = useRef(onBlur);
+  const onUploadRef = useRef(onUpload);
 
-  // 初始化编辑器
+  // 更新回调引用
   useEffect(() => {
-    if (!containerRef.current || vditorRef.current) return;
+    onChangeRef.current = onChange;
+    onSaveRef.current = onSave;
+    onFocusRef.current = onFocus;
+    onBlurRef.current = onBlur;
+    onUploadRef.current = onUpload;
+  });
 
-    isMountedRef.current = true;
+  // 初始化编辑器（只执行一次）
+  useEffect(() => {
+    if (!containerRef.current) return;
 
     const vditor = new Vditor(containerRef.current, {
       height,
@@ -113,42 +84,38 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       theme,
       icon: "material",
       lang: "zh_CN",
-      lineNum,
-      readonly,
       value,
-      toolbar: toolbar === true
-        ? [
-            "headings",
-            "bold",
-            "italic",
-            "strike",
-            "link",
-            "|",
-            "list",
-            "ordered-list",
-            "check",
-            "outdent",
-            "indent",
-            "|",
-            "quote",
-            "line",
-            "code",
-            "inline-code",
-            "|",
-            "upload",
-            "table",
-            "|",
-            "undo",
-            "redo",
-            "|",
-            "edit-mode",
-            "preview",
-            "outline",
-            "|",
-            "export",
-            "help",
-          ]
-        : toolbar,
+      toolbar: [
+        "headings",
+        "bold",
+        "italic",
+        "strike",
+        "link",
+        "|",
+        "list",
+        "ordered-list",
+        "check",
+        "outdent",
+        "indent",
+        "|",
+        "quote",
+        "line",
+        "code",
+        "inline-code",
+        "|",
+        "upload",
+        "table",
+        "|",
+        "undo",
+        "redo",
+        "|",
+        "edit-mode",
+        "preview",
+        "outline",
+        "|",
+        "export",
+        "help",
+      ],
       cache: {
         enable: false,
       },
@@ -185,44 +152,35 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       },
       upload: {
         handler: async (files: File[]) => {
-          const url = await handleUpload(files);
-          if (url) {
-            // 插入图片到编辑器
-            vditorRef.current?.insertValue(`![](${url})`);
+          if (!onUploadRef.current || files.length === 0) return null;
+          try {
+            const url = await onUploadRef.current(files[0]);
+            if (url) {
+              vditor.insertValue(`![](${url})`);
+            }
+          } catch (error) {
+            console.error("[WMarkdownEditor] 上传图片失败:", error);
           }
           return null;
         },
       },
       input: (inputValue) => {
-        if (!isInternalChange.current && isMountedRef.current) {
-          onChange(inputValue);
-          
-          // 自动保存
-          if (autoSave && autoSaveDelay > 0) {
-            if (saveTimeoutRef.current) {
-              clearTimeout(saveTimeoutRef.current);
-            }
-            saveTimeoutRef.current = setTimeout(() => {
-              onSave?.(inputValue);
-            }, autoSaveDelay);
-          }
-        }
+        lastValueRef.current = inputValue;
+        onChangeRef.current?.(inputValue);
       },
       focus: () => {
-        onFocus?.();
+        onFocusRef.current?.();
       },
       blur: () => {
-        onBlur?.();
+        onBlurRef.current?.();
       },
       after: () => {
-        if (isMountedRef.current) {
-          setIsReady(true);
-          onReady?.();
-        }
+        isReadyRef.current = true;
+        lastValueRef.current = value;
       },
       ctrlKey: (key) => {
         if (key === "s") {
-          onSave?.(vditor.getValue());
+          onSaveRef.current?.(vditor.getValue());
           return true;
         }
         return false;
@@ -232,45 +190,34 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     vditorRef.current = vditor;
 
     return () => {
-      isMountedRef.current = false;
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      // 安全销毁 Vditor 实例
       try {
-        if (vditorRef.current && containerRef.current) {
+        if (vditorRef.current) {
           vditorRef.current.destroy();
         }
-      } catch (error) {
-        // 忽略销毁时的错误（React Strict Mode 会触发两次）
-        console.debug("[WMarkdownEditor] Vditor destroy skipped:", error);
+      } catch {
+        // 忽略销毁错误
       }
       vditorRef.current = null;
+      isReadyRef.current = false;
     };
-  }, []); // 只在挂载时初始化一次
+  }, []); // 空依赖，只初始化一次
 
-  // 同步外部 value 到编辑器
+  // 同步外部 value 到编辑器（仅在文件切换时）
   useEffect(() => {
-    if (!vditorRef.current || !isReady) return;
+    if (!vditorRef.current || !isReadyRef.current) return;
     
-    const currentValue = vditorRef.current.getValue();
-    // 只有当值确实不同时才更新
-    if (value !== currentValue) {
-      isInternalChange.current = true;
+    // 只有当值与上次不同时才更新
+    if (value !== lastValueRef.current) {
+      lastValueRef.current = value;
       vditorRef.current.setValue(value);
-      // 确保值设置完成
-      requestAnimationFrame(() => {
-        isInternalChange.current = false;
-      });
     }
-  }, [value, isReady]);
+  }, [value]);
 
   // 更新只读状态
   useEffect(() => {
-    if (vditorRef.current && isReady) {
-      vditorRef.current.disabled(readonly);
-    }
-  }, [readonly, isReady]);
+    if (!vditorRef.current || !isReadyRef.current) return;
+    vditorRef.current.disabled(readonly);
+  }, [readonly]);
 
   return (
     <div
@@ -280,3 +227,5 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     />
   );
 };
+
+export default WMarkdownEditor;

@@ -30,17 +30,16 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   onContentChange,
   onSave,
 }) => {
-  const [localContent, setLocalContent] = useState(content);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [editorMode, setEditorMode] = useState<"ir" | "sv" | "wysiwyg">("ir");
+  const lastSavedContentRef = useRef(content);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 同步外部内容
+  // 当文件切换时重置状态
   useEffect(() => {
-    setLocalContent(content);
     setIsDirty(false);
-  }, [content, selectedFile?.path]);
+    lastSavedContentRef.current = content;
+  }, [selectedFile?.path, content]);
 
   // 自动保存（防抖 2 秒）
   useEffect(() => {
@@ -52,9 +51,10 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
     saveTimeoutRef.current = setTimeout(async () => {
       setIsSaving(true);
-      const success = await onSave(localContent);
+      const success = await onSave(content);
       if (success) {
         setIsDirty(false);
+        lastSavedContentRef.current = content;
       }
       setIsSaving(false);
     }, 2000);
@@ -64,26 +64,26 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [localContent, isDirty, selectedFile, onSave]);
+  }, [content, isDirty, selectedFile, onSave]);
 
   // 内容变化处理
   const handleContentChange = useCallback((value: string) => {
-    setLocalContent(value);
-    setIsDirty(true);
     onContentChange(value);
+    setIsDirty(value !== lastSavedContentRef.current);
   }, [onContentChange]);
 
   // 保存处理
-  const handleSave = useCallback(async () => {
-    if (!selectedFile || !isDirty) return;
+  const handleSave = useCallback(async (value: string) => {
+    if (!selectedFile) return;
 
     setIsSaving(true);
-    const success = await onSave(localContent);
+    const success = await onSave(value);
     if (success) {
       setIsDirty(false);
+      lastSavedContentRef.current = value;
     }
     setIsSaving(false);
-  }, [selectedFile, isDirty, localContent, onSave]);
+  }, [selectedFile, onSave]);
 
   // 未选择文件时的空状态
   if (!selectedFile) {
@@ -125,68 +125,27 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           </div>
         </div>
 
-        {/* 编辑模式切换 */}
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg bg-bg-tertiary p-0.5">
-            <button
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                editorMode === "wysiwyg"
-                  ? "bg-primary text-white"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-              onClick={() => setEditorMode("wysiwyg")}
-              title="所见即所得"
-            >
-              所见即所得
-            </button>
-            <button
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                editorMode === "ir"
-                  ? "bg-primary text-white"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-              onClick={() => setEditorMode("ir")}
-              title="即时渲染"
-            >
-              即时渲染
-            </button>
-            <button
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                editorMode === "sv"
-                  ? "bg-primary text-white"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-              onClick={() => setEditorMode("sv")}
-              title="分屏预览"
-            >
-              分屏预览
-            </button>
-          </div>
-
-          {/* 保存按钮 */}
-          <button
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={handleSave}
-            disabled={!isDirty || isSaving}
-          >
-            <span className="material-symbols-outlined text-sm">save</span>
-            保存
-          </button>
-        </div>
+        {/* 保存按钮 */}
+        <button
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => handleSave(content)}
+          disabled={!isDirty || isSaving}
+        >
+          <span className="material-symbols-outlined text-sm">save</span>
+          保存
+        </button>
       </div>
 
       {/* 编辑器区域 */}
       <div className="flex-1 overflow-hidden">
         <WMarkdownEditor
-          key={selectedFile.path}
-          value={localContent}
+          value={content}
           onChange={handleContentChange}
           onSave={handleSave}
-          mode={editorMode}
+          mode="ir"
           height="100%"
           placeholder="开始编写您的笔记..."
           theme="dark"
-          lineNum={editorMode === "sv"}
         />
       </div>
     </section>

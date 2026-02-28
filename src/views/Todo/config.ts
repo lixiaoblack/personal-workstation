@@ -1,138 +1,102 @@
 /**
- * 待办提醒页面配置
+ * Todo 待办提醒页面配置
  */
 
-export interface NavItem {
-  id: string;
-  icon: string;
-  label: string;
-  active: boolean;
-}
+// 优先级配置
+export const PRIORITY_CONFIG = {
+  low: {
+    label: "低",
+    color: "text-text-tertiary",
+    bgColor: "bg-bg-tertiary",
+    borderColor: "border-border",
+  },
+  medium: {
+    label: "中",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/20",
+    borderColor: "border-blue-500/20",
+  },
+  high: {
+    label: "高",
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/20",
+    borderColor: "border-orange-500/20",
+  },
+  urgent: {
+    label: "紧急",
+    color: "text-red-500",
+    bgColor: "bg-red-500/20",
+    borderColor: "border-red-500/20",
+  },
+} as const;
 
-export interface Task {
-  id: string;
-  title: string;
-  time: string;
-  status: "normal" | "overdue";
-  completed: boolean;
-}
+// 状态配置
+export const STATUS_CONFIG = {
+  pending: {
+    label: "待处理",
+    color: "text-text-secondary",
+    bgColor: "bg-bg-tertiary",
+    icon: "pending",
+  },
+  in_progress: {
+    label: "进行中",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/20",
+    icon: "progress_activity",
+  },
+  completed: {
+    label: "已完成",
+    color: "text-green-500",
+    bgColor: "bg-green-500/20",
+    icon: "check_circle",
+  },
+  cancelled: {
+    label: "已取消",
+    color: "text-text-tertiary",
+    bgColor: "bg-bg-tertiary",
+    icon: "cancel",
+  },
+} as const;
 
-export interface TaskCategory {
-  id: string;
-  icon: string;
-  label: string;
-  color: string;
-  tasks: Task[];
-}
+// 重复类型配置
+export const REPEAT_CONFIG = {
+  none: { label: "不重复", icon: "block" },
+  daily: { label: "每天", icon: "today" },
+  weekly: { label: "每周", icon: "date_range" },
+  monthly: { label: "每月", icon: "calendar_month" },
+  yearly: { label: "每年", icon: "event" },
+} as const;
 
-export const NAV_ITEMS: NavItem[] = [
-  { id: "dev-tools", icon: "terminal", label: "开发工具", active: false },
-  { id: "gis", icon: "map", label: "GIS 系统", active: false },
-  { id: "journal", icon: "auto_stories", label: "日志", active: false },
-  { id: "notes", icon: "description", label: "笔记本", active: false },
-  { id: "todo", icon: "notifications_active", label: "提醒事项", active: true },
+// 图标配置
+export const ICON_OPTIONS = [
+  { value: "folder", label: "文件夹" },
+  { value: "work", label: "工作" },
+  { value: "favorite", label: "生活" },
+  { value: "school", label: "学习" },
+  { value: "fitness_center", label: "健身" },
+  { value: "shopping_cart", label: "购物" },
+  { value: "flight", label: "旅行" },
+  { value: "celebration", label: "娱乐" },
+  { value: "restaurant", label: "饮食" },
+  { value: "medical_services", label: "医疗" },
+  { value: "payments", label: "财务" },
+  { value: "code", label: "开发" },
+] as const;
+
+// 默认分类颜色
+export const DEFAULT_CATEGORY_COLORS = [
+  "#3B82F6", // blue
+  "#F97316", // orange
+  "#A855F7", // purple
+  "#EF4444", // red
+  "#10B981", // green
+  "#EC4899", // pink
+  "#06B6D4", // cyan
+  "#84CC16", // lime
 ];
 
-export const TASK_CATEGORIES: TaskCategory[] = [
-  {
-    id: "work",
-    icon: "work",
-    label: "工作任务",
-    color: "blue",
-    tasks: [
-      {
-        id: "w1",
-        title: "项目进度汇报 PPT 制作",
-        time: "明天 09:00",
-        status: "normal",
-        completed: false,
-      },
-      {
-        id: "w2",
-        title: "核心 API 文档审查",
-        time: "今天 14:30",
-        status: "normal",
-        completed: false,
-      },
-      {
-        id: "w3",
-        title: "跨部门协作会议",
-        time: "已逾期",
-        status: "overdue",
-        completed: false,
-      },
-    ],
-  },
-  {
-    id: "life",
-    icon: "favorite",
-    label: "个人生活",
-    color: "orange",
-    tasks: [
-      {
-        id: "l1",
-        title: "健身房锻炼 - 腿部训练",
-        time: "今天 18:00",
-        status: "normal",
-        completed: false,
-      },
-      {
-        id: "l2",
-        title: "购买周末聚会食材",
-        time: "周五 17:00",
-        status: "normal",
-        completed: false,
-      },
-    ],
-  },
-  {
-    id: "study",
-    icon: "school",
-    label: "学习计划",
-    color: "purple",
-    tasks: [
-      {
-        id: "s1",
-        title: "阅读《Clean Code》第三章",
-        time: "每天 21:00",
-        status: "normal",
-        completed: false,
-      },
-      {
-        id: "s2",
-        title: "练习 Rust 所有权概念",
-        time: "周六 10:00",
-        status: "normal",
-        completed: false,
-      },
-      {
-        id: "s3",
-        title: "托福听力模拟测试",
-        time: "10月24日",
-        status: "normal",
-        completed: false,
-      },
-    ],
-  },
-];
-
-export const COLOR_MAP: Record<
-  string,
-  { bg: string; text: string; border: string }
-> = {
-  blue: {
-    bg: "bg-blue-500/20",
-    text: "text-blue-500",
-    border: "border-blue-500/20",
-  },
-  orange: {
-    bg: "bg-orange-500/20",
-    text: "text-orange-500",
-    border: "border-orange-500/20",
-  },
-  purple: {
-    bg: "bg-purple-500/20",
-    text: "text-purple-500",
-    border: "border-purple-500/20",
-  },
-};
+// 类型导出
+export type PriorityKey = keyof typeof PRIORITY_CONFIG;
+export type StatusKey = keyof typeof STATUS_CONFIG;
+export type RepeatKey = keyof typeof REPEAT_CONFIG;
+export type IconOption = (typeof ICON_OPTIONS)[number];

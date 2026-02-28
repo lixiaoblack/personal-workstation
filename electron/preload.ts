@@ -433,6 +433,100 @@ export interface SwaggerParseResult {
   definitions?: Record<string, unknown>;
 }
 
+// Todo 待办模块相关类型
+export type TodoPriority = "low" | "medium" | "high" | "urgent";
+export type TodoStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type TodoRepeatType = "none" | "daily" | "weekly" | "monthly" | "yearly";
+
+export interface TodoCategory {
+  id: number;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface TodoCategoryInput {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  sortOrder?: number;
+}
+
+export interface Todo {
+  id: number;
+  title: string;
+  description?: string;
+  categoryId?: number;
+  category?: TodoCategory;
+  priority: TodoPriority;
+  status: TodoStatus;
+  dueDate?: number;
+  reminderTime?: number;
+  repeatType: TodoRepeatType;
+  repeatConfig?: Record<string, unknown>;
+  parentId?: number;
+  tags?: string[];
+  sortOrder: number;
+  completedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+  subTasks?: Todo[];
+}
+
+export interface TodoInput {
+  title: string;
+  description?: string;
+  categoryId?: number;
+  priority?: TodoPriority;
+  status?: TodoStatus;
+  dueDate?: number;
+  reminderTime?: number;
+  repeatType?: TodoRepeatType;
+  repeatConfig?: Record<string, unknown>;
+  parentId?: number;
+  tags?: string[];
+  sortOrder?: number;
+}
+
+export interface TodoUpdateInput {
+  title?: string;
+  description?: string;
+  categoryId?: number;
+  priority?: TodoPriority;
+  status?: TodoStatus;
+  dueDate?: number;
+  reminderTime?: number;
+  repeatType?: TodoRepeatType;
+  repeatConfig?: Record<string, unknown>;
+  parentId?: number;
+  tags?: string[];
+  sortOrder?: number;
+}
+
+export interface TodoFilter {
+  status?: TodoStatus;
+  priority?: TodoPriority;
+  categoryId?: number;
+  parentId?: number;
+  dueDateFrom?: number;
+  dueDateTo?: number;
+  search?: string;
+}
+
+export interface TodoStats {
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  overdue: number;
+  todayDue: number;
+}
+
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld("electronAPI", {
   // 应用环境信息
@@ -909,6 +1003,51 @@ contextBridge.exposeInMainWorld("electronAPI", {
   notesGetFileInfo: (filePath: string) =>
     ipcRenderer.invoke("notes:getFileInfo", filePath),
 
+  // ========== Todo 待办模块 ==========
+
+  // 分类管理
+  todoListCategories: (): Promise<TodoCategory[]> =>
+    ipcRenderer.invoke("todo:listCategories"),
+  todoGetCategory: (id: number): Promise<TodoCategory | null> =>
+    ipcRenderer.invoke("todo:getCategory", id),
+  todoCreateCategory: (input: TodoCategoryInput): Promise<TodoCategory | null> =>
+    ipcRenderer.invoke("todo:createCategory", input),
+  todoUpdateCategory: (
+    id: number,
+    input: Partial<TodoCategoryInput>
+  ): Promise<TodoCategory | null> =>
+    ipcRenderer.invoke("todo:updateCategory", id, input),
+  todoDeleteCategory: (id: number): Promise<boolean> =>
+    ipcRenderer.invoke("todo:deleteCategory", id),
+  todoGetCategoryStats: (): Promise<Array<{ categoryId: number | null; count: number }>> =>
+    ipcRenderer.invoke("todo:getCategoryStats"),
+
+  // Todo 管理
+  todoListTodos: (filter?: TodoFilter): Promise<Todo[]> =>
+    ipcRenderer.invoke("todo:listTodos", filter),
+  todoGetTodo: (id: number): Promise<Todo | null> =>
+    ipcRenderer.invoke("todo:getTodo", id),
+  todoCreateTodo: (input: TodoInput): Promise<Todo | null> =>
+    ipcRenderer.invoke("todo:createTodo", input),
+  todoUpdateTodo: (id: number, input: TodoUpdateInput): Promise<Todo | null> =>
+    ipcRenderer.invoke("todo:updateTodo", id, input),
+  todoDeleteTodo: (id: number): Promise<boolean> =>
+    ipcRenderer.invoke("todo:deleteTodo", id),
+  todoBatchUpdateStatus: (ids: number[], status: TodoStatus): Promise<number> =>
+    ipcRenderer.invoke("todo:batchUpdateStatus", ids, status),
+  todoBatchDelete: (ids: number[]): Promise<number> =>
+    ipcRenderer.invoke("todo:batchDelete", ids),
+  todoGetSubTasks: (parentId: number): Promise<Todo[]> =>
+    ipcRenderer.invoke("todo:getSubTasks", parentId),
+  todoGetTodayTodos: (): Promise<Todo[]> =>
+    ipcRenderer.invoke("todo:getTodayTodos"),
+  todoGetOverdueTodos: (): Promise<Todo[]> =>
+    ipcRenderer.invoke("todo:getOverdueTodos"),
+  todoGetUpcomingTodos: (days?: number): Promise<Todo[]> =>
+    ipcRenderer.invoke("todo:getUpcomingTodos", days),
+  todoGetStats: (): Promise<TodoStats> =>
+    ipcRenderer.invoke("todo:getStats"),
+
   // 模块下载进度监听
   onModuleDownloadProgress: (
     callback: (progress: {
@@ -1371,6 +1510,33 @@ export interface ElectronAPI {
   notesGetFileInfo: (
     filePath: string
   ) => Promise<{ success: boolean; file?: NotesFile; error?: string }>;
+
+  // ========== Todo 待办模块 ==========
+
+  // 分类管理
+  todoListCategories: () => Promise<TodoCategory[]>;
+  todoGetCategory: (id: number) => Promise<TodoCategory | null>;
+  todoCreateCategory: (input: TodoCategoryInput) => Promise<TodoCategory | null>;
+  todoUpdateCategory: (
+    id: number,
+    input: Partial<TodoCategoryInput>
+  ) => Promise<TodoCategory | null>;
+  todoDeleteCategory: (id: number) => Promise<boolean>;
+  todoGetCategoryStats: () => Promise<Array<{ categoryId: number | null; count: number }>>;
+
+  // Todo 管理
+  todoListTodos: (filter?: TodoFilter) => Promise<Todo[]>;
+  todoGetTodo: (id: number) => Promise<Todo | null>;
+  todoCreateTodo: (input: TodoInput) => Promise<Todo | null>;
+  todoUpdateTodo: (id: number, input: TodoUpdateInput) => Promise<Todo | null>;
+  todoDeleteTodo: (id: number) => Promise<boolean>;
+  todoBatchUpdateStatus: (ids: number[], status: TodoStatus) => Promise<number>;
+  todoBatchDelete: (ids: number[]) => Promise<number>;
+  todoGetSubTasks: (parentId: number) => Promise<Todo[]>;
+  todoGetTodayTodos: () => Promise<Todo[]>;
+  todoGetOverdueTodos: () => Promise<Todo[]>;
+  todoGetUpcomingTodos: (days?: number) => Promise<Todo[]>;
+  todoGetStats: () => Promise<TodoStats>;
 
   // 模块下载进度监听
   onModuleDownloadProgress: (

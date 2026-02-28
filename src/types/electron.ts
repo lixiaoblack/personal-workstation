@@ -680,6 +680,33 @@ export interface ElectronAPI {
     filePath: string
   ) => Promise<{ success: boolean; file?: NotesFileMetadata; error?: string }>;
 
+  // ========== Todo 待办模块 ==========
+
+  // 分类管理
+  todoListCategories: () => Promise<TodoCategory[]>;
+  todoGetCategory: (id: number) => Promise<TodoCategory | null>;
+  todoCreateCategory: (input: TodoCategoryInput) => Promise<TodoCategory | null>;
+  todoUpdateCategory: (
+    id: number,
+    input: Partial<TodoCategoryInput>
+  ) => Promise<TodoCategory | null>;
+  todoDeleteCategory: (id: number) => Promise<boolean>;
+  todoGetCategoryStats: () => Promise<Array<{ categoryId: number | null; count: number }>>;
+
+  // Todo 管理
+  todoListTodos: (filter?: TodoFilter) => Promise<Todo[]>;
+  todoGetTodo: (id: number) => Promise<Todo | null>;
+  todoCreateTodo: (input: TodoInput) => Promise<Todo | null>;
+  todoUpdateTodo: (id: number, input: TodoUpdateInput) => Promise<Todo | null>;
+  todoDeleteTodo: (id: number) => Promise<boolean>;
+  todoBatchUpdateStatus: (ids: number[], status: TodoStatus) => Promise<number>;
+  todoBatchDelete: (ids: number[]) => Promise<number>;
+  todoGetSubTasks: (parentId: number) => Promise<Todo[]>;
+  todoGetTodayTodos: () => Promise<Todo[]>;
+  todoGetOverdueTodos: () => Promise<Todo[]>;
+  todoGetUpcomingTodos: (days?: number) => Promise<Todo[]>;
+  todoGetStats: () => Promise<TodoStats>;
+
   // 模块下载进度监听
   onModuleDownloadProgress: (
     callback: (progress: {
@@ -942,6 +969,100 @@ export interface NotesFileMetadata {
   lastSyncedAt: number | null;
   createdAt: number;
   updatedAt: number;
+}
+
+// Todo 待办模块相关类型
+export type TodoPriority = "low" | "medium" | "high" | "urgent";
+export type TodoStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type TodoRepeatType = "none" | "daily" | "weekly" | "monthly" | "yearly";
+
+export interface TodoCategory {
+  id: number;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface TodoCategoryInput {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  sortOrder?: number;
+}
+
+export interface Todo {
+  id: number;
+  title: string;
+  description?: string;
+  categoryId?: number;
+  category?: TodoCategory;
+  priority: TodoPriority;
+  status: TodoStatus;
+  dueDate?: number;
+  reminderTime?: number;
+  repeatType: TodoRepeatType;
+  repeatConfig?: Record<string, unknown>;
+  parentId?: number;
+  tags?: string[];
+  sortOrder: number;
+  completedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+  subTasks?: Todo[];
+}
+
+export interface TodoInput {
+  title: string;
+  description?: string;
+  categoryId?: number;
+  priority?: TodoPriority;
+  status?: TodoStatus;
+  dueDate?: number;
+  reminderTime?: number;
+  repeatType?: TodoRepeatType;
+  repeatConfig?: Record<string, unknown>;
+  parentId?: number;
+  tags?: string[];
+  sortOrder?: number;
+}
+
+export interface TodoUpdateInput {
+  title?: string;
+  description?: string;
+  categoryId?: number;
+  priority?: TodoPriority;
+  status?: TodoStatus;
+  dueDate?: number;
+  reminderTime?: number;
+  repeatType?: TodoRepeatType;
+  repeatConfig?: Record<string, unknown>;
+  parentId?: number;
+  tags?: string[];
+  sortOrder?: number;
+}
+
+export interface TodoFilter {
+  status?: TodoStatus;
+  priority?: TodoPriority;
+  categoryId?: number;
+  parentId?: number;
+  dueDateFrom?: number;
+  dueDateTo?: number;
+  search?: string;
+}
+
+export interface TodoStats {
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  overdue: number;
+  todayDue: number;
 }
 
 declare global {

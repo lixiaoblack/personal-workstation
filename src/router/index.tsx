@@ -105,10 +105,10 @@ const protectedRoutes: RouteObject[] = [
             ),
           },
           // 工作日志
-          {
-            path: "/journal",
-            element: <Journal />,
-          },
+          // {
+          //   path: "/journal",
+          //   element: <Journal />,
+          // },
           // 记事本
           {
             path: "/notes",

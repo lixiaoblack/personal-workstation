@@ -496,6 +496,59 @@ function runMigrations(database: Database.Database): void {
   `);
 
   console.log("[Database] Notes 模块数据表已创建");
+
+  // ========== Todo 待办模块数据表 ==========
+
+  // 待办分类表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS todo_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT DEFAULT '#3C83F6',
+      icon TEXT DEFAULT 'FolderOutlined',
+      sort_order INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  // 待办事项表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS todos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      category_id INTEGER,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'pending',
+      due_date INTEGER,
+      reminder_time INTEGER,
+      repeat_type TEXT DEFAULT 'none',
+      repeat_config TEXT,
+      parent_id INTEGER,
+      tags TEXT,
+      sort_order INTEGER DEFAULT 0,
+      completed_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (category_id) REFERENCES todo_categories(id) ON DELETE SET NULL,
+      FOREIGN KEY (parent_id) REFERENCES todos(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Todo 索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_todo_categories_name ON todo_categories(name);
+    CREATE INDEX IF NOT EXISTS idx_todos_category_id ON todos(category_id);
+    CREATE INDEX IF NOT EXISTS idx_todos_status ON todos(status);
+    CREATE INDEX IF NOT EXISTS idx_todos_priority ON todos(priority);
+    CREATE INDEX IF NOT EXISTS idx_todos_due_date ON todos(due_date);
+    CREATE INDEX IF NOT EXISTS idx_todos_parent_id ON todos(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_todos_created_at ON todos(created_at);
+  `);
+
+  console.log("[Database] Todo 模块数据表已创建");
 }
 
 export default {

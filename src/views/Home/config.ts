@@ -38,12 +38,12 @@ export const NAV_MENU_CONFIG: INavMenuItem[] = [
     label: "GIS 专业工具",
     path: "/gis",
   },
-  {
-    key: "journal",
-    icon: "auto_stories",
-    label: "工作日志",
-    path: "/journal",
-  },
+  // {
+  //   key: "journal",
+  //   icon: "auto_stories",
+  //   label: "工作日志",
+  //   path: "/journal",
+  // },
   {
     key: "notes",
     icon: "sticky_note_2",

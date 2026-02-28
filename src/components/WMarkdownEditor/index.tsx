@@ -72,14 +72,22 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     onUploadRef.current = onUpload;
   });
 
-  // Tab 键处理函数
-  const handleTabKey = useCallback((e: Event) => {
+  // Tab 键处理函数 - 阻止焦点切换默认行为，但允许 Vditor 处理缩进
+  const handleTabKeyCapture = useCallback((e: Event) => {
     const keyEvent = e as KeyboardEvent;
-    if (keyEvent.key === "Tab" && vditorRef.current) {
+    if (keyEvent.key === "Tab") {
+      // 阻止默认的焦点切换行为，让 Vditor 可以处理缩进
       keyEvent.preventDefault();
+      // 不调用 stopPropagation，让事件继续传播到 Vditor
+    }
+  }, []);
+
+  // Tab 键处理函数 - 冒泡阶段阻止向上传播
+  const handleTabKeyBubble = useCallback((e: Event) => {
+    const keyEvent = e as KeyboardEvent;
+    if (keyEvent.key === "Tab") {
+      // 阻止事件向上冒泡到 Electron
       keyEvent.stopPropagation();
-      // 插入两个空格作为缩进
-      vditorRef.current.insertValue("  ");
     }
   }, []);
 
@@ -190,14 +198,16 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
         lastValueRef.current = value;
         
         // 在编辑器就绪后，给编辑区域添加 Tab 键处理
+        // Capture 阶段：阻止默认焦点切换
+        // Bubble 阶段：阻止向上冒泡到 Electron
         const vditorElement = containerRef.current;
         if (vditorElement) {
-          // 查找编辑区域（contenteditable 元素）
           const editorAreas = vditorElement.querySelectorAll(
             '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
           );
           editorAreas.forEach((area) => {
-            area.addEventListener('keydown', handleTabKey, true);
+            area.addEventListener('keydown', handleTabKeyCapture, true); // capture
+            area.addEventListener('keydown', handleTabKeyBubble, false); // bubble
           });
         }
       },
@@ -220,7 +230,8 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
           '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
         );
         editorAreas.forEach((area) => {
-          area.removeEventListener('keydown', handleTabKey, true);
+          area.removeEventListener('keydown', handleTabKeyCapture, true);
+          area.removeEventListener('keydown', handleTabKeyBubble, false);
         });
       }
       
@@ -234,7 +245,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       vditorRef.current = null;
       isReadyRef.current = false;
     };
-  }, [handleTabKey]); // 包含 handleTabKey 依赖
+  }, [handleTabKeyCapture, handleTabKeyBubble]);
 
   // 同步外部 value 到编辑器（仅在文件切换时）
   useEffect(() => {

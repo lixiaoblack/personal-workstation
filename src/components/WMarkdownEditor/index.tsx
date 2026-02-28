@@ -3,7 +3,7 @@
  * 基于 Vditor 实现，支持实时预览，类似 Obsidian 体验
  */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 
@@ -55,7 +55,6 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
   const vditorRef = useRef<Vditor | null>(null);
   const isReadyRef = useRef(false);
   const lastValueRef = useRef(value);
-  const tabHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
   // 稳定的回调引用
   const onChangeRef = useRef(onChange);
@@ -72,6 +71,17 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     onBlurRef.current = onBlur;
     onUploadRef.current = onUpload;
   });
+
+  // Tab 键处理函数
+  const handleTabKey = useCallback((e: Event) => {
+    const keyEvent = e as KeyboardEvent;
+    if (keyEvent.key === "Tab" && vditorRef.current) {
+      keyEvent.preventDefault();
+      keyEvent.stopPropagation();
+      // 插入两个空格作为缩进
+      vditorRef.current.insertValue("  ");
+    }
+  }, []);
 
   // 初始化编辑器（只执行一次）
   useEffect(() => {
@@ -179,26 +189,16 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
         isReadyRef.current = true;
         lastValueRef.current = value;
         
-        // 处理 Tab 键缩进
+        // 在编辑器就绪后，给编辑区域添加 Tab 键处理
         const vditorElement = containerRef.current;
         if (vditorElement) {
-          const handleTabKey = (e: KeyboardEvent) => {
-            const activeElement = document.activeElement;
-            const editorArea = vditorElement.querySelector('.vditor-ir') || 
-                              vditorElement.querySelector('.vditor-sv') ||
-                              vditorElement.querySelector('.vditor-wysiwyg');
-            
-            if (editorArea && editorArea.contains(activeElement) && e.key === 'Tab') {
-              // 阻止默认焦点切换，手动插入缩进
-              e.preventDefault();
-              e.stopPropagation();
-              // 插入两个空格作为缩进
-              vditor.insertValue('  ');
-            }
-          };
-          
-          tabHandlerRef.current = handleTabKey;
-          vditorElement.addEventListener('keydown', handleTabKey, true);
+          // 查找编辑区域（contenteditable 元素）
+          const editorAreas = vditorElement.querySelectorAll(
+            '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
+          );
+          editorAreas.forEach((area) => {
+            area.addEventListener('keydown', handleTabKey, true);
+          });
         }
       },
       ctrlKey: (key) => {
@@ -213,10 +213,15 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     vditorRef.current = vditor;
 
     return () => {
-      // 清理 Tab 键事件监听器
-      if (containerRef.current && tabHandlerRef.current) {
-        containerRef.current.removeEventListener('keydown', tabHandlerRef.current, true);
-        tabHandlerRef.current = null;
+      // 清理事件监听器
+      const vditorElement = containerRef.current;
+      if (vditorElement) {
+        const editorAreas = vditorElement.querySelectorAll(
+          '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
+        );
+        editorAreas.forEach((area) => {
+          area.removeEventListener('keydown', handleTabKey, true);
+        });
       }
       
       try {
@@ -229,7 +234,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       vditorRef.current = null;
       isReadyRef.current = false;
     };
-  }, []); // 空依赖，只初始化一次
+  }, [handleTabKey]); // 包含 handleTabKey 依赖
 
   // 同步外部 value 到编辑器（仅在文件切换时）
   useEffect(() => {

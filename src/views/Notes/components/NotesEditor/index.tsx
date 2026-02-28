@@ -178,6 +178,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
       {/* 编辑器区域 */}
       <div className="flex-1 overflow-hidden">
         <WMarkdownEditor
+          key={selectedFile.path}
           value={localContent}
           onChange={handleContentChange}
           onSave={handleSave}

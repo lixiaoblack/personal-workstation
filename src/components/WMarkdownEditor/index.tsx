@@ -81,6 +81,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
   const [isReady, setIsReady] = useState(false);
   const isInternalChange = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(false);
 
   // 处理图片上传
   const handleUpload = useCallback(
@@ -101,6 +102,8 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
   // 初始化编辑器
   useEffect(() => {
     if (!containerRef.current || vditorRef.current) return;
+
+    isMountedRef.current = true;
 
     const vditor = new Vditor(containerRef.current, {
       height,
@@ -190,9 +193,9 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
           return null;
         },
       },
-      input: (value) => {
-        if (!isInternalChange.current) {
-          onChange(value);
+      input: (inputValue) => {
+        if (!isInternalChange.current && isMountedRef.current) {
+          onChange(inputValue);
           
           // 自动保存
           if (autoSave && autoSaveDelay > 0) {
@@ -200,7 +203,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
               clearTimeout(saveTimeoutRef.current);
             }
             saveTimeoutRef.current = setTimeout(() => {
-              onSave?.(value);
+              onSave?.(inputValue);
             }, autoSaveDelay);
           }
         }
@@ -212,8 +215,10 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
         onBlur?.();
       },
       after: () => {
-        setIsReady(true);
-        onReady?.();
+        if (isMountedRef.current) {
+          setIsReady(true);
+          onReady?.();
+        }
       },
       ctrlKey: (key) => {
         if (key === "s") {
@@ -227,20 +232,36 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     vditorRef.current = vditor;
 
     return () => {
+      isMountedRef.current = false;
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      vditorRef.current?.destroy();
+      // 安全销毁 Vditor 实例
+      try {
+        if (vditorRef.current && containerRef.current) {
+          vditorRef.current.destroy();
+        }
+      } catch (error) {
+        // 忽略销毁时的错误（React Strict Mode 会触发两次）
+        console.debug("[WMarkdownEditor] Vditor destroy skipped:", error);
+      }
       vditorRef.current = null;
     };
   }, []); // 只在挂载时初始化一次
 
   // 同步外部 value 到编辑器
   useEffect(() => {
-    if (vditorRef.current && isReady && value !== vditorRef.current.getValue()) {
+    if (!vditorRef.current || !isReady) return;
+    
+    const currentValue = vditorRef.current.getValue();
+    // 只有当值确实不同时才更新
+    if (value !== currentValue) {
       isInternalChange.current = true;
       vditorRef.current.setValue(value);
-      isInternalChange.current = false;
+      // 确保值设置完成
+      requestAnimationFrame(() => {
+        isInternalChange.current = false;
+      });
     }
   }, [value, isReady]);
 

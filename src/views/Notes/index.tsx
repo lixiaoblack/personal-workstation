@@ -42,13 +42,11 @@ const Notes: React.FC = () => {
         );
         
         if (editorArea && editorArea.contains(activeElement)) {
-          // 焦点在编辑器内，阻止事件冒泡但允许默认行为
+          // 焦点在编辑器内，只阻止冒泡到 Electron，让 Vditor 处理缩进
           e.stopPropagation();
-        } else {
-          // 焦点不在编辑器内，阻止默认的焦点切换
-          e.preventDefault();
-          e.stopPropagation();
+          // 不调用 preventDefault，让 Vditor 的默认 Tab 行为生效
         }
+        // 如果焦点不在编辑器内，不做任何处理，允许正常焦点切换
       }
     };
 

@@ -55,6 +55,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
   const vditorRef = useRef<Vditor | null>(null);
   const isReadyRef = useRef(false);
   const lastValueRef = useRef(value);
+  const tabHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
   // 稳定的回调引用
   const onChangeRef = useRef(onChange);
@@ -177,6 +178,28 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       after: () => {
         isReadyRef.current = true;
         lastValueRef.current = value;
+        
+        // 处理 Tab 键缩进
+        const vditorElement = containerRef.current;
+        if (vditorElement) {
+          const handleTabKey = (e: KeyboardEvent) => {
+            const activeElement = document.activeElement;
+            const editorArea = vditorElement.querySelector('.vditor-ir') || 
+                              vditorElement.querySelector('.vditor-sv') ||
+                              vditorElement.querySelector('.vditor-wysiwyg');
+            
+            if (editorArea && editorArea.contains(activeElement) && e.key === 'Tab') {
+              // 阻止默认焦点切换，手动插入缩进
+              e.preventDefault();
+              e.stopPropagation();
+              // 插入两个空格作为缩进
+              vditor.insertValue('  ');
+            }
+          };
+          
+          tabHandlerRef.current = handleTabKey;
+          vditorElement.addEventListener('keydown', handleTabKey, true);
+        }
       },
       ctrlKey: (key) => {
         if (key === "s") {
@@ -190,6 +213,12 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     vditorRef.current = vditor;
 
     return () => {
+      // 清理 Tab 键事件监听器
+      if (containerRef.current && tabHandlerRef.current) {
+        containerRef.current.removeEventListener('keydown', tabHandlerRef.current, true);
+        tabHandlerRef.current = null;
+      }
+      
       try {
         if (vditorRef.current) {
           vditorRef.current.destroy();

@@ -34,7 +34,6 @@ const FileTreeItem: React.FC<{
   node: FileTreeNode;
   depth: number;
   selectedFile: FileTreeNode | null;
-  expandedFolders: Set<string>;
   onSelectFile: (file: FileTreeNode) => void;
   onToggleFolder: (folderPath: string) => void;
   onContextMenu: (e: React.MouseEvent, node: FileTreeNode) => void;
@@ -42,12 +41,11 @@ const FileTreeItem: React.FC<{
   node,
   depth,
   selectedFile,
-  expandedFolders,
   onSelectFile,
   onToggleFolder,
   onContextMenu,
 }) => {
-  const isExpanded = expandedFolders.has(node.path);
+  const isExpanded = node.expanded ?? false;
   const isSelected = selectedFile?.path === node.path;
 
   const handleClick = () => {
@@ -103,7 +101,6 @@ const FileTreeItem: React.FC<{
               node={child}
               depth={depth + 1}
               selectedFile={selectedFile}
-              expandedFolders={expandedFolders}
               onSelectFile={onSelectFile}
               onToggleFolder={onToggleFolder}
               onContextMenu={onContextMenu}
@@ -282,30 +279,11 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
     node: FileTreeNode;
   } | null>(null);
 
-  // 展开状态
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set()
-  );
-
   // 处理右键菜单
   const handleContextMenu = (e: React.MouseEvent, node: FileTreeNode) => {
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, node });
-  };
-
-  // 处理展开/收起
-  const handleToggleFolder = (folderPath: string) => {
-    setExpandedFolders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderPath)) {
-        newSet.delete(folderPath);
-      } else {
-        newSet.add(folderPath);
-      }
-      return newSet;
-    });
-    onToggleFolder(folderPath);
   };
 
   // 处理新建文件夹
@@ -395,9 +373,8 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
                 node={node}
                 depth={0}
                 selectedFile={selectedFile}
-                expandedFolders={expandedFolders}
                 onSelectFile={onSelectFile}
-                onToggleFolder={handleToggleFolder}
+                onToggleFolder={onToggleFolder}
                 onContextMenu={handleContextMenu}
               />
             ))}

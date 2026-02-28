@@ -88,6 +88,30 @@ export function useNotes(): UseNotesReturn {
     []
   );
 
+  // 获取文件路径的所有父文件夹路径
+  const getParentFolders = useCallback(
+    (filePath: string, rootPath: string): string[] => {
+      const parents: string[] = [];
+      let currentPath = filePath;
+      
+      while (currentPath !== rootPath) {
+        const lastSep = Math.max(
+          currentPath.lastIndexOf("/"),
+          currentPath.lastIndexOf("\\")
+        );
+        if (lastSep === -1) break;
+        
+        currentPath = currentPath.substring(0, lastSep);
+        if (currentPath && currentPath !== rootPath) {
+          parents.push(currentPath);
+        }
+      }
+      
+      return parents;
+    },
+    []
+  );
+
   // 初始化检查根目录
   useEffect(() => {
     const initNotes = async () => {
@@ -116,6 +140,16 @@ export function useNotes(): UseNotesReturn {
                 if (result.success && result.content !== undefined) {
                   setFileContent(result.content);
                   setSelectedFile(fileNode);
+                  
+                  // 展开所有父文件夹
+                  const parentFolders = getParentFolders(fileNode.path, root);
+                  if (parentFolders.length > 0) {
+                    setExpandedFolders((prev) => {
+                      const newSet = new Set(prev);
+                      parentFolders.forEach((folder) => newSet.add(folder));
+                      return newSet;
+                    });
+                  }
                 }
               } else {
                 // 文件不存在了，清除记录
@@ -131,7 +165,7 @@ export function useNotes(): UseNotesReturn {
     };
 
     initNotes();
-  }, [findFileInTree]);
+  }, [findFileInTree, getParentFolders]);
 
   // 选择根目录
   const selectRootFolder = useCallback(async (): Promise<boolean> => {

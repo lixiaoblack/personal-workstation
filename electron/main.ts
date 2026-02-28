@@ -9,7 +9,7 @@
  * - 管理应用生命周期
  */
 
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Menu } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -57,6 +57,9 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  // 禁用默认菜单，避免 Tab 键被菜单系统捕获
+  Menu.setApplicationMenu(null);
 
   mainWindow.on("closed", () => {
     mainWindow = null;

@@ -3,7 +3,7 @@
  * 基于 Vditor 实现，支持实时预览，类似 Obsidian 体验
  */
 
-import React, { useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useEffect, useRef } from "react";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 

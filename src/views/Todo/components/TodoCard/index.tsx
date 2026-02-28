@@ -13,6 +13,12 @@ import { PRIORITY_CONFIG, ICON_OPTIONS } from "../../config";
 const { TextArea } = Input;
 const { Option } = Select;
 
+// 颜色列表
+const COLOR_OPTIONS = [
+  "#3B82F6", "#F97316", "#A855F7", "#EF4444",
+  "#10B981", "#EC4899", "#06B6D4", "#84CC16"
+];
+
 interface TodoCardProps {
   category: TodoCategory;
   todos: Todo[];
@@ -39,6 +45,9 @@ export const TodoCard: React.FC<TodoCardProps> = ({
   const [editCategoryModalVisible, setEditCategoryModalVisible] = useState(false);
   const [todoForm] = Form.useForm();
   const [categoryForm] = Form.useForm();
+  
+  // 颜色状态
+  const [selectedColor, setSelectedColor] = useState(category.color || "#3B82F6");
 
   // 待处理数量
   const pendingCount = todos.filter((t) => t.status !== "completed").length;
@@ -89,14 +98,14 @@ export const TodoCard: React.FC<TodoCardProps> = ({
       onUpdateCategory(category.id, {
         name: values.name,
         description: values.description,
-        color: values.color,
+        color: selectedColor,
         icon: values.icon,
       });
       setEditCategoryModalVisible(false);
     } catch (error) {
       console.error("编辑分类失败:", error);
     }
-  }, [category.id, onUpdateCategory, categoryForm]);
+  }, [category.id, onUpdateCategory, categoryForm, selectedColor]);
 
   // 删除分类
   const handleDeleteCategory = useCallback(() => {
@@ -176,9 +185,9 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                     categoryForm.setFieldsValue({
                       name: category.name,
                       description: category.description,
-                      color: category.color,
                       icon: category.icon,
                     });
+                    setSelectedColor(category.color || "#3B82F6");
                     setEditCategoryModalVisible(true);
                   }}
                   className="w-full px-3 py-1.5 text-left text-sm text-text-secondary hover:bg-white/10 hover:text-text-primary transition-colors"
@@ -361,33 +370,20 @@ export const TodoCard: React.FC<TodoCardProps> = ({
           </Form.Item>
 
           <Form.Item label="颜色">
-            <Form.Item name="color" noStyle>
-              <input type="hidden" />
-            </Form.Item>
-            <Form.Item shouldUpdate noStyle>
-              {({ getFieldValue, setFieldsValue }) => {
-                const currentColor = getFieldValue("color") || "#3B82F6";
-                return (
-                  <div className="flex gap-2 flex-wrap">
-                    {[
-                      "#3B82F6", "#F97316", "#A855F7", "#EF4444",
-                      "#10B981", "#EC4899", "#06B6D4", "#84CC16"
-                    ].map((color) => (
-                      <div
-                        key={color}
-                        className={`size-8 rounded-full cursor-pointer border-2 transition-all ${
-                          currentColor === color
-                            ? "border-white scale-110"
-                            : "border-transparent hover:scale-105"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setFieldsValue({ color })}
-                      />
-                    ))}
-                  </div>
-                );
-              }}
-            </Form.Item>
+            <div className="flex gap-2 flex-wrap">
+              {COLOR_OPTIONS.map((color) => (
+                <div
+                  key={color}
+                  className={`size-8 rounded-full cursor-pointer border-2 transition-all ${
+                    selectedColor === color
+                      ? "border-white scale-110"
+                      : "border-transparent hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setSelectedColor(color)}
+                />
+              ))}
+            </div>
           </Form.Item>
 
           <Form.Item name="icon" label="图标">

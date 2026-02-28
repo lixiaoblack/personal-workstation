@@ -14,12 +14,19 @@ import { TodoCard } from "./components/TodoCard";
 const { TextArea } = Input;
 const { Option } = Select;
 
+// 颜色列表
+const COLOR_OPTIONS = [
+  "#3B82F6", "#F97316", "#A855F7", "#EF4444",
+  "#10B981", "#EC4899", "#06B6D4", "#84CC16"
+];
+
 const Todo: React.FC = () => {
   const { message } = App.useApp();
 
   // 状态
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState<"in_progress" | "completed" | "all">("in_progress");
+  const [newCategoryColor, setNewCategoryColor] = useState("#3B82F6");
 
   // 弹窗状态
   const [todoModalVisible, setTodoModalVisible] = useState(false);
@@ -175,18 +182,19 @@ const Todo: React.FC = () => {
       const result = await createCategory({
         name: values.name,
         description: values.description,
-        color: values.color,
+        color: newCategoryColor,
         icon: values.icon,
       });
       if (result) {
         message.success("分类创建成功");
         setCategoryModalVisible(false);
         categoryForm.resetFields();
+        setNewCategoryColor("#3B82F6");
       }
     } catch (error) {
       console.error("创建分类失败:", error);
     }
-  }, [categoryForm, createCategory, message]);
+  }, [categoryForm, createCategory, message, newCategoryColor]);
 
   // 更新分类
   const handleUpdateCategory = useCallback(
@@ -471,32 +479,20 @@ const Todo: React.FC = () => {
           </Form.Item>
 
           <Form.Item label="颜色">
-            <Form.Item name="color" noStyle initialValue="#3B82F6">
-              <input type="hidden" />
-            </Form.Item>
-            <Form.Item shouldUpdate noStyle>
-              {({ getFieldValue, setFieldsValue }) => {
-                const currentColor = getFieldValue("color") || "#3B82F6";
-                return (
-                  <div className="flex gap-2 flex-wrap">
-                    {["#3B82F6", "#F97316", "#A855F7", "#EF4444", "#10B981", "#EC4899", "#06B6D4", "#84CC16"].map(
-                      (color) => (
-                        <div
-                          key={color}
-                          className={`size-8 rounded-full cursor-pointer border-2 transition-all ${
-                            currentColor === color
-                              ? "border-white scale-110"
-                              : "border-transparent hover:scale-105"
-                          }`}
-                          style={{ backgroundColor: color }}
-                          onClick={() => setFieldsValue({ color })}
-                        />
-                      )
-                    )}
-                  </div>
-                );
-              }}
-            </Form.Item>
+            <div className="flex gap-2 flex-wrap">
+              {COLOR_OPTIONS.map((color) => (
+                <div
+                  key={color}
+                  className={`size-8 rounded-full cursor-pointer border-2 transition-all ${
+                    newCategoryColor === color
+                      ? "border-white scale-110"
+                      : "border-transparent hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setNewCategoryColor(color)}
+                />
+              ))}
+            </div>
           </Form.Item>
 
           <Form.Item name="icon" label="图标" initialValue="folder">

@@ -1,7 +1,7 @@
 {
   "name": "personal-workstation",
   "private": true,
-  "version": "0.5.62",
+  "version": "0.5.63",
   "description": "个人工作站 - Electron 桌面应用",
   "author": "lixiaoblack",
   "main": "./dist-electron/main.js",
@@ -93,6 +93,17 @@
       "**/node_modules/better-sqlite3/**/*"
     ],
     "extraResources": [
+      {
+        "from": "resources/icons",
+        "to": "icons",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
       {
         "from": "dist/python-service",
         "to": "python-service",

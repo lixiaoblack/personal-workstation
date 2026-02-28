@@ -31,12 +31,19 @@ function getTrayIconPath(): string {
   // 开发环境: __dirname = dist-electron/
   // 生产环境: __dirname = app.asar/dist-electron/
 
+  // Windows 使用小尺寸图标
+  const iconName = process.platform === "win32" ? "icon-32.png" : "icon.png";
+
   const possiblePaths = [
     // 开发环境
+    path.join(__dirname, "../resources/icons", iconName),
     path.join(__dirname, "../resources/icon.png"),
+    path.join(__dirname, "../../resources/icons", iconName),
     path.join(__dirname, "../../resources/icon.png"),
-    // 生产环境
+    // 生产环境 - extraResources 打包位置
+    path.join(process.resourcesPath, "icons", iconName),
     path.join(process.resourcesPath, "icon.png"),
+    path.join(process.resourcesPath, "resources/icons", iconName),
     path.join(process.resourcesPath, "resources/icon.png"),
   ];
 
@@ -59,10 +66,15 @@ function getTrayIcon(): Electron.NativeImage {
 
   try {
     const icon = nativeImage.createFromPath(iconPath);
-    // macOS 需要调整为合适的大小
+    
     if (process.platform === "darwin") {
+      // macOS 需要调整为合适的大小
+      return icon.resize({ width: 16, height: 16 });
+    } else if (process.platform === "win32") {
+      // Windows 托盘图标推荐尺寸
       return icon.resize({ width: 16, height: 16 });
     }
+    
     return icon;
   } catch (error) {
     console.error("[TrayService] 加载托盘图标失败:", error);

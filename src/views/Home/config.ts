@@ -1,3 +1,12 @@
+/*
+ * @Author: wanglx
+ * @Date: 2026-02-14 21:54:44
+ * @LastEditors: wanglx
+ * @LastEditTime: 2026-02-28 18:31:45
+ * @Description:
+ *
+ * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved.
+ */
 /**
  * Home 页面配置文件
  * 包含导航菜单、模块入口配置

@@ -62,11 +62,14 @@ const Home: React.FC = () => {
     const date = new Date(todo.dueDate);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
-    
+
     if (isToday) {
       return `今天 ${date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
     }
-    return date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+    return date.toLocaleDateString("zh-CN", {
+      month: "numeric",
+      day: "numeric",
+    });
   };
 
   // 格式化字节大小
@@ -79,9 +82,8 @@ const Home: React.FC = () => {
   };
 
   // 计算效率（已完成 / 总任务）
-  const efficiency = stats.total > 0 
-    ? Math.round((stats.completed / stats.total) * 100) 
-    : 0;
+  const efficiency =
+    stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
   // 合并今日和逾期待办，按优先级排序
   const focusTodos = [...overdueTodos, ...todayTodos]
@@ -108,7 +110,7 @@ const Home: React.FC = () => {
   // 渲染焦点任务
   const renderFocusTasks = () => {
     const loading = todayLoading || overdueLoading;
-    
+
     if (loading) {
       return (
         <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
@@ -120,9 +122,11 @@ const Home: React.FC = () => {
     if (focusTodos.length === 0) {
       return (
         <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-          <span className="material-symbols-outlined text-4xl text-success mb-2">check_circle</span>
+          <span className="material-symbols-outlined text-4xl text-success mb-2">
+            check_circle
+          </span>
           <p className="text-text-secondary">今日暂无待办事项</p>
-          <button 
+          <button
             onClick={() => navigate("/todo")}
             className="mt-4 text-sm text-primary hover:underline"
           >
@@ -137,10 +141,10 @@ const Home: React.FC = () => {
         {focusTodos.map((todo) => {
           const isOverdue = overdueTodos.some((t) => t.id === todo.id);
           const dueText = formatDueDate(todo);
-          
+
           return (
-            <div 
-              key={todo.id} 
+            <div
+              key={todo.id}
               className="flex items-center gap-4 p-4 group cursor-pointer hover:bg-bg-hover transition-colors"
               onClick={() => navigate("/todo")}
             >
@@ -149,8 +153,11 @@ const Home: React.FC = () => {
                   {todo.title}
                 </p>
                 {dueText && (
-                  <p className={`text-xs mt-1 ${isOverdue ? "text-error" : "text-text-tertiary"}`}>
-                    {isOverdue ? "已逾期 · " : ""}{dueText}
+                  <p
+                    className={`text-xs mt-1 ${isOverdue ? "text-error" : "text-text-tertiary"}`}
+                  >
+                    {isOverdue ? "已逾期 · " : ""}
+                    {dueText}
                   </p>
                 )}
               </div>
@@ -168,7 +175,7 @@ const Home: React.FC = () => {
           );
         })}
         <div className="flex items-center justify-center p-4">
-          <button 
+          <button
             onClick={() => navigate("/todo")}
             className="flex items-center gap-2 text-sm text-text-tertiary hover:text-primary transition-colors"
           >
@@ -183,37 +190,47 @@ const Home: React.FC = () => {
   // 渲染统计卡片
   const renderStatsCards = () => (
     <div className="grid grid-cols-2 gap-4">
-      <div 
+      <div
         className="bg-bg-secondary rounded-xl border border-border p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onClick={() => navigate("/todo")}
       >
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary">checklist</span>
+            <span className="material-symbols-outlined text-primary">
+              checklist
+            </span>
           </div>
           <div>
-            <p className="text-2xl font-bold text-text-primary">{stats.total}</p>
+            <p className="text-2xl font-bold text-text-primary">
+              {stats.total}
+            </p>
             <p className="text-xs text-text-tertiary">总任务数</p>
           </div>
         </div>
         <div className="flex gap-4 text-xs">
-          <span className="text-warning">{stats.pending + stats.inProgress} 进行中</span>
+          <span className="text-warning">
+            {stats.pending + stats.inProgress} 进行中
+          </span>
           <span className="text-success">{stats.completed} 已完成</span>
         </div>
       </div>
-      
+
       <div className="bg-bg-secondary rounded-xl border border-border p-5">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-success">trending_up</span>
+            <span className="material-symbols-outlined text-success">
+              trending_up
+            </span>
           </div>
           <div>
-            <p className="text-2xl font-bold text-text-primary">{efficiency}%</p>
+            <p className="text-2xl font-bold text-text-primary">
+              {efficiency}%
+            </p>
             <p className="text-xs text-text-tertiary">完成率</p>
           </div>
         </div>
         <div className="h-2 bg-bg-tertiary rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-success rounded-full transition-all duration-500"
             style={{ width: `${efficiency}%` }}
           />
@@ -225,41 +242,56 @@ const Home: React.FC = () => {
   // 渲染系统状态
   const renderSystemStatus = () => {
     if (!storageInfo) return null;
-    
+
     // 假设总磁盘空间为 256GB，计算使用百分比
     const totalDiskGB = 256;
-    const usedPercent = Math.min(100, Math.round((storageInfo.totalSize / (totalDiskGB * 1024 * 1024 * 1024)) * 100));
-    
+    const usedPercent = Math.min(
+      100,
+      Math.round(
+        (storageInfo.totalSize / (totalDiskGB * 1024 * 1024 * 1024)) * 100
+      )
+    );
+
     return (
       <div className="bg-bg-secondary rounded-xl border border-border p-5">
         <p className="text-xs font-bold text-text-tertiary uppercase tracking-widest mb-4">
           系统状态
         </p>
-        
+
         <div className="space-y-4">
           <div>
             <div className="flex justify-between text-sm mb-1">
               <span className="text-text-secondary">存储占用</span>
-              <span className="text-text-primary">{formatBytes(storageInfo.totalSize)}</span>
+              <span className="text-text-primary">
+                {formatBytes(storageInfo.totalSize)}
+              </span>
             </div>
             <div className="h-2 bg-bg-tertiary rounded-full overflow-hidden">
-              <div 
+              <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  usedPercent > 80 ? "bg-error" : usedPercent > 60 ? "bg-warning" : "bg-primary"
+                  usedPercent > 80
+                    ? "bg-error"
+                    : usedPercent > 60
+                      ? "bg-warning"
+                      : "bg-primary"
                 }`}
                 style={{ width: `${usedPercent}%` }}
               />
             </div>
           </div>
-          
+
           <div className="flex justify-between text-sm">
             <span className="text-text-tertiary">数据库</span>
-            <span className="text-text-primary">{formatBytes(storageInfo.dataSize)}</span>
+            <span className="text-text-primary">
+              {formatBytes(storageInfo.dataSize)}
+            </span>
           </div>
-          
+
           <div className="flex justify-between text-sm">
             <span className="text-text-tertiary">缓存</span>
-            <span className="text-text-primary">{formatBytes(storageInfo.cacheSize)}</span>
+            <span className="text-text-primary">
+              {formatBytes(storageInfo.cacheSize)}
+            </span>
           </div>
         </div>
       </div>
@@ -279,10 +311,14 @@ const Home: React.FC = () => {
             <p className="text-text-secondary text-lg">
               今天是 {dateStr}，{weekDay}
               {stats.todayDue > 0 && (
-                <span className="text-primary font-medium">，您有 {stats.todayDue} 个待处理任务</span>
+                <span className="text-primary font-medium">
+                  ，您有 {stats.todayDue} 个待处理任务
+                </span>
               )}
               {stats.overdue > 0 && (
-                <span className="text-error font-medium">，{stats.overdue} 个已逾期</span>
+                <span className="text-error font-medium">
+                  ，{stats.overdue} 个已逾期
+                </span>
               )}
             </p>
           </div>

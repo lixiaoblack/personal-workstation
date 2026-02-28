@@ -9,9 +9,10 @@
  * - 管理应用生命周期
  */
 
-import { app, BrowserWindow, Menu, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, Menu, ipcMain, nativeTheme, nativeImage } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
 
 import { initDatabase, closeDatabase } from "./database/index";
 import * as websocketService from "./services/websocketService";
@@ -51,9 +52,42 @@ let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
 /**
+ * 获取窗口图标
+ */
+function getWindowIcon(): Electron.NativeImage | undefined {
+  // Windows 需要设置窗口图标
+  if (process.platform !== "win32") {
+    return undefined;
+  }
+
+  const possiblePaths = [
+    // 开发环境
+    path.join(__dirname, "../resources/icons/icon-64.png"),
+    path.join(__dirname, "../resources/icon.png"),
+    path.join(__dirname, "../../resources/icons/icon-64.png"),
+    path.join(__dirname, "../../resources/icon.png"),
+    // 生产环境
+    path.join(process.resourcesPath, "icons/icon-64.png"),
+    path.join(process.resourcesPath, "icon.png"),
+  ];
+
+  for (const iconPath of possiblePaths) {
+    if (fs.existsSync(iconPath)) {
+      console.log(`[Main] 找到窗口图标: ${iconPath}`);
+      return nativeImage.createFromPath(iconPath);
+    }
+  }
+
+  console.warn("[Main] 未找到窗口图标");
+  return undefined;
+}
+
+/**
  * 创建主窗口
  */
 function createWindow(): void {
+  const icon = getWindowIcon();
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -61,6 +95,7 @@ function createWindow(): void {
     minHeight: 600,
     frame: false, // 无边框窗口
     transparent: false,
+    icon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

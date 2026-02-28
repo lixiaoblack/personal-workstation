@@ -36,6 +36,7 @@ export interface UseNotesReturn extends NotesState {
 
   // 文件操作
   selectFile: (file: FileTreeNode) => Promise<void>;
+  updateFileContent: (content: string) => void;
   saveFile: (content: string) => Promise<boolean>;
   createFolder: (parentPath: string | null, name: string) => Promise<boolean>;
   createNote: (
@@ -195,6 +196,11 @@ export function useNotes(): UseNotesReturn {
       setError("读取文件失败");
       setLoading(false);
     }
+  }, []);
+
+  // 更新文件内容（编辑时）
+  const updateFileContent = useCallback((content: string) => {
+    setFileContent(content);
   }, []);
 
   // 保存文件
@@ -400,6 +406,7 @@ export function useNotes(): UseNotesReturn {
     setRootPath,
     refreshFileTree,
     selectFile,
+    updateFileContent,
     saveFile,
     createFolder,
     createNote,

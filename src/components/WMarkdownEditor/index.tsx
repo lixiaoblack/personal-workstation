@@ -196,18 +196,18 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       after: () => {
         isReadyRef.current = true;
         lastValueRef.current = value;
-        
+
         // 在编辑器就绪后，给编辑区域添加 Tab 键处理
         // Capture 阶段：阻止默认焦点切换
         // Bubble 阶段：阻止向上冒泡到 Electron
         const vditorElement = containerRef.current;
         if (vditorElement) {
           const editorAreas = vditorElement.querySelectorAll(
-            '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
+            ".vditor-ir, .vditor-sv, .vditor-wysiwyg"
           );
           editorAreas.forEach((area) => {
-            area.addEventListener('keydown', handleTabKeyCapture, true); // capture
-            area.addEventListener('keydown', handleTabKeyBubble, false); // bubble
+            area.addEventListener("keydown", handleTabKeyCapture, true); // capture
+            area.addEventListener("keydown", handleTabKeyBubble, false); // bubble
           });
         }
       },
@@ -227,14 +227,14 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       const vditorElement = containerRef.current;
       if (vditorElement) {
         const editorAreas = vditorElement.querySelectorAll(
-          '.vditor-ir, .vditor-sv, .vditor-wysiwyg'
+          ".vditor-ir, .vditor-sv, .vditor-wysiwyg"
         );
         editorAreas.forEach((area) => {
-          area.removeEventListener('keydown', handleTabKeyCapture, true);
-          area.removeEventListener('keydown', handleTabKeyBubble, false);
+          area.removeEventListener("keydown", handleTabKeyCapture, true);
+          area.removeEventListener("keydown", handleTabKeyBubble, false);
         });
       }
-      
+
       try {
         if (vditorRef.current) {
           vditorRef.current.destroy();

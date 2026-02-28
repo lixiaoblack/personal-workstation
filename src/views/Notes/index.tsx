@@ -19,6 +19,7 @@ const Notes: React.FC = () => {
     error,
     selectRootFolder,
     selectFile,
+    updateFileContent,
     saveFile,
     createFolder,
     createNote,
@@ -39,7 +40,7 @@ const Notes: React.FC = () => {
   }
 
   return (
-    <div className="notes flex h-screen w-full flex-col overflow-hidden">
+    <div className="notes flex  w-full h-full flex-col overflow-hidden">
       {/* 错误提示 */}
       {error && (
         <div className="flex items-center justify-between bg-error/10 px-4 py-2 text-sm text-error">
@@ -72,7 +73,7 @@ const Notes: React.FC = () => {
         <NotesEditor
           selectedFile={selectedFile}
           content={fileContent}
-          onContentChange={() => {}}
+          onContentChange={updateFileContent}
           onSave={saveFile}
         />
       </main>

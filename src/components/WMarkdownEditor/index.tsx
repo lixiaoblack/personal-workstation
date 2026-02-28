@@ -177,6 +177,25 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       after: () => {
         isReadyRef.current = true;
         lastValueRef.current = value;
+        
+        // 在编辑器就绪后处理 Tab 键事件
+        const vditorElement = containerRef.current;
+        if (vditorElement) {
+          // 查找编辑器内的输入元素
+          const editorInput = vditorElement.querySelector('.vditor-ir') || 
+                             vditorElement.querySelector('.vditor-sv') ||
+                             vditorElement.querySelector('.vditor-wysiwyg');
+          
+          if (editorInput) {
+            editorInput.addEventListener('keydown', ((e: Event) => {
+              const keyEvent = e as KeyboardEvent;
+              if (keyEvent.key === 'Tab') {
+                keyEvent.stopPropagation();
+                // Vditor 会自己处理 Tab 缩进
+              }
+            }) as EventListener, true);
+          }
+        }
       },
       ctrlKey: (key) => {
         if (key === "s") {
@@ -189,23 +208,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
 
     vditorRef.current = vditor;
 
-    // 处理 Tab 键事件，阻止 Electron 捕获
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Tab") {
-        e.preventDefault();
-        e.stopPropagation();
-        // Tab 增加缩进（插入2个空格）
-        if (!e.shiftKey) {
-          vditor.insertValue("  ");
-        }
-      }
-    };
-
-    const vditorElement = containerRef.current;
-    vditorElement?.addEventListener("keydown", handleKeyDown, true);
-
     return () => {
-      vditorElement?.removeEventListener("keydown", handleKeyDown, true);
       try {
         if (vditorRef.current) {
           vditorRef.current.destroy();

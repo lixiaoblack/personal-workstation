@@ -261,7 +261,9 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                   {/* 时间状态 */}
                   {isCompleted ? (
                     <span className="text-[10px] uppercase tracking-wider text-green-500 flex items-center gap-1 mt-1">
-                      <span className="material-symbols-outlined text-xs">check_circle</span>
+                      <span className="material-symbols-outlined text-xs">
+                        check_circle
+                      </span>
                       已完成
                       {todo.completedAt && (
                         <span className="text-text-tertiary ml-1">

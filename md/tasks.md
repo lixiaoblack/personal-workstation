@@ -2,7 +2,7 @@
  * @Author: wanglx
  * @Date: 2026-02-13 23:03:14
  * @LastEditors: wanglx
- * @LastEditTime: 2026-02-14 23:58:22
+ * @LastEditTime: 2026-02-28 15:03:52
  * @Description: 
  * 
  * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved. 
@@ -18,7 +18,7 @@
 ### 进行中
 
 - [ ] TASK-021: Todo 待办提醒功能开发 | 开始时间: 2026-02-27 10:00
-  - 阶段一：数据持久化与基础 CRUD（P0）
+  - 阶段一：数据持久化与基础 CRUD（P0）✅
     - [x] 设计数据库表结构（todos、todo_categories）
     - [x] 实现 Electron IPC 通信（registerTodoIpc.ts）
     - [x] 实现数据 CRUD 服务（todoService.ts）
@@ -26,11 +26,13 @@
     - [x] 分类管理功能（增删改查、颜色、图标）
     - [x] 任务管理功能（增删改查、标题、描述、优先级）
     - [x] Todo 页面重构
-  - 阶段二：时间管理与通知（P1）
-    - [ ] 任务时间字段（截止时间、提醒时间）
-    - [ ] 时间选择器组件
+    - [x] 按分类分组展示卡片
+    - [x] 任务完成状态与完成时间显示
+  - 阶段二：时间管理与通知（P1）进行中
+    - [x] 任务时间字段（截止时间、提醒时间）
+    - [x] 时间选择器组件
     - [ ] Electron Notification API 集成
-    - [ ] 逾期状态检测与显示
+    - [x] 逾期状态检测与显示
     - [ ] 重复任务功能（每日/每周/每月）
   - 阶段三：系统集成（P1）
     - [ ] Mac 菜单栏图标（Electron Tray）

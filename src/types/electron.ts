@@ -710,6 +710,7 @@ export interface ElectronAPI {
   todoGetOverdueTodos: () => Promise<Todo[]>;
   todoGetUpcomingTodos: (days?: number) => Promise<Todo[]>;
   todoGetStats: () => Promise<TodoStats>;
+  todoTestNotification: () => Promise<boolean>;
 
   // 模块下载进度监听
   onModuleDownloadProgress: (

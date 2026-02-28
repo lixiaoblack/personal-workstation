@@ -18,6 +18,11 @@ import * as websocketService from "./services/websocketService";
 import * as pythonProcessService from "./services/pythonProcessService";
 import { moduleManager } from "./services/moduleService";
 import { registerAllIpcHandlers } from "./ipc";
+import {
+  startReminderService,
+  stopReminderService,
+  sendWelcomeNotification,
+} from "./services/reminderService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -119,6 +124,9 @@ async function startBackendServices(): Promise<void> {
  * 停止后端服务
  */
 async function stopBackendServices(): Promise<void> {
+  // 停止待办提醒服务
+  stopReminderService();
+
   // 停止 OCR 模块
   try {
     moduleManager.stopOcrModule();
@@ -149,6 +157,10 @@ app.whenReady().then(async () => {
 
   // 启动后端服务
   await startBackendServices();
+
+  // 启动待办提醒服务
+  startReminderService();
+  sendWelcomeNotification();
 
   // 创建主窗口
   createWindow();

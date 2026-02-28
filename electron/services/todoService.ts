@@ -624,6 +624,51 @@ function transformTodoRow(row: Record<string, unknown>): Todo {
   };
 }
 
+/**
+ * 获取待办事项（带分类信息）
+ */
+export function getTodoWithCategory(id: number): Todo | null {
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT t.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+    FROM todos t
+    LEFT JOIN todo_categories c ON t.category_id = c.id
+    WHERE t.id = ?
+  `);
+  const row = stmt.get(id) as Record<string, unknown> | undefined;
+  if (!row) return null;
+
+  const todo = transformTodoRow(row);
+  if (row.category_name) {
+    todo.category = {
+      id: row.category_id as number,
+      name: row.category_name as string,
+      color: (row.category_color as string) || "#3C83F6",
+      icon: (row.category_icon as string) || "folder",
+      sortOrder: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    };
+  }
+  return todo;
+}
+
+/**
+ * 获取指定时间范围内需要提醒的待办
+ */
+export function listUpcomingReminders(startTime: number, endTime: number): Todo[] {
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT * FROM todos
+    WHERE status != 'completed' AND status != 'cancelled'
+    AND reminder_time IS NOT NULL
+    AND reminder_time >= ? AND reminder_time <= ?
+    ORDER BY reminder_time ASC
+  `);
+  const rows = stmt.all(startTime, endTime) as Array<Record<string, unknown>>;
+  return rows.map(transformTodoRow);
+}
+
 export default {
   // 分类
   listCategories,

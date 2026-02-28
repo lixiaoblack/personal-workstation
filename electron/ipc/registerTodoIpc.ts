@@ -6,6 +6,7 @@
 
 import { ipcMain } from "electron";
 import * as todoService from "../services/todoService";
+import { sendTestNotification } from "../services/reminderService";
 import type {
   TodoCategory,
   TodoCategoryInput,
@@ -227,6 +228,16 @@ export function registerTodoIpc(): void {
         overdue: 0,
         todayDue: 0,
       };
+    }
+  });
+
+  // 测试通知
+  ipcMain.handle("todo:testNotification", (): boolean => {
+    try {
+      return sendTestNotification();
+    } catch (error) {
+      console.error("[TodoIpc] 测试通知失败:", error);
+      return false;
     }
   });
 

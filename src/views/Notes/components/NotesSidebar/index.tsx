@@ -80,7 +80,7 @@ const FileTreeItem: React.FC<{
             chevron_right
           </span>
         )}
-        
+
         {/* 文件/文件夹图标 */}
         <span className="material-symbols-outlined">
           {node.type === "folder"
@@ -89,11 +89,11 @@ const FileTreeItem: React.FC<{
               : "folder"
             : "description"}
         </span>
-        
+
         {/* 名称 */}
         <span className="flex-1 truncate text-sm">{node.name}</span>
       </div>
-      
+
       {/* 子节点 */}
       {node.type === "folder" && isExpanded && node.children && (
         <div>
@@ -125,12 +125,21 @@ const ContextMenu: React.FC<{
   onCreateNote: () => void;
   onRename: () => void;
   onDelete: () => void;
-}> = ({ x, y, node, onClose, onCreateFolder, onCreateNote, onRename, onDelete }) => {
+}> = ({
+  x,
+  y,
+  node,
+  onClose,
+  onCreateFolder,
+  onCreateNote,
+  onRename,
+  onDelete,
+}) => {
   return (
     <>
       {/* 背景遮罩 */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      
+
       {/* 菜单 */}
       <div
         className="fixed z-50 min-w-[160px] rounded-lg border border-border bg-bg-secondary py-1 shadow-xl"
@@ -145,7 +154,9 @@ const ContextMenu: React.FC<{
                 onClose();
               }}
             >
-              <span className="material-symbols-outlined text-sm">create_new_folder</span>
+              <span className="material-symbols-outlined text-sm">
+                create_new_folder
+              </span>
               新建文件夹
             </button>
             <button
@@ -155,7 +166,9 @@ const ContextMenu: React.FC<{
                 onClose();
               }}
             >
-              <span className="material-symbols-outlined text-sm">note_add</span>
+              <span className="material-symbols-outlined text-sm">
+                note_add
+              </span>
               新建笔记
             </button>
             <div className="my-1 border-t border-border" />
@@ -206,7 +219,7 @@ const CreateDialog: React.FC<{
         <h3 className="mb-4 text-lg font-semibold text-text-primary">
           {type === "folder" ? "新建文件夹" : "新建笔记"}
         </h3>
-        
+
         <input
           type="text"
           className="mb-4 w-full rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none"
@@ -219,7 +232,7 @@ const CreateDialog: React.FC<{
             if (e.key === "Escape") onCancel();
           }}
         />
-        
+
         <div className="flex justify-end gap-2">
           <button
             className="rounded-lg px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-hover"
@@ -257,20 +270,22 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
     y: number;
     node: FileTreeNode;
   } | null>(null);
-  
+
   // 新建对话框状态
   const [createDialog, setCreateDialog] = useState<{
     type: "folder" | "note";
     parentPath: string | null;
   } | null>(null);
-  
+
   // 重命名对话框状态
   const [renameDialog, setRenameDialog] = useState<{
     node: FileTreeNode;
   } | null>(null);
 
   // 展开状态
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set()
+  );
 
   // 处理右键菜单
   const handleContextMenu = (e: React.MouseEvent, node: FileTreeNode) => {
@@ -335,16 +350,22 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
             disabled={loading}
             title="刷新"
           >
-            <span className={`material-symbols-outlined text-sm ${loading ? "animate-spin" : ""}`}>
+            <span
+              className={`material-symbols-outlined text-sm ${loading ? "animate-spin" : ""}`}
+            >
               refresh
             </span>
           </button>
           <button
             className="rounded p-1 text-text-tertiary hover:bg-bg-hover hover:text-text-primary"
-            onClick={() => setCreateDialog({ type: "folder", parentPath: null })}
+            onClick={() =>
+              setCreateDialog({ type: "folder", parentPath: null })
+            }
             title="新建文件夹"
           >
-            <span className="material-symbols-outlined text-sm">create_new_folder</span>
+            <span className="material-symbols-outlined text-sm">
+              create_new_folder
+            </span>
           </button>
           <button
             className="rounded p-1 text-text-tertiary hover:bg-bg-hover hover:text-text-primary"
@@ -360,7 +381,9 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
       <div className="flex-1 overflow-y-auto px-2 py-2">
         {fileTree.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-text-tertiary">
-            <span className="material-symbols-outlined mb-2 text-3xl">folder_off</span>
+            <span className="material-symbols-outlined mb-2 text-3xl">
+              folder_off
+            </span>
             <span className="text-sm">暂无笔记</span>
             <span className="text-xs">点击上方按钮创建</span>
           </div>
@@ -390,7 +413,10 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
           node={contextMenu.node}
           onClose={() => setContextMenu(null)}
           onCreateFolder={() =>
-            setCreateDialog({ type: "folder", parentPath: contextMenu.node.path })
+            setCreateDialog({
+              type: "folder",
+              parentPath: contextMenu.node.path,
+            })
           }
           onCreateNote={() =>
             setCreateDialog({ type: "note", parentPath: contextMenu.node.path })
@@ -404,7 +430,11 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
       {createDialog && (
         <CreateDialog
           type={createDialog.type}
-          onConfirm={createDialog.type === "folder" ? handleCreateFolder : handleCreateNote}
+          onConfirm={
+            createDialog.type === "folder"
+              ? handleCreateFolder
+              : handleCreateNote
+          }
           onCancel={() => setCreateDialog(null)}
         />
       )}

@@ -1,12 +1,10 @@
 /**
  * 笔记编辑器组件
- * 支持 Markdown 编辑、实时预览、文件上传等功能
+ * 使用全局 WMarkdownEditor 组件，基于 Vditor 实现
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import Editor from "@monaco-editor/react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { WMarkdownEditor } from "@/components/WMarkdownEditor";
 
 // 文件树节点类型
 interface FileTreeNode {
@@ -26,18 +24,16 @@ interface NotesEditorProps {
   onSave: (content: string) => Promise<boolean>;
 }
 
-type EditorMode = "edit" | "preview" | "split";
-
 export const NotesEditor: React.FC<NotesEditorProps> = ({
   selectedFile,
   content,
   onContentChange,
   onSave,
 }) => {
-  const [mode, setMode] = useState<EditorMode>("split");
   const [localContent, setLocalContent] = useState(content);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editorMode, setEditorMode] = useState<"ir" | "sv" | "wysiwyg">("ir");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 同步外部内容
@@ -70,8 +66,15 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
     };
   }, [localContent, isDirty, selectedFile, onSave]);
 
-  // 手动保存
-  const handleManualSave = useCallback(async () => {
+  // 内容变化处理
+  const handleContentChange = useCallback((value: string) => {
+    setLocalContent(value);
+    setIsDirty(true);
+    onContentChange(value);
+  }, [onContentChange]);
+
+  // 保存处理
+  const handleSave = useCallback(async () => {
     if (!selectedFile || !isDirty) return;
 
     setIsSaving(true);
@@ -81,27 +84,6 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
     }
     setIsSaving(false);
   }, [selectedFile, isDirty, localContent, onSave]);
-
-  // 快捷键保存
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        handleManualSave();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleManualSave]);
-
-  // 内容变化处理
-  const handleContentChange = useCallback((value: string | undefined) => {
-    const newContent = value || "";
-    setLocalContent(newContent);
-    setIsDirty(true);
-    onContentChange(newContent);
-  }, [onContentChange]);
 
   // 未选择文件时的空状态
   if (!selectedFile) {
@@ -130,7 +112,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           {/* 文件路径 */}
           <div className="flex items-center gap-2 text-sm">
             <span className="material-symbols-outlined text-primary">description</span>
-            <span className="text-text-primary font-medium">{selectedFile.name}</span>
+            <span className="font-medium text-text-primary">{selectedFile.name}</span>
             {isDirty && (
               <span className="text-xs text-warning">● 未保存</span>
             )}
@@ -148,40 +130,43 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           <div className="flex rounded-lg bg-bg-tertiary p-0.5">
             <button
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                mode === "edit"
+                editorMode === "wysiwyg"
                   ? "bg-primary text-white"
                   : "text-text-secondary hover:text-text-primary"
               }`}
-              onClick={() => setMode("edit")}
+              onClick={() => setEditorMode("wysiwyg")}
+              title="所见即所得"
             >
-              编辑
+              所见即所得
             </button>
             <button
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                mode === "split"
+                editorMode === "ir"
                   ? "bg-primary text-white"
                   : "text-text-secondary hover:text-text-primary"
               }`}
-              onClick={() => setMode("split")}
+              onClick={() => setEditorMode("ir")}
+              title="即时渲染"
             >
-              分栏
+              即时渲染
             </button>
             <button
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                mode === "preview"
+                editorMode === "sv"
                   ? "bg-primary text-white"
                   : "text-text-secondary hover:text-text-primary"
               }`}
-              onClick={() => setMode("preview")}
+              onClick={() => setEditorMode("sv")}
+              title="分屏预览"
             >
-              预览
+              分屏预览
             </button>
           </div>
 
           {/* 保存按钮 */}
           <button
             className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={handleManualSave}
+            onClick={handleSave}
             disabled={!isDirty || isSaving}
           >
             <span className="material-symbols-outlined text-sm">save</span>
@@ -190,62 +175,18 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         </div>
       </div>
 
-      {/* 编辑区域 */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* 编辑器 */}
-        {(mode === "edit" || mode === "split") && (
-          <div className={`${mode === "split" ? "w-1/2" : "w-full"} flex flex-col`}>
-            <Editor
-              height="100%"
-              defaultLanguage="markdown"
-              value={localContent}
-              onChange={handleContentChange}
-              theme="vs-dark"
-              options={{
-                fontSize: 14,
-                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                lineNumbers: "on",
-                minimap: { enabled: false },
-                wordWrap: "on",
-                scrollBeyondLastLine: false,
-                padding: { top: 16, bottom: 16 },
-                renderLineHighlight: "line",
-                cursorBlinking: "smooth",
-                smoothScrolling: true,
-                tabSize: 2,
-              }}
-            />
-          </div>
-        )}
-
-        {/* 分隔线 */}
-        {mode === "split" && (
-          <div className="w-px bg-border" />
-        )}
-
-        {/* 预览区域 */}
-        {(mode === "preview" || mode === "split") && (
-          <div className={`${mode === "split" ? "w-1/2" : "w-full"} overflow-y-auto p-6`}>
-            <article className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {localContent}
-              </ReactMarkdown>
-            </article>
-          </div>
-        )}
-      </div>
-
-      {/* 底部状态栏 */}
-      <div className="flex items-center justify-between border-t border-border bg-bg-tertiary/30 px-4 py-1 text-xs text-text-tertiary">
-        <div className="flex items-center gap-4">
-          <span>字符: {localContent.length.toLocaleString()}</span>
-          <span>行数: {localContent.split("\n").length}</span>
-          <span>词数: {localContent.split(/\s+/).filter(Boolean).length}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span>Markdown</span>
-          <span>UTF-8</span>
-        </div>
+      {/* 编辑器区域 */}
+      <div className="flex-1 overflow-hidden">
+        <WMarkdownEditor
+          value={localContent}
+          onChange={handleContentChange}
+          onSave={handleSave}
+          mode={editorMode}
+          height="100%"
+          placeholder="开始编写您的笔记..."
+          theme="dark"
+          lineNum={editorMode === "sv"}
+        />
       </div>
     </section>
   );

@@ -607,6 +607,58 @@ export interface ElectronAPI {
     error?: string;
   }>;
 
+  // ========== Notes 笔记模块 ==========
+
+  // 设置管理
+  notesGetSetting: (key: string) => Promise<string | null>;
+  notesSaveSetting: (key: string, value: string) => Promise<boolean>;
+  notesGetRootPath: () => Promise<string | null>;
+  notesSetRootPath: (rootPath: string) => Promise<boolean>;
+  notesHasRootPath: () => Promise<boolean>;
+
+  // 文件夹选择
+  notesSelectFolder: () => Promise<{ canceled: boolean; filePaths: string[] }>;
+  notesValidateFolder: (
+    folderPath: string
+  ) => Promise<{ valid: boolean; error?: string }>;
+
+  // 文件扫描
+  notesScanFolder: (rootPath: string) => Promise<{
+    success: boolean;
+    fileCount: number;
+    folderCount: number;
+    error?: string;
+  }>;
+  notesGetFileTree: () => Promise<NotesFileTreeNode[]>;
+
+  // 文件操作
+  notesCreateFolder: (
+    parentPath: string | null,
+    folderName: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  notesCreateNote: (
+    parentPath: string | null,
+    fileName: string,
+    content?: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  notesReadFile: (
+    filePath: string
+  ) => Promise<{ success: boolean; content?: string; error?: string }>;
+  notesSaveFile: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  notesRenameItem: (
+    oldPath: string,
+    newName: string
+  ) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+  notesDeleteItem: (
+    itemPath: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  notesGetFileInfo: (
+    filePath: string
+  ) => Promise<{ success: boolean; file?: NotesFileMetadata; error?: string }>;
+
   // 模块下载进度监听
   onModuleDownloadProgress: (
     callback: (progress: {
@@ -842,6 +894,32 @@ export interface PostmanSetting {
   id: number;
   key: string;
   value: Record<string, unknown>;
+  updatedAt: number;
+}
+
+// Notes 笔记模块相关类型
+export interface NotesFileTreeNode {
+  id: string;
+  name: string;
+  type: "file" | "folder";
+  path: string;
+  children?: NotesFileTreeNode[];
+  expanded?: boolean;
+  active?: boolean;
+}
+
+export interface NotesFileMetadata {
+  id: number;
+  path: string;
+  name: string;
+  parentPath: string | null;
+  type: "file" | "folder";
+  contentHash: string | null;
+  fileMtime: number | null;
+  vectorDocIds: string | null;
+  chunkCount: number;
+  lastSyncedAt: number | null;
+  createdAt: number;
   updatedAt: number;
 }
 

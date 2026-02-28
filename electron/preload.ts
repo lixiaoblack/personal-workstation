@@ -1296,9 +1296,7 @@ export interface ElectronAPI {
   ) => Promise<{ valid: boolean; error?: string }>;
 
   // 文件扫描
-  notesScanFolder: (
-    rootPath: string
-  ) => Promise<{
+  notesScanFolder: (rootPath: string) => Promise<{
     success: boolean;
     fileCount: number;
     folderCount: number;

@@ -72,12 +72,7 @@ export function registerNotesIpc(): void {
   // 创建笔记
   ipcMain.handle(
     "notes:createNote",
-    (
-      _event,
-      parentPath: string | null,
-      fileName: string,
-      content?: string
-    ) => {
+    (_event, parentPath: string | null, fileName: string, content?: string) => {
       return notesService.createNote(parentPath, fileName, content);
     }
   );

@@ -30,21 +30,25 @@ export interface UseNotesReturn extends NotesState {
   // 文件夹操作
   selectRootFolder: () => Promise<boolean>;
   setRootPath: (path: string) => Promise<void>;
-  
+
   // 文件树操作
   refreshFileTree: () => Promise<void>;
-  
+
   // 文件操作
   selectFile: (file: FileTreeNode) => Promise<void>;
   saveFile: (content: string) => Promise<boolean>;
   createFolder: (parentPath: string | null, name: string) => Promise<boolean>;
-  createNote: (parentPath: string | null, name: string, content?: string) => Promise<boolean>;
+  createNote: (
+    parentPath: string | null,
+    name: string,
+    content?: string
+  ) => Promise<boolean>;
   renameItem: (oldPath: string, newName: string) => Promise<boolean>;
   deleteItem: (itemPath: string) => Promise<boolean>;
-  
+
   // 展开/收起
   toggleFolderExpand: (folderPath: string) => void;
-  
+
   // 清除错误
   clearError: () => void;
 }
@@ -57,9 +61,11 @@ export function useNotes(): UseNotesReturn {
   const [fileContent, setFileContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 展开状态管理
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set()
+  );
 
   // 初始化检查根目录
   useEffect(() => {
@@ -67,11 +73,11 @@ export function useNotes(): UseNotesReturn {
       try {
         const hasRoot = await window.electronAPI.notesHasRootPath();
         setHasRootPath(hasRoot);
-        
+
         if (hasRoot) {
           const root = await window.electronAPI.notesGetRootPath();
           setRootPathState(root);
-          
+
           // 扫描并获取文件树
           if (root) {
             await window.electronAPI.notesScanFolder(root);
@@ -84,7 +90,7 @@ export function useNotes(): UseNotesReturn {
         setError("初始化笔记模块失败");
       }
     };
-    
+
     initNotes();
   }, []);
 
@@ -93,29 +99,30 @@ export function useNotes(): UseNotesReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await window.electronAPI.notesSelectFolder();
-      
+
       if (result.canceled || result.filePaths.length === 0) {
         setLoading(false);
         return false;
       }
-      
+
       const selectedPath = result.filePaths[0];
-      
+
       // 验证文件夹
-      const validation = await window.electronAPI.notesValidateFolder(selectedPath);
+      const validation =
+        await window.electronAPI.notesValidateFolder(selectedPath);
       if (!validation.valid) {
         setError(validation.error || "文件夹验证失败");
         setLoading(false);
         return false;
       }
-      
+
       // 设置根目录
       await window.electronAPI.notesSetRootPath(selectedPath);
       setRootPathState(selectedPath);
       setHasRootPath(true);
-      
+
       // 扫描文件夹
       const scanResult = await window.electronAPI.notesScanFolder(selectedPath);
       if (!scanResult.success) {
@@ -123,11 +130,11 @@ export function useNotes(): UseNotesReturn {
         setLoading(false);
         return false;
       }
-      
+
       // 获取文件树
       const tree = await window.electronAPI.notesGetFileTree();
       setFileTree(tree);
-      
+
       setLoading(false);
       return true;
     } catch (err) {
@@ -143,7 +150,7 @@ export function useNotes(): UseNotesReturn {
     await window.electronAPI.notesSetRootPath(path);
     setRootPathState(path);
     setHasRootPath(true);
-    
+
     // 扫描文件夹
     await window.electronAPI.notesScanFolder(path);
     const tree = await window.electronAPI.notesGetFileTree();
@@ -153,7 +160,7 @@ export function useNotes(): UseNotesReturn {
   // 刷新文件树
   const refreshFileTree = useCallback(async () => {
     if (!rootPath) return;
-    
+
     try {
       setLoading(true);
       await window.electronAPI.notesScanFolder(rootPath);
@@ -170,18 +177,18 @@ export function useNotes(): UseNotesReturn {
   // 选择文件
   const selectFile = useCallback(async (file: FileTreeNode) => {
     if (file.type !== "file") return;
-    
+
     try {
       setLoading(true);
       const result = await window.electronAPI.notesReadFile(file.path);
-      
+
       if (result.success && result.content !== undefined) {
         setFileContent(result.content);
         setSelectedFile(file);
       } else {
         setError(result.error || "读取文件失败");
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error("[useNotes] 读取文件失败:", err);
@@ -191,141 +198,163 @@ export function useNotes(): UseNotesReturn {
   }, []);
 
   // 保存文件
-  const saveFile = useCallback(async (content: string): Promise<boolean> => {
-    if (!selectedFile) return false;
-    
-    try {
-      const result = await window.electronAPI.notesSaveFile(selectedFile.path, content);
-      
-      if (result.success) {
-        setFileContent(content);
-        return true;
-      } else {
-        setError(result.error || "保存文件失败");
+  const saveFile = useCallback(
+    async (content: string): Promise<boolean> => {
+      if (!selectedFile) return false;
+
+      try {
+        const result = await window.electronAPI.notesSaveFile(
+          selectedFile.path,
+          content
+        );
+
+        if (result.success) {
+          setFileContent(content);
+          return true;
+        } else {
+          setError(result.error || "保存文件失败");
+          return false;
+        }
+      } catch (err) {
+        console.error("[useNotes] 保存文件失败:", err);
+        setError("保存文件失败");
         return false;
       }
-    } catch (err) {
-      console.error("[useNotes] 保存文件失败:", err);
-      setError("保存文件失败");
-      return false;
-    }
-  }, [selectedFile]);
+    },
+    [selectedFile]
+  );
 
   // 创建文件夹
-  const createFolder = useCallback(async (
-    parentPath: string | null,
-    name: string
-  ): Promise<boolean> => {
-    try {
-      const result = await window.electronAPI.notesCreateFolder(parentPath, name);
-      
-      if (result.success) {
-        await refreshFileTree();
-        return true;
-      } else {
-        setError(result.error || "创建文件夹失败");
+  const createFolder = useCallback(
+    async (parentPath: string | null, name: string): Promise<boolean> => {
+      try {
+        const result = await window.electronAPI.notesCreateFolder(
+          parentPath,
+          name
+        );
+
+        if (result.success) {
+          await refreshFileTree();
+          return true;
+        } else {
+          setError(result.error || "创建文件夹失败");
+          return false;
+        }
+      } catch (err) {
+        console.error("[useNotes] 创建文件夹失败:", err);
+        setError("创建文件夹失败");
         return false;
       }
-    } catch (err) {
-      console.error("[useNotes] 创建文件夹失败:", err);
-      setError("创建文件夹失败");
-      return false;
-    }
-  }, [refreshFileTree]);
+    },
+    [refreshFileTree]
+  );
 
   // 创建笔记
-  const createNote = useCallback(async (
-    parentPath: string | null,
-    name: string,
-    content?: string
-  ): Promise<boolean> => {
-    try {
-      const result = await window.electronAPI.notesCreateNote(parentPath, name, content);
-      
-      if (result.success) {
-        await refreshFileTree();
-        
-        // 如果创建成功，自动选中新文件
-        if (result.path) {
-          const newNode: FileTreeNode = {
-            id: result.path,
-            name: name.endsWith(".md") ? name : `${name}.md`,
-            type: "file",
-            path: result.path,
-          };
-          await selectFile(newNode);
+  const createNote = useCallback(
+    async (
+      parentPath: string | null,
+      name: string,
+      content?: string
+    ): Promise<boolean> => {
+      try {
+        const result = await window.electronAPI.notesCreateNote(
+          parentPath,
+          name,
+          content
+        );
+
+        if (result.success) {
+          await refreshFileTree();
+
+          // 如果创建成功，自动选中新文件
+          if (result.path) {
+            const newNode: FileTreeNode = {
+              id: result.path,
+              name: name.endsWith(".md") ? name : `${name}.md`,
+              type: "file",
+              path: result.path,
+            };
+            await selectFile(newNode);
+          }
+
+          return true;
+        } else {
+          setError(result.error || "创建笔记失败");
+          return false;
         }
-        
-        return true;
-      } else {
-        setError(result.error || "创建笔记失败");
+      } catch (err) {
+        console.error("[useNotes] 创建笔记失败:", err);
+        setError("创建笔记失败");
         return false;
       }
-    } catch (err) {
-      console.error("[useNotes] 创建笔记失败:", err);
-      setError("创建笔记失败");
-      return false;
-    }
-  }, [refreshFileTree, selectFile]);
+    },
+    [refreshFileTree, selectFile]
+  );
 
   // 重命名
-  const renameItem = useCallback(async (
-    oldPath: string,
-    newName: string
-  ): Promise<boolean> => {
-    try {
-      const result = await window.electronAPI.notesRenameItem(oldPath, newName);
-      
-      if (result.success) {
-        await refreshFileTree();
-        
-        // 如果重命名的是当前选中的文件，更新选中状态
-        if (selectedFile?.path === oldPath && result.newPath) {
-          setSelectedFile({
-            ...selectedFile,
-            id: result.newPath,
-            name: newName,
-            path: result.newPath,
-          });
+  const renameItem = useCallback(
+    async (oldPath: string, newName: string): Promise<boolean> => {
+      try {
+        const result = await window.electronAPI.notesRenameItem(
+          oldPath,
+          newName
+        );
+
+        if (result.success) {
+          await refreshFileTree();
+
+          // 如果重命名的是当前选中的文件，更新选中状态
+          if (selectedFile?.path === oldPath && result.newPath) {
+            setSelectedFile({
+              ...selectedFile,
+              id: result.newPath,
+              name: newName,
+              path: result.newPath,
+            });
+          }
+
+          return true;
+        } else {
+          setError(result.error || "重命名失败");
+          return false;
         }
-        
-        return true;
-      } else {
-        setError(result.error || "重命名失败");
+      } catch (err) {
+        console.error("[useNotes] 重命名失败:", err);
+        setError("重命名失败");
         return false;
       }
-    } catch (err) {
-      console.error("[useNotes] 重命名失败:", err);
-      setError("重命名失败");
-      return false;
-    }
-  }, [refreshFileTree, selectedFile]);
+    },
+    [refreshFileTree, selectedFile]
+  );
 
   // 删除
-  const deleteItem = useCallback(async (itemPath: string): Promise<boolean> => {
-    try {
-      const result = await window.electronAPI.notesDeleteItem(itemPath);
-      
-      if (result.success) {
-        await refreshFileTree();
-        
-        // 如果删除的是当前选中的文件，清除选中状态
-        if (selectedFile?.path === itemPath) {
-          setSelectedFile(null);
-          setFileContent("");
+  const deleteItem = useCallback(
+    async (itemPath: string): Promise<boolean> => {
+      try {
+        const result = await window.electronAPI.notesDeleteItem(itemPath);
+
+        if (result.success) {
+          await refreshFileTree();
+
+          // 如果删除的是当前选中的文件，清除选中状态
+          if (selectedFile?.path === itemPath) {
+            setSelectedFile(null);
+            setFileContent("");
+          }
+
+          return true;
+        } else {
+          setError(result.error || "删除失败");
+          return false;
         }
-        
-        return true;
-      } else {
-        setError(result.error || "删除失败");
+      } catch (err) {
+        console.error("[useNotes] 删除失败:", err);
+        setError("删除失败");
         return false;
       }
-    } catch (err) {
-      console.error("[useNotes] 删除失败:", err);
-      setError("删除失败");
-      return false;
-    }
-  }, [refreshFileTree, selectedFile]);
+    },
+    [refreshFileTree, selectedFile]
+  );
 
   // 切换文件夹展开状态
   const toggleFolderExpand = useCallback((folderPath: string) => {
@@ -346,15 +375,18 @@ export function useNotes(): UseNotesReturn {
   }, []);
 
   // 更新文件树的展开状态
-  const updateTreeExpandState = useCallback((
-    nodes: FileTreeNode[]
-  ): FileTreeNode[] => {
-    return nodes.map((node) => ({
-      ...node,
-      expanded: expandedFolders.has(node.path),
-      children: node.children ? updateTreeExpandState(node.children) : undefined,
-    }));
-  }, [expandedFolders]);
+  const updateTreeExpandState = useCallback(
+    (nodes: FileTreeNode[]): FileTreeNode[] => {
+      return nodes.map((node) => ({
+        ...node,
+        expanded: expandedFolders.has(node.path),
+        children: node.children
+          ? updateTreeExpandState(node.children)
+          : undefined,
+      }));
+    },
+    [expandedFolders]
+  );
 
   return {
     hasRootPath,

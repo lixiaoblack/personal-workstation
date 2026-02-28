@@ -260,7 +260,7 @@ export function getFileTree(): FileTreeNode[] {
 export function createFolder(
   parentPath: string | null,
   folderName: string
-): { success: boolean; path?: string; error?: string } {
+): { success: boolean; path?: string; error?: string; exists?: boolean } {
   const rootPath = getRootPath();
 
   if (!rootPath) {
@@ -273,7 +273,7 @@ export function createFolder(
       : path.join(rootPath, folderName);
 
     if (fs.existsSync(folderPath)) {
-      return { success: false, error: "文件夹已存在" };
+      return { success: false, error: "文件夹已存在", exists: true };
     }
 
     fs.mkdirSync(folderPath, { recursive: false });
@@ -296,12 +296,83 @@ export function createFolder(
   }
 }
 
+// 强制创建文件夹（覆盖或创建副本）
+export function createFolderForce(
+  parentPath: string | null,
+  folderName: string,
+  mode: "overwrite" | "copy"
+): { success: boolean; path?: string; error?: string } {
+  const rootPath = getRootPath();
+
+  if (!rootPath) {
+    return { success: false, error: "未设置根目录" };
+  }
+
+  try {
+    const folderPath = parentPath
+      ? path.join(parentPath, folderName)
+      : path.join(rootPath, folderName);
+
+    if (mode === "overwrite") {
+      // 覆盖：先删除再创建
+      if (fs.existsSync(folderPath)) {
+        fs.rmSync(folderPath, { recursive: true, force: true });
+        // 从数据库删除
+        const db = getDatabase();
+        db.prepare("DELETE FROM notes_files WHERE path LIKE ? OR path = ?").run(
+          `${folderPath}/%`,
+          folderPath
+        );
+      }
+      fs.mkdirSync(folderPath, { recursive: false });
+    } else {
+      // 创建副本：生成新名称
+      let newPath = folderPath;
+      let counter = 1;
+      while (fs.existsSync(newPath)) {
+        newPath = parentPath
+          ? path.join(parentPath, `${folderName} (${counter})`)
+          : path.join(rootPath, `${folderName} (${counter})`);
+        counter++;
+      }
+      fs.mkdirSync(newPath, { recursive: false });
+
+      // 更新返回的路径
+      const finalFolderName = path.basename(newPath);
+      const db = getDatabase();
+      const now = Date.now();
+      db.prepare(
+        `INSERT INTO notes_files (path, name, parent_path, type, created_at, updated_at)
+         VALUES (?, ?, ?, 'folder', ?, ?)`
+      ).run(newPath, finalFolderName, parentPath, now, now);
+
+      return { success: true, path: newPath };
+    }
+
+    // 更新数据库
+    const db = getDatabase();
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO notes_files (path, name, parent_path, type, created_at, updated_at)
+       VALUES (?, ?, ?, 'folder', ?, ?)`
+    ).run(folderPath, folderName, parentPath, now, now);
+
+    return { success: true, path: folderPath };
+  } catch (error) {
+    console.error("[NotesService] 强制创建文件夹失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "创建失败",
+    };
+  }
+}
+
 // 创建笔记文件
 export function createNote(
   parentPath: string | null,
   fileName: string,
   content: string = ""
-): { success: boolean; path?: string; error?: string } {
+): { success: boolean; path?: string; error?: string; exists?: boolean } {
   const rootPath = getRootPath();
 
   if (!rootPath) {
@@ -316,7 +387,7 @@ export function createNote(
       : path.join(rootPath, finalName);
 
     if (fs.existsSync(filePath)) {
-      return { success: false, error: "文件已存在" };
+      return { success: false, error: "文件已存在", exists: true };
     }
 
     // 写入文件
@@ -336,6 +407,103 @@ export function createNote(
     return { success: true, path: filePath };
   } catch (error) {
     console.error("[NotesService] 创建笔记失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "创建失败",
+    };
+  }
+}
+
+// 强制创建笔记文件（覆盖或创建副本）
+export function createNoteForce(
+  parentPath: string | null,
+  fileName: string,
+  mode: "overwrite" | "copy",
+  content: string = ""
+): { success: boolean; path?: string; error?: string } {
+  const rootPath = getRootPath();
+
+  if (!rootPath) {
+    return { success: false, error: "未设置根目录" };
+  }
+
+  try {
+    // 确保文件名以 .md 结尾
+    let finalName = fileName.endsWith(".md") ? fileName : `${fileName}.md`;
+    let filePath = parentPath
+      ? path.join(parentPath, finalName)
+      : path.join(rootPath, finalName);
+
+    if (mode === "overwrite") {
+      // 覆盖：直接写入（会覆盖现有内容）
+      fs.writeFileSync(filePath, content, "utf-8");
+
+      // 更新或插入数据库记录
+      const db = getDatabase();
+      const now = Date.now();
+      const stat = fs.statSync(filePath);
+      const contentHash = calculateFileHash(filePath);
+
+      const existing = db
+        .prepare("SELECT id FROM notes_files WHERE path = ?")
+        .get(filePath);
+
+      if (existing) {
+        db.prepare(
+          "UPDATE notes_files SET content_hash = ?, file_mtime = ?, updated_at = ? WHERE path = ?"
+        ).run(contentHash, stat.mtimeMs, now, filePath);
+      } else {
+        db.prepare(
+          `INSERT INTO notes_files (path, name, parent_path, type, content_hash, file_mtime, created_at, updated_at)
+           VALUES (?, ?, ?, 'file', ?, ?, ?, ?)`
+        ).run(
+          filePath,
+          finalName,
+          parentPath,
+          contentHash,
+          stat.mtimeMs,
+          now,
+          now
+        );
+      }
+    } else {
+      // 创建副本：生成新名称
+      let counter = 1;
+      const baseName = finalName.replace(/\.md$/, "");
+      while (fs.existsSync(filePath)) {
+        finalName = `${baseName} (${counter}).md`;
+        filePath = parentPath
+          ? path.join(parentPath, finalName)
+          : path.join(rootPath, finalName);
+        counter++;
+      }
+
+      // 写入文件
+      fs.writeFileSync(filePath, content, "utf-8");
+
+      // 更新数据库
+      const db = getDatabase();
+      const now = Date.now();
+      const stat = fs.statSync(filePath);
+      const contentHash = calculateFileHash(filePath);
+
+      db.prepare(
+        `INSERT INTO notes_files (path, name, parent_path, type, content_hash, file_mtime, created_at, updated_at)
+         VALUES (?, ?, ?, 'file', ?, ?, ?, ?)`
+      ).run(
+        filePath,
+        finalName,
+        parentPath,
+        contentHash,
+        stat.mtimeMs,
+        now,
+        now
+      );
+    }
+
+    return { success: true, path: filePath };
+  } catch (error) {
+    console.error("[NotesService] 强制创建笔记失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "创建失败",
@@ -404,7 +572,15 @@ export function renameItem(
 ): { success: boolean; newPath?: string; error?: string } {
   try {
     const parentPath = path.dirname(oldPath);
-    const newPath = path.join(parentPath, newName);
+
+    // 检查是否是文件，如果是文件且用户没有输入 .md 后缀，自动添加
+    const isFile = fs.existsSync(oldPath) && fs.statSync(oldPath).isFile();
+    let finalName = newName;
+    if (isFile && !newName.endsWith(".md")) {
+      finalName = `${newName}.md`;
+    }
+
+    const newPath = path.join(parentPath, finalName);
 
     if (fs.existsSync(newPath)) {
       return { success: false, error: "目标名称已存在" };
@@ -419,7 +595,7 @@ export function renameItem(
     // 更新当前项
     db.prepare(
       "UPDATE notes_files SET name = ?, path = ?, updated_at = ? WHERE path = ?"
-    ).run(newName, newPath, now, oldPath);
+    ).run(finalName, newPath, now, oldPath);
 
     // 如果是文件夹，更新所有子项的路径
     const rows = db

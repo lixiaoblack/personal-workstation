@@ -874,11 +874,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 文件操作
   notesCreateFolder: (parentPath: string | null, folderName: string) =>
     ipcRenderer.invoke("notes:createFolder", parentPath, folderName),
+  notesCreateFolderForce: (
+    parentPath: string | null,
+    folderName: string,
+    mode: "overwrite" | "copy"
+  ) =>
+    ipcRenderer.invoke("notes:createFolderForce", parentPath, folderName, mode),
   notesCreateNote: (
     parentPath: string | null,
     fileName: string,
     content?: string
   ) => ipcRenderer.invoke("notes:createNote", parentPath, fileName, content),
+  notesCreateNoteForce: (
+    parentPath: string | null,
+    fileName: string,
+    mode: "overwrite" | "copy",
+    content?: string
+  ) =>
+    ipcRenderer.invoke(
+      "notes:createNoteForce",
+      parentPath,
+      fileName,
+      mode,
+      content
+    ),
   notesReadFile: (filePath: string) =>
     ipcRenderer.invoke("notes:readFile", filePath),
   notesSaveFile: (filePath: string, content: string) =>
@@ -1308,10 +1327,31 @@ export interface ElectronAPI {
   notesCreateFolder: (
     parentPath: string | null,
     folderName: string
+  ) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    exists?: boolean;
+  }>;
+  notesCreateFolderForce: (
+    parentPath: string | null,
+    folderName: string,
+    mode: "overwrite" | "copy"
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   notesCreateNote: (
     parentPath: string | null,
     fileName: string,
+    content?: string
+  ) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    exists?: boolean;
+  }>;
+  notesCreateNoteForce: (
+    parentPath: string | null,
+    fileName: string,
+    mode: "overwrite" | "copy",
     content?: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   notesReadFile: (

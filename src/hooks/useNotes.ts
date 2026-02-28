@@ -41,10 +41,24 @@ export interface UseNotesReturn extends NotesState {
   selectFile: (file: FileTreeNode) => Promise<void>;
   updateFileContent: (content: string) => void;
   saveFile: (content: string) => Promise<boolean>;
-  createFolder: (parentPath: string | null, name: string) => Promise<boolean>;
+  createFolder: (
+    parentPath: string | null,
+    name: string
+  ) => Promise<{ success: boolean; exists?: boolean }>;
+  createFolderForce: (
+    parentPath: string | null,
+    name: string,
+    mode: "overwrite" | "copy"
+  ) => Promise<boolean>;
   createNote: (
     parentPath: string | null,
     name: string,
+    content?: string
+  ) => Promise<{ success: boolean; exists?: boolean }>;
+  createNoteForce: (
+    parentPath: string | null,
+    name: string,
+    mode: "overwrite" | "copy",
     content?: string
   ) => Promise<boolean>;
   renameItem: (oldPath: string, newName: string) => Promise<boolean>;
@@ -93,20 +107,20 @@ export function useNotes(): UseNotesReturn {
     (filePath: string, rootPath: string): string[] => {
       const parents: string[] = [];
       let currentPath = filePath;
-      
+
       while (currentPath !== rootPath) {
         const lastSep = Math.max(
           currentPath.lastIndexOf("/"),
           currentPath.lastIndexOf("\\")
         );
         if (lastSep === -1) break;
-        
+
         currentPath = currentPath.substring(0, lastSep);
         if (currentPath && currentPath !== rootPath) {
           parents.push(currentPath);
         }
       }
-      
+
       return parents;
     },
     []
@@ -135,12 +149,13 @@ export function useNotes(): UseNotesReturn {
               const fileNode = findFileInTree(lastOpenedFile, tree);
               if (fileNode) {
                 // 自动选中上次打开的文件
-                const result =
-                  await window.electronAPI.notesReadFile(fileNode.path);
+                const result = await window.electronAPI.notesReadFile(
+                  fileNode.path
+                );
                 if (result.success && result.content !== undefined) {
                   setFileContent(result.content);
                   setSelectedFile(fileNode);
-                  
+
                   // 展开所有父文件夹
                   const parentFolders = getParentFolders(fileNode.path, root);
                   if (parentFolders.length > 0) {
@@ -306,11 +321,44 @@ export function useNotes(): UseNotesReturn {
 
   // 创建文件夹
   const createFolder = useCallback(
-    async (parentPath: string | null, name: string): Promise<boolean> => {
+    async (
+      parentPath: string | null,
+      name: string
+    ): Promise<{ success: boolean; exists?: boolean }> => {
       try {
         const result = await window.electronAPI.notesCreateFolder(
           parentPath,
           name
+        );
+
+        if (result.success) {
+          await refreshFileTree();
+          return { success: true };
+        } else {
+          setError(result.error || "创建文件夹失败");
+          return { success: false, exists: result.exists };
+        }
+      } catch (err) {
+        console.error("[useNotes] 创建文件夹失败:", err);
+        setError("创建文件夹失败");
+        return { success: false };
+      }
+    },
+    [refreshFileTree]
+  );
+
+  // 强制创建文件夹（覆盖或创建副本）
+  const createFolderForce = useCallback(
+    async (
+      parentPath: string | null,
+      name: string,
+      mode: "overwrite" | "copy"
+    ): Promise<boolean> => {
+      try {
+        const result = await window.electronAPI.notesCreateFolderForce(
+          parentPath,
+          name,
+          mode
         );
 
         if (result.success) {
@@ -321,7 +369,7 @@ export function useNotes(): UseNotesReturn {
           return false;
         }
       } catch (err) {
-        console.error("[useNotes] 创建文件夹失败:", err);
+        console.error("[useNotes] 强制创建文件夹失败:", err);
         setError("创建文件夹失败");
         return false;
       }
@@ -335,7 +383,7 @@ export function useNotes(): UseNotesReturn {
       parentPath: string | null,
       name: string,
       content?: string
-    ): Promise<boolean> => {
+    ): Promise<{ success: boolean; exists?: boolean }> => {
       try {
         const result = await window.electronAPI.notesCreateNote(
           parentPath,
@@ -357,13 +405,58 @@ export function useNotes(): UseNotesReturn {
             await selectFile(newNode);
           }
 
+          return { success: true };
+        } else {
+          setError(result.error || "创建笔记失败");
+          return { success: false, exists: result.exists };
+        }
+      } catch (err) {
+        console.error("[useNotes] 创建笔记失败:", err);
+        setError("创建笔记失败");
+        return { success: false };
+      }
+    },
+    [refreshFileTree, selectFile]
+  );
+
+  // 强制创建笔记（覆盖或创建副本）
+  const createNoteForce = useCallback(
+    async (
+      parentPath: string | null,
+      name: string,
+      mode: "overwrite" | "copy",
+      content?: string
+    ): Promise<boolean> => {
+      try {
+        const result = await window.electronAPI.notesCreateNoteForce(
+          parentPath,
+          name,
+          mode,
+          content
+        );
+
+        if (result.success) {
+          await refreshFileTree();
+
+          // 如果创建成功，自动选中新文件
+          if (result.path) {
+            const finalName = name.endsWith(".md") ? name : `${name}.md`;
+            const newNode: FileTreeNode = {
+              id: result.path,
+              name: finalName,
+              type: "file",
+              path: result.path,
+            };
+            await selectFile(newNode);
+          }
+
           return true;
         } else {
           setError(result.error || "创建笔记失败");
           return false;
         }
       } catch (err) {
-        console.error("[useNotes] 创建笔记失败:", err);
+        console.error("[useNotes] 强制创建笔记失败:", err);
         setError("创建笔记失败");
         return false;
       }
@@ -383,14 +476,50 @@ export function useNotes(): UseNotesReturn {
         if (result.success) {
           await refreshFileTree();
 
+          // 更新展开状态中的文件夹路径
+          setExpandedFolders((prev) => {
+            const newSet = new Set<string>();
+            prev.forEach((folderPath) => {
+              if (folderPath === oldPath) {
+                // 被重命名的文件夹，更新为新路径
+                newSet.add(result.newPath!);
+              } else if (
+                folderPath.startsWith(oldPath + "/") ||
+                folderPath.startsWith(oldPath + "\\")
+              ) {
+                // 子文件夹，更新路径前缀
+                newSet.add(folderPath.replace(oldPath, result.newPath!));
+              } else {
+                newSet.add(folderPath);
+              }
+            });
+            return newSet;
+          });
+
           // 如果重命名的是当前选中的文件，更新选中状态
           if (selectedFile?.path === oldPath && result.newPath) {
             setSelectedFile({
               ...selectedFile,
               id: result.newPath,
-              name: newName,
+              name: newName.endsWith(".md") ? newName : `${newName}.md`,
               path: result.newPath,
             });
+          } else if (selectedFile?.path && result.newPath) {
+            // 检查选中文件是否在被重命名的文件夹下
+            const sep = oldPath.includes("/") ? "/" : "\\";
+            if (selectedFile.path.startsWith(oldPath + sep)) {
+              const newFilePath = selectedFile.path.replace(
+                oldPath,
+                result.newPath
+              );
+              setSelectedFile({
+                ...selectedFile,
+                id: newFilePath,
+                path: newFilePath,
+              });
+              // 更新本地存储
+              localStorage.setItem(LAST_OPENED_FILE_KEY, newFilePath);
+            }
           }
 
           return true;
@@ -484,7 +613,9 @@ export function useNotes(): UseNotesReturn {
     updateFileContent,
     saveFile,
     createFolder,
+    createFolderForce,
     createNote,
+    createNoteForce,
     renameItem,
     deleteItem,
     toggleFolderExpand,

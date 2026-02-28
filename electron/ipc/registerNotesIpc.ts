@@ -69,11 +69,38 @@ export function registerNotesIpc(): void {
     }
   );
 
+  // 强制创建文件夹（覆盖或创建副本）
+  ipcMain.handle(
+    "notes:createFolderForce",
+    (
+      _event,
+      parentPath: string | null,
+      folderName: string,
+      mode: "overwrite" | "copy"
+    ) => {
+      return notesService.createFolderForce(parentPath, folderName, mode);
+    }
+  );
+
   // 创建笔记
   ipcMain.handle(
     "notes:createNote",
     (_event, parentPath: string | null, fileName: string, content?: string) => {
       return notesService.createNote(parentPath, fileName, content);
+    }
+  );
+
+  // 强制创建笔记（覆盖或创建副本）
+  ipcMain.handle(
+    "notes:createNoteForce",
+    (
+      _event,
+      parentPath: string | null,
+      fileName: string,
+      mode: "overwrite" | "copy",
+      content?: string
+    ) => {
+      return notesService.createNoteForce(parentPath, fileName, mode, content);
     }
   );
 

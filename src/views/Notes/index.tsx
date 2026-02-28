@@ -22,7 +22,9 @@ const Notes: React.FC = () => {
     updateFileContent,
     saveFile,
     createFolder,
+    createFolderForce,
     createNote,
+    createNoteForce,
     renameItem,
     deleteItem,
     toggleFolderExpand,
@@ -41,19 +43,6 @@ const Notes: React.FC = () => {
 
   return (
     <div className="notes flex  w-full h-full flex-col overflow-hidden">
-      {/* 错误提示 */}
-      {error && (
-        <div className="flex items-center justify-between bg-error/10 px-4 py-2 text-sm text-error">
-          <span>{error}</span>
-          <button
-            className="rounded px-2 py-0.5 hover:bg-error/20"
-            onClick={clearError}
-          >
-            <span className="material-symbols-outlined text-sm">close</span>
-          </button>
-        </div>
-      )}
-
       <main className="flex flex-1 overflow-hidden">
         {/* 左侧边栏 */}
         <NotesSidebar
@@ -62,7 +51,9 @@ const Notes: React.FC = () => {
           onSelectFile={selectFile}
           onToggleFolder={toggleFolderExpand}
           onCreateFolder={createFolder}
+          onCreateFolderForce={createFolderForce}
           onCreateNote={createNote}
+          onCreateNoteForce={createNoteForce}
           onRenameItem={renameItem}
           onDeleteItem={deleteItem}
           onRefresh={refreshFileTree}

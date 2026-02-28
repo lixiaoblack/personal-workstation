@@ -21,8 +21,24 @@ interface NotesSidebarProps {
   selectedFile: FileTreeNode | null;
   onSelectFile: (file: FileTreeNode) => void;
   onToggleFolder: (folderPath: string) => void;
-  onCreateFolder: (parentPath: string | null, name: string) => Promise<boolean>;
-  onCreateNote: (parentPath: string | null, name: string) => Promise<boolean>;
+  onCreateFolder: (
+    parentPath: string | null,
+    name: string
+  ) => Promise<{ success: boolean; exists?: boolean }>;
+  onCreateFolderForce: (
+    parentPath: string | null,
+    name: string,
+    mode: "overwrite" | "copy"
+  ) => Promise<boolean>;
+  onCreateNote: (
+    parentPath: string | null,
+    name: string
+  ) => Promise<{ success: boolean; exists?: boolean }>;
+  onCreateNoteForce: (
+    parentPath: string | null,
+    name: string,
+    mode: "overwrite" | "copy"
+  ) => Promise<boolean>;
   onRenameItem: (oldPath: string, newName: string) => Promise<boolean>;
   onDeleteItem: (itemPath: string) => Promise<boolean>;
   onRefresh: () => void;
@@ -264,13 +280,98 @@ const CreateDialog: React.FC<{
   );
 };
 
+// 文件已存在确认对话框
+const ExistsConfirmDialog: React.FC<{
+  type: "folder" | "note";
+  name: string;
+  onOverwrite: () => void;
+  onCreateCopy: () => void;
+  onCancel: () => void;
+}> = ({ type, name, onOverwrite, onCreateCopy, onCancel }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-96 rounded-xl border border-border bg-bg-secondary p-4 shadow-xl">
+        <h3 className="mb-2 text-lg font-semibold text-text-primary">
+          {type === "folder" ? "文件夹已存在" : "文件已存在"}
+        </h3>
+        <p className="mb-4 text-sm text-text-secondary">
+          {type === "folder"
+            ? `文件夹 "${name}" 已存在，请选择操作：`
+            : `文件 "${name}" 已存在，请选择操作：`}
+        </p>
+
+        <div className="flex flex-col gap-2">
+          <button
+            className="w-full rounded-lg bg-primary px-3 py-2 text-sm text-white hover:bg-primary-hover"
+            onClick={onOverwrite}
+          >
+            覆盖原有{type === "folder" ? "文件夹" : "文件"}
+          </button>
+          <button
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-bg-hover"
+            onClick={onCreateCopy}
+          >
+            创建副本
+          </button>
+          <button
+            className="w-full rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover"
+            onClick={onCancel}
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 删除确认对话框
+const DeleteConfirmDialog: React.FC<{
+  type: "folder" | "file";
+  name: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ type, name, onConfirm, onCancel }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-96 rounded-xl border border-border bg-bg-secondary p-4 shadow-xl">
+        <h3 className="mb-2 text-lg font-semibold text-text-primary">
+          确认删除
+        </h3>
+        <p className="mb-4 text-sm text-text-secondary">
+          {type === "folder"
+            ? `确定要删除文件夹 "${name}" 及其所有内容吗？此操作不可撤销。`
+            : `确定要删除文件 "${name}" 吗？此操作不可撤销。`}
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            className="rounded-lg px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-hover"
+            onClick={onCancel}
+          >
+            取消
+          </button>
+          <button
+            className="rounded-lg bg-error px-3 py-1.5 text-sm text-white hover:bg-error/80"
+            onClick={onConfirm}
+          >
+            删除
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const NotesSidebar: React.FC<NotesSidebarProps> = ({
   fileTree,
   selectedFile,
   onSelectFile,
   onToggleFolder,
   onCreateFolder,
+  onCreateFolderForce,
   onCreateNote,
+  onCreateNoteForce,
   onRenameItem,
   onDeleteItem,
   onRefresh,
@@ -289,8 +390,20 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
     parentPath: string | null;
   } | null>(null);
 
+  // 文件已存在确认对话框状态
+  const [existsDialog, setExistsDialog] = useState<{
+    type: "folder" | "note";
+    name: string;
+    parentPath: string | null;
+  } | null>(null);
+
   // 重命名对话框状态
   const [renameDialog, setRenameDialog] = useState<{
+    node: FileTreeNode;
+  } | null>(null);
+
+  // 删除确认对话框状态
+  const [deleteDialog, setDeleteDialog] = useState<{
     node: FileTreeNode;
   } | null>(null);
 
@@ -304,15 +417,79 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
   // 处理新建文件夹
   const handleCreateFolder = async (name: string) => {
     const parentPath = createDialog?.parentPath ?? null;
-    await onCreateFolder(parentPath, name);
-    setCreateDialog(null);
+    const result = await onCreateFolder(parentPath, name);
+
+    if (result.exists) {
+      // 文件夹已存在，显示确认对话框
+      setExistsDialog({ type: "folder", name, parentPath });
+    } else {
+      setCreateDialog(null);
+    }
   };
 
   // 处理新建笔记
   const handleCreateNote = async (name: string) => {
     const parentPath = createDialog?.parentPath ?? null;
-    await onCreateNote(parentPath, name);
-    setCreateDialog(null);
+    const result = await onCreateNote(parentPath, name);
+
+    if (result.exists) {
+      // 文件已存在，显示确认对话框
+      setExistsDialog({ type: "note", name, parentPath });
+    } else {
+      setCreateDialog(null);
+    }
+  };
+
+  // 处理覆盖已存在的文件夹
+  const handleOverwriteFolder = async () => {
+    if (existsDialog) {
+      await onCreateFolderForce(
+        existsDialog.parentPath,
+        existsDialog.name,
+        "overwrite"
+      );
+      setExistsDialog(null);
+      setCreateDialog(null);
+    }
+  };
+
+  // 处理创建文件夹副本
+  const handleCreateFolderCopy = async () => {
+    if (existsDialog) {
+      await onCreateFolderForce(
+        existsDialog.parentPath,
+        existsDialog.name,
+        "copy"
+      );
+      setExistsDialog(null);
+      setCreateDialog(null);
+    }
+  };
+
+  // 处理覆盖已存在的笔记
+  const handleOverwriteNote = async () => {
+    if (existsDialog) {
+      await onCreateNoteForce(
+        existsDialog.parentPath,
+        existsDialog.name,
+        "overwrite"
+      );
+      setExistsDialog(null);
+      setCreateDialog(null);
+    }
+  };
+
+  // 处理创建笔记副本
+  const handleCreateNoteCopy = async () => {
+    if (existsDialog) {
+      await onCreateNoteForce(
+        existsDialog.parentPath,
+        existsDialog.name,
+        "copy"
+      );
+      setExistsDialog(null);
+      setCreateDialog(null);
+    }
   };
 
   // 处理重命名
@@ -323,11 +500,19 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
     }
   };
 
-  // 处理删除
-  const handleDelete = async () => {
+  // 处理删除 - 显示确认对话框
+  const handleDelete = () => {
     if (contextMenu) {
-      await onDeleteItem(contextMenu.node.path);
+      setDeleteDialog({ node: contextMenu.node });
       setContextMenu(null);
+    }
+  };
+
+  // 确认删除
+  const handleConfirmDelete = async () => {
+    if (deleteDialog) {
+      await onDeleteItem(deleteDialog.node.path);
+      setDeleteDialog(null);
     }
   };
 
@@ -437,6 +622,38 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
           type="note"
           onConfirm={handleRename}
           onCancel={() => setRenameDialog(null)}
+        />
+      )}
+
+      {/* 文件已存在确认对话框 */}
+      {existsDialog && (
+        <ExistsConfirmDialog
+          type={existsDialog.type}
+          name={existsDialog.name}
+          onOverwrite={
+            existsDialog.type === "folder"
+              ? handleOverwriteFolder
+              : handleOverwriteNote
+          }
+          onCreateCopy={
+            existsDialog.type === "folder"
+              ? handleCreateFolderCopy
+              : handleCreateNoteCopy
+          }
+          onCancel={() => {
+            setExistsDialog(null);
+            setCreateDialog(null);
+          }}
+        />
+      )}
+
+      {/* 删除确认对话框 */}
+      {deleteDialog && (
+        <DeleteConfirmDialog
+          type={deleteDialog.node.type}
+          name={deleteDialog.node.name}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteDialog(null)}
         />
       )}
     </aside>

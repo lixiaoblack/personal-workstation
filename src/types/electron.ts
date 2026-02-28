@@ -635,10 +635,31 @@ export interface ElectronAPI {
   notesCreateFolder: (
     parentPath: string | null,
     folderName: string
+  ) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    exists?: boolean;
+  }>;
+  notesCreateFolderForce: (
+    parentPath: string | null,
+    folderName: string,
+    mode: "overwrite" | "copy"
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   notesCreateNote: (
     parentPath: string | null,
     fileName: string,
+    content?: string
+  ) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    exists?: boolean;
+  }>;
+  notesCreateNoteForce: (
+    parentPath: string | null,
+    fileName: string,
+    mode: "overwrite" | "copy",
     content?: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   notesReadFile: (

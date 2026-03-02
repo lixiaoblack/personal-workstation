@@ -1,6 +1,6 @@
 /**
  * Notes 笔记向量服务
- * 
+ *
  * 处理笔记向量索引、搜索等操作，通过 HTTP API 与 Python 服务通信
  */
 
@@ -29,7 +29,7 @@ export interface NotesStats {
 
 /**
  * 索引笔记到向量存储
- * 
+ *
  * @param filePath 文件路径
  * @param content Markdown 内容
  * @param metadata 额外元数据
@@ -54,7 +54,9 @@ export async function indexNote(
     });
 
     if (response.success) {
-      console.log(`[NotesVectorService] 索引笔记成功: ${filePath}, ${response.data} 块`);
+      console.log(
+        `[NotesVectorService] 索引笔记成功: ${filePath}, ${response.data} 块`
+      );
       return { success: true, chunkCount: response.data };
     } else {
       console.error("[NotesVectorService] 索引笔记失败:", response.error);
@@ -62,13 +64,16 @@ export async function indexNote(
     }
   } catch (error) {
     console.error("[NotesVectorService] 索引笔记异常:", error);
-    return { success: false, error: error instanceof Error ? error.message : "未知错误" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
   }
 }
 
 /**
  * 从向量存储删除笔记
- * 
+ *
  * @param filePath 文件路径
  * @returns 是否删除成功
  */
@@ -95,13 +100,16 @@ export async function deleteNoteFromVectorstore(
     }
   } catch (error) {
     console.error("[NotesVectorService] 删除笔记向量异常:", error);
-    return { success: false, error: error instanceof Error ? error.message : "未知错误" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
   }
 }
 
 /**
  * 语义搜索笔记
- * 
+ *
  * @param query 搜索查询
  * @param k 返回数量
  * @param filePathFilter 文件路径过滤
@@ -131,16 +139,23 @@ export async function searchNotes(
     }
   } catch (error) {
     console.error("[NotesVectorService] 搜索笔记异常:", error);
-    return { success: false, error: error instanceof Error ? error.message : "未知错误" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
   }
 }
 
 /**
  * 获取笔记索引统计
- * 
+ *
  * @returns 统计信息
  */
-export async function getNotesStats(): Promise<{ success: boolean; stats?: NotesStats; error?: string }> {
+export async function getNotesStats(): Promise<{
+  success: boolean;
+  stats?: NotesStats;
+  error?: string;
+}> {
   try {
     // 检查 Python 服务是否可用
     if (!(await checkPythonApiHealth())) {
@@ -156,13 +171,16 @@ export async function getNotesStats(): Promise<{ success: boolean; stats?: Notes
     }
   } catch (error) {
     console.error("[NotesVectorService] 获取笔记统计异常:", error);
-    return { success: false, error: error instanceof Error ? error.message : "未知错误" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
   }
 }
 
 /**
  * 全量索引所有笔记
- * 
+ *
  * @param rootPath 笔记根目录
  * @returns 索引的文件数量
  */
@@ -187,6 +205,9 @@ export async function indexAllNotes(
     }
   } catch (error) {
     console.error("[NotesVectorService] 全量索引异常:", error);
-    return { success: false, error: error instanceof Error ? error.message : "未知错误" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "未知错误",
+    };
   }
 }

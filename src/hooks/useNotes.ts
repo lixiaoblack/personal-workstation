@@ -33,6 +33,7 @@ export interface UseNotesReturn extends NotesState {
   // 文件夹操作
   selectRootFolder: () => Promise<boolean>;
   setRootPath: (path: string) => Promise<void>;
+  changeFolder: () => Promise<boolean>;
 
   // 文件树操作
   refreshFileTree: () => Promise<void>;
@@ -602,6 +603,64 @@ export function useNotes(): UseNotesReturn {
     }
   }, [rootPath]);
 
+  // 切换目录
+  const changeFolder = useCallback(async (): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 清除当前选中状态
+      setSelectedFile(null);
+      setFileContent("");
+      localStorage.removeItem(LAST_OPENED_FILE_KEY);
+
+      // 弹出文件夹选择对话框
+      const result = await window.electronAPI.notesSelectFolder();
+
+      if (result.canceled || result.filePaths.length === 0) {
+        setLoading(false);
+        return false;
+      }
+
+      const selectedPath = result.filePaths[0];
+
+      // 验证文件夹
+      const validation =
+        await window.electronAPI.notesValidateFolder(selectedPath);
+      if (!validation.valid) {
+        setError(validation.error || "文件夹验证失败");
+        setLoading(false);
+        return false;
+      }
+
+      // 设置新根目录
+      await window.electronAPI.notesSetRootPath(selectedPath);
+      setRootPathState(selectedPath);
+      setHasRootPath(true);
+
+      // 扫描新文件夹
+      const scanResult = await window.electronAPI.notesScanFolder(selectedPath);
+      if (!scanResult.success) {
+        setError(scanResult.error || "扫描文件夹失败");
+        setLoading(false);
+        return false;
+      }
+
+      // 获取新文件树
+      const tree = await window.electronAPI.notesGetFileTree();
+      setFileTree(tree);
+      setExpandedFolders(new Set());
+
+      setLoading(false);
+      return true;
+    } catch (err) {
+      console.error("[useNotes] 切换目录失败:", err);
+      setError("切换目录失败");
+      setLoading(false);
+      return false;
+    }
+  }, []);
+
   // 更新文件树的展开状态
   const updateTreeExpandState = useCallback(
     (nodes: FileTreeNode[]): FileTreeNode[] => {
@@ -626,6 +685,7 @@ export function useNotes(): UseNotesReturn {
     error,
     selectRootFolder,
     setRootPath,
+    changeFolder,
     refreshFileTree,
     selectFile,
     updateFileContent,

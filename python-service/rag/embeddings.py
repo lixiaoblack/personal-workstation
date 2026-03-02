@@ -324,7 +324,8 @@ def get_embedding_service(
                 config = model_router.get_default_embedding_config()
 
                 if config:
-                    _global_embedding_service = init_embedding_service_from_config(config)
+                    _global_embedding_service = init_embedding_service_from_config(
+                        config)
                     logger.info(
                         f"[Embeddings] 自动初始化嵌入服务: {config.provider.value} / {config.model_id}"
                     )

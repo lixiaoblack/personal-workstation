@@ -75,16 +75,19 @@ class SearchNotesTool(BaseTool):
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
                             asyncio.run,
-                            direct_search_notes(query, k=limit, file_path_filter=file_path_filter)
+                            direct_search_notes(
+                                query, k=limit, file_path_filter=file_path_filter)
                         )
                         results = future.result(timeout=30)
                 else:
                     results = loop.run_until_complete(
-                        direct_search_notes(query, k=limit, file_path_filter=file_path_filter)
+                        direct_search_notes(
+                            query, k=limit, file_path_filter=file_path_filter)
                     )
             except RuntimeError:
                 results = asyncio.run(
-                    direct_search_notes(query, k=limit, file_path_filter=file_path_filter)
+                    direct_search_notes(
+                        query, k=limit, file_path_filter=file_path_filter)
                 )
 
             if not results:
@@ -95,18 +98,19 @@ class SearchNotesTool(BaseTool):
 
             for note in results:
                 score_str = f"(相关度: {note.get('score', 0):.2f})"
-                
-                lines.append(f"📄 **{note.get('file_name', '未知文件')}** {score_str}")
-                
+
+                lines.append(
+                    f"📄 **{note.get('file_name', '未知文件')}** {score_str}")
+
                 if note.get('heading'):
                     lines.append(f"   章节：{note['heading']}")
-                
+
                 # 显示内容片段（截取前 200 字符）
                 content = note.get('content', '')
                 if len(content) > 200:
                     content = content[:200] + "..."
                 lines.append(f"   内容：{content}")
-                
+
                 # 添加文件路径（可点击）
                 lines.append(f"   路径：`{note.get('file_path', '')}`")
                 lines.append("")
@@ -141,18 +145,19 @@ class SearchNotesTool(BaseTool):
 
             for note in results:
                 score_str = f"(相关度: {note.get('score', 0):.2f})"
-                
-                lines.append(f"📄 **{note.get('file_name', '未知文件')}** {score_str}")
-                
+
+                lines.append(
+                    f"📄 **{note.get('file_name', '未知文件')}** {score_str}")
+
                 if note.get('heading'):
                     lines.append(f"   章节：{note['heading']}")
-                
+
                 # 显示内容片段（截取前 200 字符）
                 content = note.get('content', '')
                 if len(content) > 200:
                     content = content[:200] + "..."
                 lines.append(f"   内容：{content}")
-                
+
                 # 添加文件路径
                 lines.append(f"   路径：`{note.get('file_path', '')}`")
                 lines.append("")

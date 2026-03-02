@@ -101,7 +101,8 @@ class ModelRouter:
             # 预创建 LLM 模型实例
             try:
                 self._models[model_id] = self.create_chat_model(config)
-                logger.info(f"已注册 LLM 模型: {config.provider} / {config.model_id}")
+                logger.info(
+                    f"已注册 LLM 模型: {config.provider} / {config.model_id}")
             except Exception as e:
                 logger.error(f"创建模型失败: {e}")
                 raise

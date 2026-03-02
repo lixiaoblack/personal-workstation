@@ -29,6 +29,7 @@ const Notes: React.FC = () => {
     toggleFolderExpand,
     refreshFileTree,
     rebuildIndex,
+    changeFolder,
   } = useNotes();
 
   // 未设置根目录时显示选择弹窗
@@ -57,6 +58,7 @@ const Notes: React.FC = () => {
           onDeleteItem={deleteItem}
           onRefresh={refreshFileTree}
           onRebuildIndex={rebuildIndex}
+          onChangeFolder={changeFolder}
           loading={loading}
         />
 

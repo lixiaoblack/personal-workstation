@@ -43,6 +43,7 @@ interface NotesSidebarProps {
   onDeleteItem: (itemPath: string) => Promise<boolean>;
   onRefresh: () => void;
   onRebuildIndex?: () => Promise<void>;
+  onChangeFolder?: () => Promise<boolean>;
   loading: boolean;
 }
 
@@ -377,6 +378,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
   onDeleteItem,
   onRefresh,
   onRebuildIndex,
+  onChangeFolder,
   loading,
 }) => {
   // 右键菜单状态
@@ -561,6 +563,18 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
                 className={`material-symbols-outlined text-sm ${isRebuilding ? "animate-spin" : ""}`}
               >
                 sync
+              </span>
+            </button>
+          )}
+          {onChangeFolder && (
+            <button
+              className="rounded p-1 text-text-tertiary hover:bg-bg-hover hover:text-text-primary"
+              onClick={onChangeFolder}
+              disabled={loading}
+              title="切换目录"
+            >
+              <span className="material-symbols-outlined text-sm">
+                folder_open
               </span>
             </button>
           )}

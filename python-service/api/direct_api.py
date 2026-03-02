@@ -742,4 +742,3 @@ async def direct_get_notes_stats() -> Dict[str, Any]:
             "indexed": False,
             "error": str(e)
         }
-

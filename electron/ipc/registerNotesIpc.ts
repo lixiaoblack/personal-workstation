@@ -94,7 +94,12 @@ export function registerNotesIpc(): void {
   // 创建笔记
   ipcMain.handle(
     "notes:createNote",
-    async (_event, parentPath: string | null, fileName: string, content?: string) => {
+    async (
+      _event,
+      parentPath: string | null,
+      fileName: string,
+      content?: string
+    ) => {
       const result = notesService.createNote(parentPath, fileName, content);
       // 创建笔记成功后，索引到向量存储
       if (result.success && result.path && content) {
@@ -114,7 +119,12 @@ export function registerNotesIpc(): void {
       mode: "overwrite" | "copy",
       content?: string
     ) => {
-      const result = notesService.createNoteForce(parentPath, fileName, mode, content);
+      const result = notesService.createNoteForce(
+        parentPath,
+        fileName,
+        mode,
+        content
+      );
       // 创建笔记成功后，索引到向量存储
       if (result.success && result.path && content) {
         await notesVectorService.indexNote(result.path, content);
@@ -154,7 +164,10 @@ export function registerNotesIpc(): void {
         try {
           const fileResult = notesService.readFile(result.newPath);
           if (fileResult.success && fileResult.content) {
-            await notesVectorService.indexNote(result.newPath, fileResult.content);
+            await notesVectorService.indexNote(
+              result.newPath,
+              fileResult.content
+            );
           }
         } catch (err) {
           console.error("[NotesIpc] 重命名后重新索引失败:", err);
@@ -182,9 +195,12 @@ export function registerNotesIpc(): void {
   // ========== 向量索引操作 ==========
 
   // 索引单个笔记
-  ipcMain.handle("notes:indexNote", async (_event, filePath: string, content: string) => {
-    return await notesVectorService.indexNote(filePath, content);
-  });
+  ipcMain.handle(
+    "notes:indexNote",
+    async (_event, filePath: string, content: string) => {
+      return await notesVectorService.indexNote(filePath, content);
+    }
+  );
 
   // 全量索引笔记
   ipcMain.handle("notes:indexAllNotes", async (_event, rootPath: string) => {

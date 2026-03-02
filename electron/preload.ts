@@ -1022,8 +1022,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("notes:indexNote", filePath, content),
   notesIndexAllNotes: (rootPath: string) =>
     ipcRenderer.invoke("notes:indexAllNotes", rootPath),
-  notesGetIndexStats: () =>
-    ipcRenderer.invoke("notes:getIndexStats"),
+  notesGetIndexStats: () => ipcRenderer.invoke("notes:getIndexStats"),
 
   // ========== Todo 待办模块 ==========
 
@@ -1599,7 +1598,12 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; chunkCount?: number; error?: string }>;
   notesIndexAllNotes: (
     rootPath: string
-  ) => Promise<{ success: boolean; indexedCount?: number; totalFiles?: number; error?: string }>;
+  ) => Promise<{
+    success: boolean;
+    indexedCount?: number;
+    totalFiles?: number;
+    error?: string;
+  }>;
   notesGetIndexStats: () => Promise<{
     success: boolean;
     stats?: {

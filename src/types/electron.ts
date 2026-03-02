@@ -687,7 +687,12 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; chunkCount?: number; error?: string }>;
   notesIndexAllNotes: (
     rootPath: string
-  ) => Promise<{ success: boolean; indexedCount?: number; totalFiles?: number; error?: string }>;
+  ) => Promise<{
+    success: boolean;
+    indexedCount?: number;
+    totalFiles?: number;
+    error?: string;
+  }>;
   notesGetIndexStats: () => Promise<{
     success: boolean;
     stats?: {

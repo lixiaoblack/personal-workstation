@@ -47,7 +47,7 @@ class DeleteNoteRequest(BaseModel):
 async def index_note(request: IndexNoteRequest):
     """
     索引笔记到向量存储
-    
+
     将 Markdown 内容分块并存储到向量数据库，    """
     try:
         chunk_count = await direct_index_note(
@@ -55,7 +55,7 @@ async def index_note(request: IndexNoteRequest):
             content=request.content,
             metadata=request.metadata
         )
-        
+
         return {
             "success": True,
             "chunk_count": chunk_count
@@ -114,39 +114,40 @@ async def get_stats():
 async def index_all_notes(request: dict):
     """
     全量索引笔记目录
-    
+
     遍历指定目录下的所有 .md 文件并索引
     """
     root_path = request.get("root_path")
     if not root_path or not os.path.isdir(root_path):
         raise HTTPException(status_code=400, detail="根目录不存在")
-    
+
     try:
         # 查找所有 .md 文件
-        md_files = glob.glob(os.path.join(root_path, "**/*.md"), recursive=True)
-        
+        md_files = glob.glob(os.path.join(
+            root_path, "**/*.md"), recursive=True)
+
         indexed_count = 0
         for file_path in md_files:
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                
+
                 # 获取文件修改时间
                 stat = os.stat(file_path)
                 modified_at = int(stat.st_mtime * 1000)
-                
+
                 chunk_count = await direct_index_note(
                     file_path=file_path,
                     content=content,
                     metadata={"modified_at": modified_at}
                 )
-                
+
                 if chunk_count > 0:
                     indexed_count += 1
             except Exception as e:
                 print(f"索引文件失败 {file_path}: {e}")
                 continue
-        
+
         return {
             "success": True,
             "indexed_count": indexed_count,

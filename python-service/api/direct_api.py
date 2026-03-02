@@ -295,3 +295,240 @@ def direct_list_knowledge_documents(knowledge_id: str) -> List[Dict[str, Any]]:
             })
 
         return documents
+
+
+# ==================== Todo 待办直接调用 ====================
+
+def direct_list_todo_categories() -> List[Dict[str, Any]]:
+    """直接调用：获取待办分类列表"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, name, description, color, icon, sort_order,
+                   float_window_enabled, float_window_x, float_window_y,
+                   float_window_width, float_window_height, float_window_always_on_top,
+                   created_at, updated_at
+            FROM todo_categories
+            ORDER BY sort_order ASC, created_at ASC
+        """)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+def direct_get_todo_category(category_id: int) -> Optional[Dict[str, Any]]:
+    """直接调用：获取单个待办分类"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, name, description, color, icon, sort_order,
+                   float_window_enabled, float_window_x, float_window_y,
+                   float_window_width, float_window_height, float_window_always_on_top,
+                   created_at, updated_at
+            FROM todo_categories WHERE id = ?
+        """, (category_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def direct_create_todo(
+    title: str,
+    description: Optional[str] = None,
+    category_id: Optional[int] = None,
+    priority: str = "medium",
+    status: str = "pending",
+    due_date: Optional[int] = None,
+    reminder_time: Optional[int] = None,
+    repeat_type: str = "none",
+    repeat_config: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    直接调用：创建待办事项
+
+    Args:
+        title: 待办标题（必填）
+        description: 待办描述
+        category_id: 分类 ID
+        priority: 优先级 (low/medium/high/urgent)
+        status: 状态 (pending/in_progress/completed/cancelled)
+        due_date: 截止时间（毫秒时间戳）
+        reminder_time: 提醒时间（毫秒时间戳）
+        repeat_type: 重复类型 (none/daily/weekly/monthly/yearly)
+        repeat_config: 重复配置
+        tags: 标签列表
+
+    Returns:
+        创建的待办事项
+    """
+    now = int(time.time() * 1000)
+
+    with get_db() as conn:
+        cursor = conn.execute("""
+            INSERT INTO todos 
+            (title, description, category_id, priority, status, due_date, 
+             reminder_time, repeat_type, repeat_config, tags, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            title,
+            description,
+            category_id,
+            priority,
+            status,
+            due_date,
+            reminder_time,
+            repeat_type,
+            json.dumps(repeat_config) if repeat_config else None,
+            json.dumps(tags) if tags else None,
+            now,
+            now
+        ))
+        todo_id = cursor.lastrowid
+        conn.commit()
+
+        # 返回创建的待办
+        return direct_get_todo(todo_id)
+
+
+def direct_get_todo(todo_id: int) -> Optional[Dict[str, Any]]:
+    """直接调用：获取单个待办事项"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, title, description, category_id, priority, status,
+                   due_date, reminder_time, repeat_type, repeat_config,
+                   parent_id, tags, sort_order, completed_at, created_at, updated_at
+            FROM todos WHERE id = ?
+        """, (todo_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        todo = dict(row)
+        # 解析 JSON 字段
+        if todo.get("repeat_config"):
+            try:
+                todo["repeat_config"] = json.loads(todo["repeat_config"])
+            except:
+                todo["repeat_config"] = None
+        if todo.get("tags"):
+            try:
+                todo["tags"] = json.loads(todo["tags"])
+            except:
+                todo["tags"] = []
+
+        return todo
+
+
+def direct_list_todos(
+    category_id: Optional[int] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    limit: int = 50
+) -> List[Dict[str, Any]]:
+    """
+    直接调用：获取待办事项列表
+
+    Args:
+        category_id: 分类 ID 过滤
+        status: 状态过滤
+        priority: 优先级过滤
+        limit: 返回数量限制
+
+    Returns:
+        待办事项列表
+    """
+    with get_db() as conn:
+        query = """
+            SELECT id, title, description, category_id, priority, status,
+                   due_date, reminder_time, repeat_type, repeat_config,
+                   parent_id, tags, sort_order, completed_at, created_at, updated_at
+            FROM todos WHERE 1=1
+        """
+        params = []
+
+        if category_id is not None:
+            query += " AND category_id = ?"
+            params.append(category_id)
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+        if priority:
+            query += " AND priority = ?"
+            params.append(priority)
+
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor = conn.execute(query, params)
+        rows = cursor.fetchall()
+
+        todos = []
+        for row in rows:
+            todo = dict(row)
+            if todo.get("repeat_config"):
+                try:
+                    todo["repeat_config"] = json.loads(todo["repeat_config"])
+                except:
+                    todo["repeat_config"] = None
+            if todo.get("tags"):
+                try:
+                    todo["tags"] = json.loads(todo["tags"])
+                except:
+                    todo["tags"] = []
+            todos.append(todo)
+
+        return todos
+
+
+def direct_get_today_todos() -> List[Dict[str, Any]]:
+    """直接调用：获取今日待办（未完成的今日截止或逾期的）"""
+    import datetime
+
+    # 获取今天开始和结束的时间戳
+    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = int((today + datetime.timedelta(days=1)).timestamp() * 1000)
+
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, title, description, category_id, priority, status,
+                   due_date, reminder_time, repeat_type, repeat_config,
+                   parent_id, tags, sort_order, completed_at, created_at, updated_at
+            FROM todos 
+            WHERE status != 'completed' 
+            AND status != 'cancelled'
+            AND due_date IS NOT NULL
+            AND due_date < ?
+            ORDER BY due_date ASC, priority DESC
+        """, (today_end,))
+        rows = cursor.fetchall()
+
+        todos = []
+        for row in rows:
+            todo = dict(row)
+            if todo.get("repeat_config"):
+                try:
+                    todo["repeat_config"] = json.loads(todo["repeat_config"])
+                except:
+                    todo["repeat_config"] = None
+            if todo.get("tags"):
+                try:
+                    todo["tags"] = json.loads(todo["tags"])
+                except:
+                    todo["tags"] = []
+            todos.append(todo)
+
+        return todos
+
+
+def direct_update_todo_status(todo_id: int, status: str) -> Optional[Dict[str, Any]]:
+    """直接调用：更新待办状态"""
+    now = int(time.time() * 1000)
+
+    with get_db() as conn:
+        # 如果是完成状态，记录完成时间
+        completed_at = now if status == "completed" else None
+
+        conn.execute("""
+            UPDATE todos SET status = ?, completed_at = ?, updated_at = ?
+            WHERE id = ?
+        """, (status, completed_at, now, todo_id))
+        conn.commit()
+
+        return direct_get_todo(todo_id)

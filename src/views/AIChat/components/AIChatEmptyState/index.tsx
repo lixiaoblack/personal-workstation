@@ -31,21 +31,46 @@ const AIChatEmptyState: React.FC<AIChatEmptyStateProps> = memo(
             : "请先在设置中配置模型，才能开始对话。"}
         </p>
         {llmModels.length > 0 && (
-          <div className="flex flex-wrap gap-2 justify-center">
-            {[
-              "帮我写一段 Python 代码",
-              "解释什么是闭包",
-              "如何优化 SQL 查询",
-            ].map((suggestion) => (
-              <button
-                key={suggestion}
-                className="px-4 py-2 rounded-full border border-border hover:border-primary hover:text-primary text-text-tertiary text-sm transition-all"
-                onClick={() => onSelectSuggestion(suggestion)}
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
+          <>
+            {/* 快捷提示 */}
+            <div className="flex flex-wrap gap-2 justify-center mb-4">
+              {[
+                "帮我写一段 Python 代码",
+                "解释什么是闭包",
+                "如何优化 SQL 查询",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  className="px-4 py-2 rounded-full border border-border hover:border-primary hover:text-primary text-text-tertiary text-sm transition-all"
+                  onClick={() => onSelectSuggestion(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+            {/* Todo 快捷入口 */}
+            <div className="mt-4 pt-4 border-t border-border w-full max-w-md">
+              <p className="text-xs text-text-tertiary mb-3 flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">checklist</span>
+                待办快捷入口
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  "添加待办：明天下午3点开会",
+                  "查看今日待办",
+                  "添加一个高优先级待办：完成项目报告",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    className="px-3 py-1.5 rounded-full bg-tertiary hover:bg-primary/10 text-text-secondary text-xs transition-all flex items-center gap-1"
+                    onClick={() => onSelectSuggestion(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
         {llmModels.length === 0 && (
           <button

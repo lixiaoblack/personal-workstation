@@ -896,6 +896,14 @@ def init_default_tools():
     global_tool_registry.register(EchoTool())
     global_tool_registry.register(FileReadTool())  # 文件读取工具
 
+    # 注册 Todo 工具
+    try:
+        from .todo_tool import register_todo_tools
+        todo_count = register_todo_tools()
+        logger.info(f"已注册 {todo_count} 个 Todo 工具")
+    except Exception as e:
+        logger.warning(f"注册 Todo 工具失败: {e}")
+
     logger.info(f"已注册 {len(global_tool_registry.list_tools())} 个默认工具")
 
 

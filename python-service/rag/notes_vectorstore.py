@@ -252,14 +252,23 @@ class NotesVectorStore:
         self._ensure_embedding_service()
 
         expected_dim = self._embedding_service.dimension
+        logger.info(f"[NotesVectorStore] 期望向量维度: {expected_dim}")
 
         if self._vectorstore.collection_exists(NOTES_COLLECTION_ID):
             # 检查现有集合的维度是否匹配
             existing_dim = self._vectorstore.get_collection_dimension(NOTES_COLLECTION_ID)
+            logger.info(f"[NotesVectorStore] 现有集合维度: {existing_dim}")
             if existing_dim is not None and existing_dim != expected_dim:
                 logger.warning(
                     f"[NotesVectorStore] 集合维度不匹配: 现有={existing_dim}, 期望={expected_dim}，删除旧集合"
                 )
+                self._vectorstore.delete_collection(NOTES_COLLECTION_ID)
+                # 清理表缓存，确保重新打开
+                if NOTES_COLLECTION_ID in self._vectorstore._tables:
+                    del self._vectorstore._tables[NOTES_COLLECTION_ID]
+            elif existing_dim is None:
+                # 无法获取维度，可能是空表或损坏，删除重建
+                logger.warning(f"[NotesVectorStore] 无法获取现有集合维度，删除重建")
                 self._vectorstore.delete_collection(NOTES_COLLECTION_ID)
 
         if not self._vectorstore.collection_exists(NOTES_COLLECTION_ID):

@@ -196,23 +196,29 @@ class LanceDBVectorStore:
         """
         # 先从缓存获取
         if knowledge_id in self._vector_dims:
+            logger.debug(f"从缓存获取维度: {knowledge_id} = {self._vector_dims[knowledge_id]}")
             return self._vector_dims[knowledge_id]
 
         # 从表中获取
         try:
             if not self.collection_exists(knowledge_id):
+                logger.debug(f"集合不存在: {knowledge_id}")
                 return None
 
             table = self._get_table(knowledge_id)
             # 获取表的一行数据来检查向量维度
             df = table.to_pandas()
+            logger.debug(f"获取集合数据: {knowledge_id}, 行数={len(df) if df is not None else 0}, 列={list(df.columns) if df is not None else []}")
+            
             if df is not None and len(df) > 0 and "vector" in df.columns:
                 vector = df.iloc[0]["vector"]
                 dim = len(vector) if vector is not None else None
+                logger.info(f"从数据获取维度: {knowledge_id} = {dim}")
                 if dim:
                     # 缓存维度
                     self._vector_dims[knowledge_id] = dim
                 return dim
+            logger.debug(f"无法获取维度: df={df is not None}, len={len(df) if df is not None else 0}, has_vector={'vector' in df.columns if df is not None else False}")
             return None
         except Exception as e:
             logger.warning(f"获取知识库维度失败: {knowledge_id}, 错误: {e}")

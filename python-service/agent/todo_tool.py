@@ -601,7 +601,7 @@ class AskCategoryTool(BaseTool):
                 ask_handler=ask_handler,
                 ask_type=AskType.SELECT,
                 title=ask_title,
-                description="请选择一个分类，或选择"不需要分类"直接创建",
+                description='请选择一个分类，或选择"不需要分类"直接创建',
                 options=options,
                 timeout=60000,  # 60秒超时
             )

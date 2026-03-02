@@ -16,7 +16,6 @@ const Notes: React.FC = () => {
     selectedFile,
     fileContent,
     loading,
-    error,
     selectRootFolder,
     selectFile,
     updateFileContent,
@@ -29,7 +28,7 @@ const Notes: React.FC = () => {
     deleteItem,
     toggleFolderExpand,
     refreshFileTree,
-    clearError,
+    rebuildIndex,
   } = useNotes();
 
   // 未设置根目录时显示选择弹窗
@@ -57,6 +56,7 @@ const Notes: React.FC = () => {
           onRenameItem={renameItem}
           onDeleteItem={deleteItem}
           onRefresh={refreshFileTree}
+          onRebuildIndex={rebuildIndex}
           loading={loading}
         />
 

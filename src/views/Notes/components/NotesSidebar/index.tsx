@@ -42,6 +42,7 @@ interface NotesSidebarProps {
   onRenameItem: (oldPath: string, newName: string) => Promise<boolean>;
   onDeleteItem: (itemPath: string) => Promise<boolean>;
   onRefresh: () => void;
+  onRebuildIndex?: () => Promise<void>;
   loading: boolean;
 }
 
@@ -375,6 +376,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
   onRenameItem,
   onDeleteItem,
   onRefresh,
+  onRebuildIndex,
   loading,
 }) => {
   // 右键菜单状态
@@ -383,6 +385,9 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
     y: number;
     node: FileTreeNode;
   } | null>(null);
+
+  // 索引重建状态
+  const [isRebuilding, setIsRebuilding] = useState(false);
 
   // 新建对话框状态
   const [createDialog, setCreateDialog] = useState<{
@@ -516,6 +521,17 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
     }
   };
 
+  // 处理重建索引
+  const handleRebuildIndex = async () => {
+    if (!onRebuildIndex || isRebuilding) return;
+    setIsRebuilding(true);
+    try {
+      await onRebuildIndex();
+    } finally {
+      setIsRebuilding(false);
+    }
+  };
+
   return (
     <aside className="flex h-full w-64 flex-shrink-0 flex-col border-r border-border bg-bg-secondary">
       {/* 顶部操作栏 */}
@@ -534,6 +550,20 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
               refresh
             </span>
           </button>
+          {onRebuildIndex && (
+            <button
+              className="rounded p-1 text-text-tertiary hover:bg-bg-hover hover:text-text-primary"
+              onClick={handleRebuildIndex}
+              disabled={isRebuilding}
+              title="重建索引"
+            >
+              <span
+                className={`material-symbols-outlined text-sm ${isRebuilding ? "animate-spin" : ""}`}
+              >
+                sync
+              </span>
+            </button>
+          )}
           <button
             className="rounded p-1 text-text-tertiary hover:bg-bg-hover hover:text-text-primary"
             onClick={() =>

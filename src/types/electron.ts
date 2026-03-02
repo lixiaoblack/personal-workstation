@@ -680,6 +680,25 @@ export interface ElectronAPI {
     filePath: string
   ) => Promise<{ success: boolean; file?: NotesFileMetadata; error?: string }>;
 
+  // Notes 向量索引
+  notesIndexNote: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; chunkCount?: number; error?: string }>;
+  notesIndexAllNotes: (
+    rootPath: string
+  ) => Promise<{ success: boolean; indexedCount?: number; totalFiles?: number; error?: string }>;
+  notesGetIndexStats: () => Promise<{
+    success: boolean;
+    stats?: {
+      total_chunks: number;
+      total_files: number;
+      indexed: boolean;
+      error?: string;
+    };
+    error?: string;
+  }>;
+
   // ========== Todo 待办模块 ==========
 
   // 分类管理

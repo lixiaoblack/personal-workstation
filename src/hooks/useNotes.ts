@@ -67,6 +67,9 @@ export interface UseNotesReturn extends NotesState {
   // 展开/收起
   toggleFolderExpand: (folderPath: string) => void;
 
+  // 索引操作
+  rebuildIndex: () => Promise<void>;
+
   // 清除错误
   clearError: () => void;
 }
@@ -584,6 +587,21 @@ export function useNotes(): UseNotesReturn {
     setError(null);
   }, []);
 
+  // 重建索引
+  const rebuildIndex = useCallback(async () => {
+    if (!rootPath) return;
+    try {
+      setLoading(true);
+      const result = await window.electronAPI.notesIndexAllNotes(rootPath);
+      console.log("[useNotes] 重建索引完成:", result);
+    } catch (err) {
+      console.error("[useNotes] 重建索引失败:", err);
+      setError("重建索引失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [rootPath]);
+
   // 更新文件树的展开状态
   const updateTreeExpandState = useCallback(
     (nodes: FileTreeNode[]): FileTreeNode[] => {
@@ -619,6 +637,7 @@ export function useNotes(): UseNotesReturn {
     renameItem,
     deleteItem,
     toggleFolderExpand,
+    rebuildIndex,
     clearError,
   };
 }

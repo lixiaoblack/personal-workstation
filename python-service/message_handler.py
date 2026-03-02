@@ -29,6 +29,11 @@ class MessageHandler:
         self.send_callback = send_callback
         # 初始化 Ask 模块
         self.ask_handler = AskHandler(send_callback=send_callback)
+        
+        # 设置 AskHandler 引用到 Todo 工具模块
+        from agent.todo_tool import set_ask_handler
+        set_ask_handler(self.ask_handler)
+        
         self.handlers = {
             "ping": self._handle_ping,
             "chat_message": self._handle_chat_message,

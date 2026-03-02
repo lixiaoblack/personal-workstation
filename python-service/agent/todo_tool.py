@@ -8,11 +8,13 @@ Todo 待办工具
 2. ListCategoriesTool - 列出所有分类
 3. ListTodosTool - 列出待办事项
 4. CompleteTodoTool - 完成待办事项
+5. AskCategoryTool - 使用 Ask 模块让用户选择分类
 """
 
 from typing import Optional, List, Dict, Any
 from pydantic import Field
 import logging
+import asyncio
 
 from .tools import BaseTool, ToolSchema, global_tool_registry
 from api.direct_api import (
@@ -24,6 +26,21 @@ from api.direct_api import (
 )
 
 logger = logging.getLogger(__name__)
+
+# 全局 AskHandler 引用，由 MessageHandler 设置
+_ask_handler = None
+
+
+def set_ask_handler(handler):
+    """设置全局 AskHandler 引用"""
+    global _ask_handler
+    _ask_handler = handler
+    logger.info("[TodoTool] 已设置 AskHandler 引用")
+
+
+def get_ask_handler():
+    """获取全局 AskHandler 引用"""
+    return _ask_handler
 
 
 class CreateTodoTool(BaseTool):
@@ -43,25 +60,23 @@ class CreateTodoTool(BaseTool):
     description = """创建待办事项。
 
 【重要】创建待办前必须先确认分类：
-1. 如果用户没有指定分类，必须先调用 list_todo_categories 获取分类列表
-2. 展示分类列表给用户，询问用户想放到哪个分类
-3. 等待用户选择分类（或创建新分类）后，再调用此工具创建待办
-4. 如果用户说"随便"或"不需要分类"，则可以不传 category_id
+1. 如果用户没有指定分类，调用 ask_todo_category 工具弹出 UI 让用户选择
+2. ask_todo_category 会返回选中的分类 ID 或 "none"（不指定分类）
+3. 根据返回结果设置 category_id 参数
 
 支持的参数：
 - 标题（必填）
 - 描述/详情
-- 分类 ID（需要先获取分类列表让用户选择）
+- 分类 ID（通过 ask_todo_category 获取）
 - 优先级：low（低）、medium（中）、high（高）、urgent（紧急）
 - 截止时间：支持自然语言如"明天下午3点"、"下周一"
 - 重复类型：none（不重复）、daily（每天）、weekly（每周）、monthly（每月）
 
 示例流程：
 用户: "帮我添加一个待办，明天下午3点开会"
-AI: 先调用 list_todo_categories 获取分类列表
-AI: "您有以下分类：工作、生活、学习。请问要把这个待办放到哪个分类？"
-用户: "工作"
-AI: 再调用 create_todo 创建待办，设置 category_id
+AI: 调用 ask_todo_category(title="明天下午3点开会")
+工具返回: "selected:1"
+AI: 调用 create_todo(title="明天下午3点开会", category_id=1, due_date="明天下午3点")
 """
 
     class ArgsSchema(ToolSchema):
@@ -502,6 +517,7 @@ def register_todo_tools():
         ListTodosTool(),
         CompleteTodoTool(),
         GetTodayTodosTool(),
+        AskCategoryTool(),
     ]
 
     for tool in tools:
@@ -509,3 +525,141 @@ def register_todo_tools():
         logger.info(f"已注册 Todo 工具: {tool.name}")
 
     return len(tools)
+
+
+class AskCategoryTool(BaseTool):
+    """
+    分类选择工具
+
+    使用 Ask 模块让用户通过 UI 界面选择待办分类。
+    """
+
+    name = "ask_todo_category"
+    description = """弹出 UI 让用户选择待办分类。
+
+【使用场景】
+- 用户创建待办但没有指定分类时，使用此工具让用户选择
+
+【返回值】
+- 如果用户选择了分类：返回分类 ID
+- 如果用户取消：返回 "cancelled"
+- 如果超时：返回 "timeout"
+
+【调用时机】
+在 create_todo 之前，如果用户没有指定分类，调用此工具让用户选择。
+"""
+
+    class ArgsSchema(ToolSchema):
+        title: Optional[str] = Field(
+            default=None,
+            description="待办标题，用于显示在询问界面"
+        )
+
+    args_schema = ArgsSchema
+
+    def _run(self, title: Optional[str] = None) -> str:
+        """使用 Ask 模块让用户选择分类"""
+        try:
+            # 获取分类列表
+            categories = direct_list_todo_categories()
+
+            if not categories:
+                return "no_categories:暂无分类，可以直接创建待办（不指定分类）"
+
+            # 获取 AskHandler
+            ask_handler = get_ask_handler()
+            if not ask_handler:
+                # 如果没有 AskHandler，返回分类列表让 AI 处理
+                logger.warning("[AskCategoryTool] AskHandler 未设置，返回分类列表")
+                return self._format_categories_for_ai(categories)
+
+            # 构建 Ask 选项
+            from ask import AskOption, AskType
+
+            options = []
+            for cat in categories:
+                options.append(AskOption(
+                    id=str(cat['id']),
+                    label=cat['name'],
+                    description=cat.get('description'),
+                    metadata={"category_id": cat['id']}
+                ))
+
+            # 添加"不需要分类"选项
+            options.append(AskOption(
+                id="none",
+                label="不需要分类",
+                description="直接创建待办，不指定分类"
+            ))
+
+            # 执行异步询问（同步包装）
+            ask_title = "选择待办分类"
+            if title:
+                ask_title = f"「{title}」放到哪个分类？"
+
+            response = self._run_async_ask(
+                ask_handler=ask_handler,
+                ask_type=AskType.SELECT,
+                title=ask_title,
+                description="请选择一个分类，或选择"不需要分类"直接创建",
+                options=options,
+                timeout=60000,  # 60秒超时
+            )
+
+            if response is None:
+                return "timeout:用户未响应，已超时"
+
+            action = response.action
+            value = response.value
+
+            if action == "cancel":
+                return "cancelled:用户取消了选择"
+            elif action == "timeout":
+                return "timeout:用户未响应，已超时"
+            elif action == "submit":
+                if value == "none":
+                    return "none:用户选择不指定分类"
+                else:
+                    # 返回分类 ID
+                    return f"selected:{value}"
+            else:
+                return f"unknown:未知操作 {action}"
+
+        except Exception as e:
+            logger.error(f"[AskCategoryTool] 执行失败: {e}")
+            return f"error:{str(e)}"
+
+    def _run_async_ask(self, ask_handler, **kwargs):
+        """在同步上下文中执行异步询问"""
+        try:
+            # 尝试在现有事件循环中运行
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果事件循环正在运行，使用线程池
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        self._async_ask(ask_handler, **kwargs)
+                    )
+                    return future.result(timeout=kwargs.get('timeout', 60000) / 1000 + 10)
+            else:
+                return loop.run_until_complete(self._async_ask(ask_handler, **kwargs))
+        except RuntimeError:
+            # 没有事件循环，创建一个新的
+            return asyncio.run(self._async_ask(ask_handler, **kwargs))
+
+    async def _async_ask(self, ask_handler, **kwargs):
+        """异步执行询问"""
+        return await ask_handler.ask_and_wait(**kwargs)
+
+    def _format_categories_for_ai(self, categories: List[Dict]) -> str:
+        """格式化分类列表供 AI 处理（当 Ask 模块不可用时）"""
+        lines = ["fallback:Ask 模块不可用，请用以下格式询问用户：", ""]
+        lines.append("您有以下待办分类：")
+        for i, cat in enumerate(categories, 1):
+            desc = f" - {cat['description']}" if cat.get('description') else ""
+            lines.append(f"{i}. {cat['name']}{desc} (ID: {cat['id']})")
+        lines.append("")
+        lines.append('请问要放到哪个分类？或说"不需要分类"。')
+        return "\n".join(lines)

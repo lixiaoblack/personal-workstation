@@ -385,7 +385,7 @@ def direct_create_todo(
 
         # 返回创建的待办
         todo = direct_get_todo(todo_id)
-        
+
         # 同步到向量存储（后台执行）
         if todo:
             import asyncio
@@ -394,13 +394,16 @@ def direct_create_todo(
                 if loop.is_running():
                     # 在后台线程中同步
                     import concurrent.futures
-                    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                    executor.submit(asyncio.run, direct_sync_todo_to_vectorstore(todo_id))
+                    executor = concurrent.futures.ThreadPoolExecutor(
+                        max_workers=1)
+                    executor.submit(
+                        asyncio.run, direct_sync_todo_to_vectorstore(todo_id))
                 else:
-                    loop.run_until_complete(direct_sync_todo_to_vectorstore(todo_id))
+                    loop.run_until_complete(
+                        direct_sync_todo_to_vectorstore(todo_id))
             except:
                 pass
-        
+
         return todo
 
 
@@ -499,7 +502,8 @@ def direct_get_today_todos() -> List[Dict[str, Any]]:
     import datetime
 
     # 获取今天开始和结束的时间戳
-    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.datetime.now().replace(
+        hour=0, minute=0, second=0, microsecond=0)
     today_end = int((today + datetime.timedelta(days=1)).timestamp() * 1000)
 
     with get_db() as conn:
@@ -549,7 +553,7 @@ def direct_update_todo_status(todo_id: int, status: str) -> Optional[Dict[str, A
         conn.commit()
 
         todo = direct_get_todo(todo_id)
-        
+
         # 同步到向量存储
         if todo:
             import asyncio
@@ -558,23 +562,26 @@ def direct_update_todo_status(todo_id: int, status: str) -> Optional[Dict[str, A
                 if loop.is_running():
                     # 在后台线程中同步
                     import concurrent.futures
-                    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                    executor.submit(asyncio.run, direct_sync_todo_to_vectorstore(todo_id))
+                    executor = concurrent.futures.ThreadPoolExecutor(
+                        max_workers=1)
+                    executor.submit(
+                        asyncio.run, direct_sync_todo_to_vectorstore(todo_id))
                 else:
-                    loop.run_until_complete(direct_sync_todo_to_vectorstore(todo_id))
+                    loop.run_until_complete(
+                        direct_sync_todo_to_vectorstore(todo_id))
             except:
                 pass
-        
+
         return todo
 
 
 async def direct_sync_todo_to_vectorstore(todo_id: int) -> bool:
     """
     直接调用：同步待办到向量存储
-    
+
     Args:
         todo_id: 待办 ID
-    
+
     Returns:
         是否同步成功
     """
@@ -582,20 +589,20 @@ async def direct_sync_todo_to_vectorstore(todo_id: int) -> bool:
         todo = direct_get_todo(todo_id)
         if not todo:
             return False
-        
+
         # 获取分类名称
         category_name = None
         if todo.get("category_id"):
             category = direct_get_todo_category(todo["category_id"])
             if category:
                 category_name = category.get("name")
-        
+
         # 同步到向量存储
         from rag.todo_vectorstore import get_todo_vectorstore
         store = get_todo_vectorstore()
-        
+
         return await store.add_todo(todo, category_name)
-        
+
     except Exception as e:
         import logging
         logging.error(f"[direct_api] 同步待办到向量存储失败: {e}")
@@ -605,28 +612,28 @@ async def direct_sync_todo_to_vectorstore(todo_id: int) -> bool:
 async def direct_sync_all_todos_to_vectorstore() -> int:
     """
     直接调用：同步所有待办到向量存储
-    
+
     Returns:
         同步成功的数量
     """
     try:
         todos = direct_list_todos(limit=1000)
         categories = direct_list_todo_categories()
-        
+
         # 构建分类 ID 到名称的映射
         category_map = {cat["id"]: cat["name"] for cat in categories}
-        
+
         from rag.todo_vectorstore import get_todo_vectorstore
         store = get_todo_vectorstore()
-        
+
         count = 0
         for todo in todos:
             category_name = category_map.get(todo.get("category_id"))
             if await store.add_todo(todo, category_name):
                 count += 1
-        
+
         return count
-        
+
     except Exception as e:
         import logging
         logging.error(f"[direct_api] 同步所有待办到向量存储失败: {e}")

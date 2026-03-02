@@ -678,7 +678,7 @@ class AskCategoryTool(BaseTool):
 class SearchTodosTool(BaseTool):
     """
     语义搜索待办工具
-    
+
     通过自然语言语义搜索待办事项，适合用户用自然语言提问的场景。
     """
 
@@ -742,12 +742,14 @@ class SearchTodosTool(BaseTool):
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
                             asyncio.run,
-                            store.search(query, k=limit, status_filter=status_filter)
+                            store.search(query, k=limit,
+                                         status_filter=status_filter)
                         )
                         results = future.result(timeout=30)
                 else:
                     results = loop.run_until_complete(
-                        store.search(query, k=limit, status_filter=status_filter)
+                        store.search(query, k=limit,
+                                     status_filter=status_filter)
                     )
             except RuntimeError:
                 results = asyncio.run(
@@ -772,14 +774,15 @@ class SearchTodosTool(BaseTool):
             }
 
             lines = [f"🔍 找到 {len(results)} 条与「{query}」相关的待办：", ""]
-            
+
             for todo in results:
                 status_icon = "✅" if todo['status'] == 'completed' else "⏳"
                 priority_str = priority_names.get(todo.get('priority'), '中')
                 status_str = status_names.get(todo.get('status'), '未知')
                 score_str = f"(相关度: {todo.get('score', 0):.2f})"
 
-                lines.append(f"  {status_icon} [{todo['id']}] {todo['title']} {score_str}")
+                lines.append(
+                    f"  {status_icon} [{todo['id']}] {todo['title']} {score_str}")
                 lines.append(f"      状态: {status_str} | 优先级: {priority_str}")
 
                 if todo.get('category_name'):
@@ -789,7 +792,8 @@ class SearchTodosTool(BaseTool):
                     from datetime import datetime
                     dt = datetime.fromtimestamp(todo['due_date'] / 1000)
                     now = datetime.now()
-                    is_overdue = dt < now and todo['status'] not in ['completed', 'cancelled']
+                    is_overdue = dt < now and todo['status'] not in [
+                        'completed', 'cancelled']
                     due_str = dt.strftime('%Y-%m-%d %H:%M')
                     if is_overdue:
                         lines.append(f"      ⚠️ 截止: {due_str} (已逾期)")
@@ -816,7 +820,8 @@ class SearchTodosTool(BaseTool):
 
             store = get_todo_vectorstore()
 
-            status_filter = None if include_completed else ["pending", "in_progress"]
+            status_filter = None if include_completed else [
+                "pending", "in_progress"]
 
             results = await store.search(query, k=limit, status_filter=status_filter)
 
@@ -838,14 +843,15 @@ class SearchTodosTool(BaseTool):
             }
 
             lines = [f"🔍 找到 {len(results)} 条与「{query}」相关的待办：", ""]
-            
+
             for todo in results:
                 status_icon = "✅" if todo['status'] == 'completed' else "⏳"
                 priority_str = priority_names.get(todo.get('priority'), '中')
                 status_str = status_names.get(todo.get('status'), '未知')
                 score_str = f"(相关度: {todo.get('score', 0):.2f})"
 
-                lines.append(f"  {status_icon} [{todo['id']}] {todo['title']} {score_str}")
+                lines.append(
+                    f"  {status_icon} [{todo['id']}] {todo['title']} {score_str}")
                 lines.append(f"      状态: {status_str} | 优先级: {priority_str}")
 
                 if todo.get('category_name'):
@@ -855,7 +861,8 @@ class SearchTodosTool(BaseTool):
                     from datetime import datetime
                     dt = datetime.fromtimestamp(todo['due_date'] / 1000)
                     now = datetime.now()
-                    is_overdue = dt < now and todo['status'] not in ['completed', 'cancelled']
+                    is_overdue = dt < now and todo['status'] not in [
+                        'completed', 'cancelled']
                     due_str = dt.strftime('%Y-%m-%d %H:%M')
                     if is_overdue:
                         lines.append(f"      ⚠️ 截止: {due_str} (已逾期)")

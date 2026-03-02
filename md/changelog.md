@@ -31,6 +31,31 @@
 
 ---
 
+## [0.5.64] - 2026-03-02
+
+### 新增 (Added)
+
+- **AI 语义创建 Todo 功能完善**
+  - Ask 模块集成到 AI 创建待办流程
+  - 用户说"帮我添加一个待办"时弹出分类选择卡片
+  - WebSocket 消息路由支持 ASK/ASK_RESULT/ASK_RESPONSE 类型
+  - agent_chat 消息异步处理，避免阻塞 WebSocket 消息循环
+  - AskCard 组件用户响应后立即消失
+
+- **Todo 语义搜索功能**
+  - 创建待办向量存储模块 (todo_vectorstore.py)
+  - 待办创建/更新时自动同步到 LanceDB 向量数据库
+  - 新增 SearchTodosTool 语义搜索工具
+  - 支持自然语言查询待办（如"今天有什么要做的"、"紧急任务"）
+  - 搜索结果按相关度排序，包含分数显示
+
+### 修复 (Fixed)
+
+- WebSocket 消息循环阻塞导致 ask_response 无法被处理
+- AskCard 用户响应后仍显示"处理中"状态
+
+---
+
 ## [0.5.63] - 2026-02-28
 
 ### 修复 (Fixed)

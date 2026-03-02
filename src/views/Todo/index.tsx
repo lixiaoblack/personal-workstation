@@ -408,21 +408,6 @@ const Todo: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* AI 助手按钮 - 匹配设计稿样式 */}
-        <div className="absolute bottom-8 right-8">
-          <button className="bg-primary hover:bg-primary-hover text-white flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl shadow-primary/30 transition-all transform hover:scale-105 active:scale-95 group">
-            <span className="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">
-              auto_awesome
-            </span>
-            <span className="font-bold tracking-wide">AI 助手</span>
-            <div className="ml-2 flex items-center gap-0.5">
-              <span className="w-1 h-1 bg-white/40 rounded-full" />
-              <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
-              <span className="w-1 h-1 bg-white/40 rounded-full" />
-            </div>
-          </button>
-        </div>
       </main>
 
       {/* 待办编辑弹窗 */}

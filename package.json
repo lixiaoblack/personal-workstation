@@ -15,7 +15,7 @@
     "build:all": "vite build && node scripts/build-python.js && electron-builder --mac --win",
     "preview": "vite preview",
     "lint": "eslint .",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps && node scripts/copy-vditor-theme.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.0",
@@ -84,6 +84,7 @@
     "files": [
       "dist/index.html",
       "dist/assets/**/*",
+      "dist/vditor-content-theme/**/*",
       "dist-electron/**/*",
       "package.json"
     ],

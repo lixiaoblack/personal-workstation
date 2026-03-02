@@ -6,6 +6,7 @@
 
 import { ipcMain } from "electron";
 import * as notesService from "../services/notesService";
+import * as notesVectorService from "../services/notesVectorService";
 
 export function registerNotesIpc(): void {
   // ========== 设置管理 ==========
@@ -26,8 +27,16 @@ export function registerNotesIpc(): void {
   });
 
   // 设置根目录路径
-  ipcMain.handle("notes:setRootPath", (_event, rootPath: string) => {
-    return notesService.setRootPath(rootPath);
+  ipcMain.handle("notes:setRootPath", async (_event, rootPath: string) => {
+    const result = notesService.setRootPath(rootPath);
+    // 设置新根目录时，触发全量索引
+    if (result) {
+      // 异步执行全量索引，不阻塞主流程
+      notesVectorService.indexAllNotes(rootPath).catch((err) => {
+        console.error("[NotesIpc] 全量索引笔记失败:", err);
+      });
+    }
+    return result;
   });
 
   // 检查是否已设置根目录
@@ -85,22 +94,32 @@ export function registerNotesIpc(): void {
   // 创建笔记
   ipcMain.handle(
     "notes:createNote",
-    (_event, parentPath: string | null, fileName: string, content?: string) => {
-      return notesService.createNote(parentPath, fileName, content);
+    async (_event, parentPath: string | null, fileName: string, content?: string) => {
+      const result = notesService.createNote(parentPath, fileName, content);
+      // 创建笔记成功后，索引到向量存储
+      if (result.success && result.path && content) {
+        await notesVectorService.indexNote(result.path, content);
+      }
+      return result;
     }
   );
 
   // 强制创建笔记（覆盖或创建副本）
   ipcMain.handle(
     "notes:createNoteForce",
-    (
+    async (
       _event,
       parentPath: string | null,
       fileName: string,
       mode: "overwrite" | "copy",
       content?: string
     ) => {
-      return notesService.createNoteForce(parentPath, fileName, mode, content);
+      const result = notesService.createNoteForce(parentPath, fileName, mode, content);
+      // 创建笔记成功后，索引到向量存储
+      if (result.success && result.path && content) {
+        await notesVectorService.indexNote(result.path, content);
+      }
+      return result;
     }
   );
 
@@ -112,27 +131,69 @@ export function registerNotesIpc(): void {
   // 保存文件
   ipcMain.handle(
     "notes:saveFile",
-    (_event, filePath: string, content: string) => {
-      return notesService.saveFile(filePath, content);
+    async (_event, filePath: string, content: string) => {
+      const result = notesService.saveFile(filePath, content);
+      // 保存成功后，更新向量索引
+      if (result.success) {
+        await notesVectorService.indexNote(filePath, content);
+      }
+      return result;
     }
   );
 
   // 重命名
   ipcMain.handle(
     "notes:renameItem",
-    (_event, oldPath: string, newName: string) => {
-      return notesService.renameItem(oldPath, newName);
+    async (_event, oldPath: string, newName: string) => {
+      const result = notesService.renameItem(oldPath, newName);
+      // 重命名成功后，更新向量索引
+      if (result.success && result.newPath) {
+        // 删除旧路径的向量
+        await notesVectorService.deleteNoteFromVectorstore(oldPath);
+        // 读取新文件内容并重新索引
+        try {
+          const fileResult = notesService.readFile(result.newPath);
+          if (fileResult.success && fileResult.content) {
+            await notesVectorService.indexNote(result.newPath, fileResult.content);
+          }
+        } catch (err) {
+          console.error("[NotesIpc] 重命名后重新索引失败:", err);
+        }
+      }
+      return result;
     }
   );
 
   // 删除
-  ipcMain.handle("notes:deleteItem", (_event, itemPath: string) => {
-    return notesService.deleteItem(itemPath);
+  ipcMain.handle("notes:deleteItem", async (_event, itemPath: string) => {
+    const result = notesService.deleteItem(itemPath);
+    // 删除成功后，从向量存储中删除
+    if (result.success) {
+      await notesVectorService.deleteNoteFromVectorstore(itemPath);
+    }
+    return result;
   });
 
   // 获取文件信息
   ipcMain.handle("notes:getFileInfo", (_event, filePath: string) => {
     return notesService.getFileInfo(filePath);
+  });
+
+  // ========== 向量索引操作 ==========
+
+  // 索引单个笔记
+  ipcMain.handle("notes:indexNote", async (_event, filePath: string, content: string) => {
+    return await notesVectorService.indexNote(filePath, content);
+  });
+
+  // 全量索引笔记
+  ipcMain.handle("notes:indexAllNotes", async (_event, rootPath: string) => {
+    return await notesVectorService.indexAllNotes(rootPath);
+  });
+
+  // 获取索引统计
+  ipcMain.handle("notes:getIndexStats", async () => {
+    return await notesVectorService.getNotesStats();
   });
 
   console.log("[IPC] Notes 模块 IPC 处理器已注册");

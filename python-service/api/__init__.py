@@ -13,13 +13,16 @@ from .models import (
 )
 from .routers import (
     knowledge_router, conversation_router,
-    memory_router, user_router, ocr_router, llm_router
+    memory_router, user_router, ocr_router, llm_router,
+    notes_router
 )
 from .direct_api import (
     direct_list_knowledge, direct_get_knowledge, direct_create_knowledge,
     direct_list_conversations, direct_get_conversation, direct_get_messages,
     direct_get_memories, direct_save_memory, direct_build_memory_context,
-    direct_ocr_recognize, direct_ocr_recognize_file
+    direct_ocr_recognize, direct_ocr_recognize_file,
+    direct_index_note, direct_delete_note_from_vectorstore,
+    direct_search_notes, direct_get_notes_stats,
 )
 
 __all__ = [
@@ -33,9 +36,12 @@ __all__ = [
     # 路由
     "knowledge_router", "conversation_router",
     "memory_router", "user_router", "ocr_router", "llm_router",
+    "notes_router",
     # 直接调用接口
     "direct_list_knowledge", "direct_get_knowledge", "direct_create_knowledge",
     "direct_list_conversations", "direct_get_conversation", "direct_get_messages",
     "direct_get_memories", "direct_save_memory", "direct_build_memory_context",
     "direct_ocr_recognize", "direct_ocr_recognize_file",
+    "direct_index_note", "direct_delete_note_from_vectorstore",
+    "direct_search_notes", "direct_get_notes_stats",
 ]

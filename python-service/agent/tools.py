@@ -904,6 +904,14 @@ def init_default_tools():
     except Exception as e:
         logger.warning(f"注册 Todo 工具失败: {e}")
 
+    # 注册 Notes 工具
+    try:
+        from .notes_tool import register_notes_tools
+        notes_count = register_notes_tools()
+        logger.info(f"已注册 {notes_count} 个 Notes 工具")
+    except Exception as e:
+        logger.warning(f"注册 Notes 工具失败: {e}")
+
     logger.info(f"已注册 {len(global_tool_registry.list_tools())} 个默认工具")
 
 

@@ -10,6 +10,7 @@ from .memory import router as memory_router
 from .user import router as user_router
 from .ocr import router as ocr_router
 from .llm import router as llm_router
+from .notes import router as notes_router
 
 __all__ = [
     "knowledge_router",
@@ -18,4 +19,5 @@ __all__ = [
     "user_router",
     "ocr_router",
     "llm_router",
+    "notes_router",
 ]

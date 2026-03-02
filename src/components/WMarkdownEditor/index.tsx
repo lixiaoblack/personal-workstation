@@ -141,7 +141,7 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
       preview: {
         theme: {
           current: theme === "dark" ? "dark" : "light",
-          path: "https://unpkg.com/vditor@3.10.4/dist/css/content-theme",
+          path: "./vditor-content-theme",
         },
         hljs: {
           enable: true,
@@ -263,6 +263,28 @@ export const WMarkdownEditor: React.FC<WMarkdownEditorProps> = ({
     if (!vditorRef.current || !isReadyRef.current) return;
     vditorRef.current.disabled(readonly);
   }, [readonly]);
+
+  // 动态更新主题
+  useEffect(() => {
+    if (!vditorRef.current || !isReadyRef.current) return;
+
+    // 更新编辑器主题
+    // 使用类型断言避免 TypeScript 报错
+    const vditor = vditorRef.current as Vditor & {
+      setTheme: (
+        theme: "dark" | "classic",
+        contentTheme?: string,
+        codeTheme?: string,
+        contentThemePath?: string
+      ) => void;
+    };
+    vditor.setTheme(
+      theme === "dark" ? "dark" : "classic",
+      theme === "dark" ? "dark" : "light",
+      "github-dark",
+      "./vditor-content-theme"
+    );
+  }, [theme]);
 
   return (
     <div

@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { WMarkdownEditor } from "@/components/WMarkdownEditor";
+import { useTheme } from "@/contexts";
 
 // 文件树节点类型
 interface FileTreeNode {
@@ -30,6 +31,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   onContentChange,
   onSave,
 }) => {
+  const { resolvedTheme } = useTheme();
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const lastSavedContentRef = useRef(content);
@@ -161,7 +163,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           mode="ir"
           height="100%"
           placeholder="开始编写您的笔记..."
-          theme="dark"
+          theme={resolvedTheme === "light" ? "classic" : "dark"}
         />
       </div>
     </section>

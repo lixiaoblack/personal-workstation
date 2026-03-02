@@ -638,3 +638,108 @@ async def direct_sync_all_todos_to_vectorstore() -> int:
         import logging
         logging.error(f"[direct_api] 同步所有待办到向量存储失败: {e}")
         return 0
+
+
+# ==================== 笔记向量存储直接调用 ====================
+
+async def direct_index_note(
+    file_path: str,
+    content: str,
+    metadata: Optional[Dict[str, Any]] = None
+) -> int:
+    """
+    直接调用：索引笔记到向量存储
+
+    Args:
+        file_path: 文件路径
+        content: Markdown 内容
+        metadata: 额外元数据（如 modified_at）
+
+    Returns:
+        索引的块数量
+    """
+    try:
+        from rag.notes_vectorstore import get_notes_vectorstore
+        store = get_notes_vectorstore()
+
+        return await store.index_note(file_path, content, metadata)
+
+    except Exception as e:
+        import logging
+        logging.error(f"[direct_api] 索引笔记失败: {e}")
+        return 0
+
+
+async def direct_delete_note_from_vectorstore(file_path: str) -> bool:
+    """
+    直接调用：从向量存储删除笔记
+
+    Args:
+        file_path: 文件路径
+
+    Returns:
+        是否删除成功
+    """
+    try:
+        from rag.notes_vectorstore import get_notes_vectorstore
+        store = get_notes_vectorstore()
+
+        return await store.delete_note(file_path)
+
+    except Exception as e:
+        import logging
+        logging.error(f"[direct_api] 删除笔记向量失败: {e}")
+        return False
+
+
+async def direct_search_notes(
+    query: str,
+    k: int = 5,
+    file_path_filter: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    直接调用：语义搜索笔记
+
+    Args:
+        query: 搜索查询
+        k: 返回数量
+        file_path_filter: 文件路径过滤
+
+    Returns:
+        搜索结果列表
+    """
+    try:
+        from rag.notes_vectorstore import get_notes_vectorstore
+        store = get_notes_vectorstore()
+
+        return await store.search(query, k, file_path_filter)
+
+    except Exception as e:
+        import logging
+        logging.error(f"[direct_api] 搜索笔记失败: {e}")
+        return []
+
+
+async def direct_get_notes_stats() -> Dict[str, Any]:
+    """
+    直接调用：获取笔记索引统计
+
+    Returns:
+        统计信息
+    """
+    try:
+        from rag.notes_vectorstore import get_notes_vectorstore
+        store = get_notes_vectorstore()
+
+        return await store.get_notes_stats()
+
+    except Exception as e:
+        import logging
+        logging.error(f"[direct_api] 获取笔记统计失败: {e}")
+        return {
+            "total_chunks": 0,
+            "total_files": 0,
+            "indexed": False,
+            "error": str(e)
+        }
+

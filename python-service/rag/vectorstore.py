@@ -184,6 +184,40 @@ class LanceDBVectorStore:
         """
         return knowledge_id in self._db.table_names()
 
+    def get_collection_dimension(self, knowledge_id: str) -> Optional[int]:
+        """
+        获取知识库的向量维度
+
+        Args:
+            knowledge_id: 知识库 ID
+
+        Returns:
+            向量维度，如果不存在返回 None
+        """
+        # 先从缓存获取
+        if knowledge_id in self._vector_dims:
+            return self._vector_dims[knowledge_id]
+
+        # 从表中获取
+        try:
+            if not self.collection_exists(knowledge_id):
+                return None
+
+            table = self._get_table(knowledge_id)
+            # 获取表的一行数据来检查向量维度
+            df = table.to_pandas()
+            if df is not None and len(df) > 0 and "vector" in df.columns:
+                vector = df.iloc[0]["vector"]
+                dim = len(vector) if vector is not None else None
+                if dim:
+                    # 缓存维度
+                    self._vector_dims[knowledge_id] = dim
+                return dim
+            return None
+        except Exception as e:
+            logger.warning(f"获取知识库维度失败: {knowledge_id}, 错误: {e}")
+            return None
+
     def create_collection(
         self,
         knowledge_id: str,

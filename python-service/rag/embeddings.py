@@ -61,10 +61,18 @@ class EmbeddingService:
 
     # 模型维度
     MODEL_DIMENSIONS = {
+        # Ollama 模型
         "nomic-embed-text": 768,
+        "mxbai-embed-large": 1024,
+        # OpenAI 模型
         "text-embedding-3-small": 1536,
         "text-embedding-3-large": 3072,
         "text-embedding-ada-002": 1536,
+        # 百炼模型
+        "text-embedding-v1": 1536,
+        "text-embedding-v2": 1536,
+        "text-embedding-v3": 1024,
+        "text-embedding-v4": 1024,
     }
 
     def __init__(

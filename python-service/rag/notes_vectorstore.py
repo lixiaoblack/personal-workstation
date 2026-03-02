@@ -244,19 +244,30 @@ class NotesVectorStore:
         )
 
     async def _ensure_collection(self):
-        """确保集合已创建"""
+        """确保集合已创建，处理维度不匹配的情况"""
         if self._initialized:
             return
 
         # 确保嵌入服务已初始化
         self._ensure_embedding_service()
 
+        expected_dim = self._embedding_service.dimension
+
+        if self._vectorstore.collection_exists(NOTES_COLLECTION_ID):
+            # 检查现有集合的维度是否匹配
+            existing_dim = self._vectorstore.get_collection_dimension(NOTES_COLLECTION_ID)
+            if existing_dim is not None and existing_dim != expected_dim:
+                logger.warning(
+                    f"[NotesVectorStore] 集合维度不匹配: 现有={existing_dim}, 期望={expected_dim}，删除旧集合"
+                )
+                self._vectorstore.delete_collection(NOTES_COLLECTION_ID)
+
         if not self._vectorstore.collection_exists(NOTES_COLLECTION_ID):
             self._vectorstore.create_collection(
                 NOTES_COLLECTION_ID,
-                vector_dim=self._embedding_service.dimension
+                vector_dim=expected_dim
             )
-            logger.info(f"[NotesVectorStore] 创建笔记向量集合: {NOTES_COLLECTION_ID}")
+            logger.info(f"[NotesVectorStore] 创建笔记向量集合: {NOTES_COLLECTION_ID}, 维度={expected_dim}")
 
         self._initialized = True
 

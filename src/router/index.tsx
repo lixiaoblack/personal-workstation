@@ -16,6 +16,7 @@ import { Settings } from "@/views/Settings";
 import { AISettings } from "@/views/Settings/AISettings";
 import { AIChat } from "@/views/AIChat";
 import Agents from "@/views/Agents";
+import AgentBuilder from "@/views/Agents/AgentBuilder";
 import Knowledge from "@/views/Knowledge";
 import Notes from "@/views/Notes";
 import Todo from "@/views/Todo";
@@ -147,6 +148,14 @@ const protectedRoutes: RouteObject[] = [
           {
             path: "/agents",
             element: <Agents />,
+          },
+          {
+            path: "/agents/create",
+            element: <AgentBuilder />,
+          },
+          {
+            path: "/agents/:id/edit",
+            element: <AgentBuilder />,
           },
           // 知识库
           {

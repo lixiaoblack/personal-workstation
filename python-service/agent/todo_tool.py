@@ -8,7 +8,9 @@ Todo 待办工具
 2. ListCategoriesTool - 列出所有分类
 3. ListTodosTool - 列出待办事项
 4. CompleteTodoTool - 完成待办事项
-5. AskCategoryTool - 使用 Ask 模块让用户选择分类
+5. GetTodayTodosTool - 获取今日待办
+6. AskCategoryTool - 使用 Ask 模块让用户选择分类
+7. SearchTodosTool - 语义搜索待办事项
 """
 
 from typing import Optional, List, Dict, Any
@@ -23,6 +25,7 @@ from api.direct_api import (
     direct_list_todos,
     direct_get_today_todos,
     direct_update_todo_status,
+    direct_sync_todo_to_vectorstore,
 )
 
 logger = logging.getLogger(__name__)
@@ -519,6 +522,7 @@ def register_todo_tools():
         CompleteTodoTool(),
         GetTodayTodosTool(),
         AskCategoryTool(),
+        SearchTodosTool(),
     ]
 
     for tool in tools:
@@ -669,3 +673,199 @@ class AskCategoryTool(BaseTool):
         lines.append("")
         lines.append('请问要放到哪个分类？或说"不需要分类"。')
         return "\n".join(lines)
+
+
+class SearchTodosTool(BaseTool):
+    """
+    语义搜索待办工具
+    
+    通过自然语言语义搜索待办事项，适合用户用自然语言提问的场景。
+    """
+
+    name = "search_todos"
+    description = """通过自然语言语义搜索待办事项。
+
+【使用场景】
+- 用户问"我今天有什么要做的"
+- 用户问"接下来有什么任务"
+- 用户问"有没有关于XXX的待办"
+- 用户问"紧急的事情有哪些"
+
+【返回格式】
+返回匹配的待办列表，按相关度排序，包含标题、状态、优先级、截止时间等信息。
+
+【注意】
+此工具通过语义相似度匹配，可能不完全准确。如果用户明确要查询今日待办，建议使用 get_today_todos 工具。
+"""
+
+    class ArgsSchema(ToolSchema):
+        query: str = Field(
+            description="搜索查询，如'今天要做什么'、'紧急任务'、'关于项目的待办'"
+        )
+        include_completed: bool = Field(
+            default=False,
+            description="是否包含已完成的待办"
+        )
+        limit: int = Field(
+            default=10,
+            description="返回数量限制，默认 10 条"
+        )
+
+    args_schema = ArgsSchema
+
+    def _run(
+        self,
+        query: str,
+        include_completed: bool = False,
+        limit: int = 10,
+    ) -> str:
+        """语义搜索待办"""
+        try:
+            import asyncio
+            from rag.todo_vectorstore import get_todo_vectorstore
+
+            # 获取向量存储
+            store = get_todo_vectorstore()
+
+            # 确定状态过滤
+            if include_completed:
+                status_filter = None
+            else:
+                status_filter = ["pending", "in_progress"]
+
+            # 尝试在现有事件循环中运行
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # 创建新线程运行异步代码
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(
+                            asyncio.run,
+                            store.search(query, k=limit, status_filter=status_filter)
+                        )
+                        results = future.result(timeout=30)
+                else:
+                    results = loop.run_until_complete(
+                        store.search(query, k=limit, status_filter=status_filter)
+                    )
+            except RuntimeError:
+                results = asyncio.run(
+                    store.search(query, k=limit, status_filter=status_filter)
+                )
+
+            if not results:
+                return f"没有找到与「{query}」相关的待办事项。"
+
+            # 格式化结果
+            priority_names = {
+                "low": "低",
+                "medium": "中",
+                "high": "高",
+                "urgent": "紧急",
+            }
+            status_names = {
+                "pending": "待处理",
+                "in_progress": "进行中",
+                "completed": "已完成",
+                "cancelled": "已取消",
+            }
+
+            lines = [f"🔍 找到 {len(results)} 条与「{query}」相关的待办：", ""]
+            
+            for todo in results:
+                status_icon = "✅" if todo['status'] == 'completed' else "⏳"
+                priority_str = priority_names.get(todo.get('priority'), '中')
+                status_str = status_names.get(todo.get('status'), '未知')
+                score_str = f"(相关度: {todo.get('score', 0):.2f})"
+
+                lines.append(f"  {status_icon} [{todo['id']}] {todo['title']} {score_str}")
+                lines.append(f"      状态: {status_str} | 优先级: {priority_str}")
+
+                if todo.get('category_name'):
+                    lines.append(f"      分类: {todo['category_name']}")
+
+                if todo.get('due_date'):
+                    from datetime import datetime
+                    dt = datetime.fromtimestamp(todo['due_date'] / 1000)
+                    now = datetime.now()
+                    is_overdue = dt < now and todo['status'] not in ['completed', 'cancelled']
+                    due_str = dt.strftime('%Y-%m-%d %H:%M')
+                    if is_overdue:
+                        lines.append(f"      ⚠️ 截止: {due_str} (已逾期)")
+                    else:
+                        lines.append(f"      截止: {due_str}")
+
+                lines.append("")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"语义搜索待办失败: {e}")
+            return f"❌ 搜索失败：{str(e)}"
+
+    async def _call_async(
+        self,
+        query: str,
+        include_completed: bool = False,
+        limit: int = 10,
+    ) -> str:
+        """异步执行语义搜索（Deep Agent 会调用此方法）"""
+        try:
+            from rag.todo_vectorstore import get_todo_vectorstore
+
+            store = get_todo_vectorstore()
+
+            status_filter = None if include_completed else ["pending", "in_progress"]
+
+            results = await store.search(query, k=limit, status_filter=status_filter)
+
+            if not results:
+                return f"没有找到与「{query}」相关的待办事项。"
+
+            # 格式化结果
+            priority_names = {
+                "low": "低",
+                "medium": "中",
+                "high": "高",
+                "urgent": "紧急",
+            }
+            status_names = {
+                "pending": "待处理",
+                "in_progress": "进行中",
+                "completed": "已完成",
+                "cancelled": "已取消",
+            }
+
+            lines = [f"🔍 找到 {len(results)} 条与「{query}」相关的待办：", ""]
+            
+            for todo in results:
+                status_icon = "✅" if todo['status'] == 'completed' else "⏳"
+                priority_str = priority_names.get(todo.get('priority'), '中')
+                status_str = status_names.get(todo.get('status'), '未知')
+                score_str = f"(相关度: {todo.get('score', 0):.2f})"
+
+                lines.append(f"  {status_icon} [{todo['id']}] {todo['title']} {score_str}")
+                lines.append(f"      状态: {status_str} | 优先级: {priority_str}")
+
+                if todo.get('category_name'):
+                    lines.append(f"      分类: {todo['category_name']}")
+
+                if todo.get('due_date'):
+                    from datetime import datetime
+                    dt = datetime.fromtimestamp(todo['due_date'] / 1000)
+                    now = datetime.now()
+                    is_overdue = dt < now and todo['status'] not in ['completed', 'cancelled']
+                    due_str = dt.strftime('%Y-%m-%d %H:%M')
+                    if is_overdue:
+                        lines.append(f"      ⚠️ 截止: {due_str} (已逾期)")
+                    else:
+                        lines.append(f"      截止: {due_str}")
+
+                lines.append("")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"语义搜索待办失败: {e}")
+            return f"❌ 搜索失败：{str(e)}"

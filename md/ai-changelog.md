@@ -56,6 +56,15 @@
 
 ### 新增 (Added)
 
+### 新增 (Added) - v0.5.37
+
+- **Todo 语义搜索功能**
+  - 创建 python-service/rag/todo_vectorstore.py 待办向量存储模块
+  - 待办创建/更新时自动同步到向量数据库（LanceDB）
+  - 新增 SearchTodosTool 语义搜索工具
+  - 支持自然语言查询待办（如"今天有什么要做的"、"紧急任务"）
+  - 搜索结果按相关度排序，包含分数显示
+
 ### 新增 (Added) - v0.5.36
 
 - **AI 语义创建 Todo 功能完善**

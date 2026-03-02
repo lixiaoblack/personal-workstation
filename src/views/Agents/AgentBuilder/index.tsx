@@ -9,15 +9,24 @@
  * 5. 高级参数配置
  */
 import React, { useState, useEffect, useCallback } from "react";
-import { Button, Input, Select, message, Spin } from "antd";
+import { Button, message, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAgents } from "@/hooks/useAgents";
 import type { CreateAgentInput, UpdateAgentInput } from "@/types/agent";
-import { AGENT_AVATARS } from "@/types/agent";
-import { AVAILABLE_TOOLS, DEFAULT_AGENT_PARAMETERS } from "../config";
+import { DEFAULT_AGENT_PARAMETERS } from "../config";
+import {
+  BasicConfig,
+  PromptEditor,
+  ToolSelector,
+  KnowledgeBinder,
+  AdvancedConfig,
+} from "./components";
+import type { BasicConfigValue } from "./components/BasicConfig";
+import type { PromptEditorValue } from "./components/PromptEditor";
+import type { ToolSelectorValue } from "./components/ToolSelector";
+import type { KnowledgeBinderValue } from "./components/KnowledgeBinder";
+import type { AdvancedConfigValue } from "./components/AdvancedConfig";
 import "./AgentBuilder.sass";
-
-const { TextArea } = Input;
 
 const AgentBuilder: React.FC = () => {
   const navigate = useNavigate();
@@ -106,12 +115,48 @@ const AgentBuilder: React.FC = () => {
     }
   }, [isEditMode, loadAgentData, loadModels]);
 
-  // 更新表单字段
-  const updateField = <K extends keyof CreateAgentInput>(
-    field: K,
-    value: CreateAgentInput[K]
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  // 更新基础配置
+  const handleBasicConfigChange = (value: BasicConfigValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: value.name,
+      description: value.description,
+      avatar: value.avatar,
+      model_id: value.model_id,
+      model_name: value.model_name,
+    }));
+  };
+
+  // 更新提示词
+  const handlePromptEditorChange = (value: PromptEditorValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      system_prompt: value.system_prompt,
+    }));
+  };
+
+  // 更新工具选择
+  const handleToolSelectorChange = (value: ToolSelectorValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      tools: value.tools,
+    }));
+  };
+
+  // 更新知识库绑定
+  const handleKnowledgeBinderChange = (value: KnowledgeBinderValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      knowledge_ids: value.knowledge_ids,
+    }));
+  };
+
+  // 更新高级配置
+  const handleAdvancedConfigChange = (value: AdvancedConfigValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      parameters: value.parameters,
+    }));
   };
 
   // 保存智能体
@@ -168,14 +213,79 @@ const AgentBuilder: React.FC = () => {
     navigate("/agents");
   };
 
-  // 切换工具选择
-  const toggleTool = (toolId: string) => {
-    const currentTools = formData.tools || [];
-    const newTools = currentTools.includes(toolId)
-      ? currentTools.filter((t) => t !== toolId)
-      : [...currentTools, toolId];
-    updateField("tools", newTools);
-  };
+  // Tab 配置
+  const tabItems = [
+    {
+      key: "basic",
+      label: (
+        <span className="flex items-center gap-1">
+          <span className="material-symbols-outlined text-sm">tune</span>
+          基础配置
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <BasicConfig
+            value={{
+              name: formData.name,
+              description: formData.description || "",
+              avatar: formData.avatar || "🤖",
+              model_id: formData.model_id,
+              model_name: formData.model_name,
+            }}
+            onChange={handleBasicConfigChange}
+            models={models}
+          />
+          <PromptEditor
+            value={{ system_prompt: formData.system_prompt || "" }}
+            onChange={handlePromptEditorChange}
+          />
+        </div>
+      ),
+    },
+    {
+      key: "tools",
+      label: (
+        <span className="flex items-center gap-1">
+          <span className="material-symbols-outlined text-sm">build</span>
+          工具与知识库
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <ToolSelector
+            value={{ tools: formData.tools || [] }}
+            onChange={handleToolSelectorChange}
+          />
+          <KnowledgeBinder
+            value={{ knowledge_ids: formData.knowledge_ids || [] }}
+            onChange={handleKnowledgeBinderChange}
+          />
+        </div>
+      ),
+    },
+    {
+      key: "advanced",
+      label: (
+        <span className="flex items-center gap-1">
+          <span className="material-symbols-outlined text-sm">settings</span>
+          高级配置
+        </span>
+      ),
+      children: (
+        <AdvancedConfig
+          value={{
+            parameters: {
+              temperature: (formData.parameters?.temperature as number) ?? 0.7,
+              max_tokens: (formData.parameters?.max_tokens as number) ?? 4096,
+              top_p: (formData.parameters?.top_p as number) ?? 1,
+            },
+          }}
+          onChange={handleAdvancedConfigChange}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="agent-builder h-full flex flex-col">
@@ -206,154 +316,12 @@ const AgentBuilder: React.FC = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* 基础配置 */}
-            <div className="bg-bg-secondary rounded-xl p-6 border border-border">
-              <h3 className="text-base font-medium text-text-primary mb-4">基础配置</h3>
-
-              {/* 头像选择 */}
-              <div className="mb-4">
-                <label className="block text-sm text-text-secondary mb-2">头像</label>
-                <div className="flex gap-2 flex-wrap">
-                  {AGENT_AVATARS.map((avatar) => (
-                    <button
-                      key={avatar}
-                      type="button"
-                      className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${
-                        formData.avatar === avatar
-                          ? "bg-primary/20 ring-2 ring-primary"
-                          : "bg-bg-tertiary hover:bg-bg-hover"
-                      }`}
-                      onClick={() => updateField("avatar", avatar)}
-                    >
-                      {avatar}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 名称 */}
-              <div className="mb-4">
-                <label className="block text-sm text-text-secondary mb-2">
-                  名称 <span className="text-error">*</span>
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => updateField("name", e.target.value)}
-                  placeholder="给智能体起个名字"
-                  maxLength={50}
-                />
-              </div>
-
-              {/* 描述 */}
-              <div className="mb-4">
-                <label className="block text-sm text-text-secondary mb-2">描述</label>
-                <TextArea
-                  value={formData.description || ""}
-                  onChange={(e) => updateField("description", e.target.value)}
-                  placeholder="描述这个智能体的功能和用途"
-                  rows={2}
-                  maxLength={200}
-                  showCount
-                />
-              </div>
-
-              {/* 模型选择 */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-2">模型</label>
-                <Select
-                  value={formData.model_id}
-                  onChange={(value) => {
-                    const selectedModel = models.find((m) => m.id === value);
-                    updateField("model_id", value);
-                    updateField("model_name", selectedModel?.modelId);
-                  }}
-                  placeholder="选择模型"
-                  className="w-full"
-                  allowClear
-                  options={models.map((m) => ({
-                    value: m.id,
-                    label: m.name,
-                  }))}
-                />
-              </div>
-            </div>
-
-            {/* 提示词 */}
-            <div className="bg-bg-secondary rounded-xl p-6 border border-border">
-              <h3 className="text-base font-medium text-text-primary mb-4">系统提示词</h3>
-              <TextArea
-                value={formData.system_prompt || ""}
-                onChange={(e) => updateField("system_prompt", e.target.value)}
-                placeholder="定义智能体的角色、行为和能力..."
-                rows={6}
-                showCount
-              />
-            </div>
-
-            {/* 工具选择 */}
-            <div className="bg-bg-secondary rounded-xl p-6 border border-border">
-              <h3 className="text-base font-medium text-text-primary mb-4">可用工具</h3>
-              <div className="space-y-2">
-                {AVAILABLE_TOOLS.map((tool) => (
-                  <div
-                    key={tool.id}
-                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
-                      formData.tools?.includes(tool.id)
-                        ? "bg-primary/10 border border-primary/50"
-                        : "bg-bg-tertiary border border-transparent hover:border-border"
-                    }`}
-                    onClick={() => toggleTool(tool.id)}
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-text-primary">{tool.name}</div>
-                      <div className="text-xs text-text-tertiary">{tool.description}</div>
-                    </div>
-                    <span className="material-symbols-outlined text-primary">
-                      {formData.tools?.includes(tool.id) ? "check_box" : "check_box_outline_blank"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 高级参数 */}
-            <div className="bg-bg-secondary rounded-xl p-6 border border-border">
-              <h3 className="text-base font-medium text-text-primary mb-4">高级参数</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-text-secondary mb-2">温度 (Temperature)</label>
-                  <Input
-                    type="number"
-                    value={(formData.parameters?.temperature as number) ?? 0.7}
-                    onChange={(e) =>
-                      updateField("parameters", {
-                        ...formData.parameters,
-                        temperature: parseFloat(e.target.value) || 0.7,
-                      } as Record<string, unknown>)
-                    }
-                    min={0}
-                    max={2}
-                    step={0.1}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-text-secondary mb-2">最大令牌数</label>
-                  <Input
-                    type="number"
-                    value={(formData.parameters?.max_tokens as number) ?? 4096}
-                    onChange={(e) =>
-                      updateField("parameters", {
-                        ...formData.parameters,
-                        max_tokens: parseInt(e.target.value) || 4096,
-                      } as Record<string, unknown>)
-                    }
-                    min={1}
-                    max={32000}
-                  />
-                </div>
-              </div>
-            </div>
+          <div className="max-w-3xl mx-auto">
+            <Tabs
+              defaultActiveKey="basic"
+              items={tabItems}
+              className="agent-builder-tabs"
+            />
           </div>
         )}
       </div>

@@ -9,8 +9,8 @@
 | 状态 | 数量 |
 |------|------|
 | 进行中 | 0 |
-| 已完成 | 8 |
-| 待处理 | 20 |
+| 已完成 | 15 |
+| 待处理 | 13 |
 
 ---
 
@@ -110,41 +110,43 @@
 
 **目标**：用户可以配置智能体的基础信息、提示词、工具、知识库等
 
-### 待处理
+**状态**：✅ 已完成 (2026-03-02)
 
-- [ ] M2-01: 组件 - BasicConfig 基础配置
+### 已完成
+
+- [x] M2-01: 组件 - BasicConfig 基础配置
   - 创建 `src/views/Agents/AgentBuilder/components/BasicConfig/`
   - 名称输入框
   - 描述文本域
   - 头像选择（预设图标）
   - 模型选择下拉框（从已有模型配置加载）
 
-- [ ] M2-02: 组件 - PromptEditor 提示词编辑器
+- [x] M2-02: 组件 - PromptEditor 提示词编辑器
   - 创建 `src/views/Agents/AgentBuilder/components/PromptEditor/`
   - 多行文本编辑器
   - 变量插入按钮
   - 字数统计
 
-- [ ] M2-03: 组件 - ToolSelector 工具选择器
+- [x] M2-03: 组件 - ToolSelector 工具选择器
   - 创建 `src/views/Agents/AgentBuilder/components/ToolSelector/`
   - 从后端获取可用工具列表
   - 多选开关
   - 已选工具标签展示
   - 工具说明弹窗
 
-- [ ] M2-04: 组件 - KnowledgeBinder 知识库绑定
+- [x] M2-04: 组件 - KnowledgeBinder 知识库绑定
   - 创建 `src/views/Agents/AgentBuilder/components/KnowledgeBinder/`
   - 从后端获取知识库列表
   - 多选绑定
   - 检索参数配置（top_k）
 
-- [ ] M2-05: 组件 - AdvancedConfig 高级配置
+- [x] M2-05: 组件 - AdvancedConfig 高级配置
   - 创建 `src/views/Agents/AgentBuilder/components/AdvancedConfig/`
   - 温度滑块（0-2）
   - 最大迭代次数
   - 开场白配置
 
-- [ ] M2-06: 页面 - 智能体配置页
+- [x] M2-06: 页面 - 智能体配置页
   - 创建 `src/views/Agents/AgentBuilder/index.tsx`
   - 左侧：配置表单（Tab 切换各配置模块）
   - 右侧：预览对话窗口（可选，Phase 2.5）
@@ -152,17 +154,17 @@
   - 表单验证
   - 创建/编辑模式复用
 
-- [ ] M2-07: 路由配置
+- [x] M2-07: 路由配置
   - 添加 `/agents/create` 路由
   - 添加 `/agents/:id/edit` 路由
 
 ### 验收标准
 
-- [ ] 可创建新智能体并保存到数据库
-- [ ] 可编辑已有智能体
-- [ ] 表单验证正常（名称必填等）
-- [ ] 保存后跳转回列表页
-- [ ] 工具、知识库选择正常保存
+- [x] 可创建新智能体并保存到数据库
+- [x] 可编辑已有智能体
+- [x] 表单验证正常（名称必填等）
+- [x] 保存后跳转回列表页
+- [x] 工具、知识库选择正常保存
 
 ---
 

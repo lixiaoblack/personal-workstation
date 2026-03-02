@@ -41,24 +41,33 @@ class CreateTodoTool(BaseTool):
 
     name = "create_todo"
     description = """创建待办事项。
-    
-可以通过自然语言创建待办，支持：
+
+【重要】创建待办前必须先确认分类：
+1. 如果用户没有指定分类，必须先调用 list_todo_categories 获取分类列表
+2. 展示分类列表给用户，询问用户想放到哪个分类
+3. 等待用户选择分类（或创建新分类）后，再调用此工具创建待办
+4. 如果用户说"随便"或"不需要分类"，则可以不传 category_id
+
+支持的参数：
 - 标题（必填）
 - 描述/详情
-- 分类（需要先获取分类列表）
+- 分类 ID（需要先获取分类列表让用户选择）
 - 优先级：low（低）、medium（中）、high（高）、urgent（紧急）
 - 截止时间：支持自然语言如"明天下午3点"、"下周一"
 - 重复类型：none（不重复）、daily（每天）、weekly（每周）、monthly（每月）
 
-示例：
-- 创建待办：title="完成项目报告", priority="high"
-- 创建待办：title="开会", due_date="明天下午3点"
+示例流程：
+用户: "帮我添加一个待办，明天下午3点开会"
+AI: 先调用 list_todo_categories 获取分类列表
+AI: "您有以下分类：工作、生活、学习。请问要把这个待办放到哪个分类？"
+用户: "工作"
+AI: 再调用 create_todo 创建待办，设置 category_id
 """
 
     class ArgsSchema(ToolSchema):
         title: str = Field(description="待办标题（必填），简洁描述任务内容")
         description: Optional[str] = Field(
-            default=None, 
+            default=None,
             description="待办详情/描述"
         )
         category_id: Optional[int] = Field(
@@ -142,16 +151,21 @@ class CreateTodoTool(BaseTool):
                 # 格式化返回信息
                 info_parts = [f"✅ 已创建待办：{result['title']}"]
                 if result.get('priority'):
-                    priority_names = {"low": "低", "medium": "中", "high": "高", "urgent": "紧急"}
-                    info_parts.append(f"   优先级：{priority_names.get(result['priority'], result['priority'])}")
+                    priority_names = {
+                        "low": "低", "medium": "中", "high": "高", "urgent": "紧急"}
+                    info_parts.append(
+                        f"   优先级：{priority_names.get(result['priority'], result['priority'])}")
                 if result.get('due_date'):
                     from datetime import datetime
                     dt = datetime.fromtimestamp(result['due_date'] / 1000)
-                    info_parts.append(f"   截止时间：{dt.strftime('%Y-%m-%d %H:%M')}")
+                    info_parts.append(
+                        f"   截止时间：{dt.strftime('%Y-%m-%d %H:%M')}")
                 if result.get('repeat_type') and result['repeat_type'] != 'none':
-                    repeat_names = {"daily": "每天", "weekly": "每周", "monthly": "每月", "yearly": "每年"}
-                    info_parts.append(f"   重复：{repeat_names.get(result['repeat_type'], result['repeat_type'])}")
-                
+                    repeat_names = {"daily": "每天", "weekly": "每周",
+                                    "monthly": "每月", "yearly": "每年"}
+                    info_parts.append(
+                        f"   重复：{repeat_names.get(result['repeat_type'], result['repeat_type'])}")
+
                 return "\n".join(info_parts)
             else:
                 return "❌ 创建待办失败"
@@ -163,7 +177,7 @@ class CreateTodoTool(BaseTool):
     def _parse_datetime(self, datetime_str: str) -> Optional[int]:
         """
         解析自然语言时间
-        
+
         支持：
         - 相对时间：明天、后天、下周一
         - 时间点：下午3点、18:00
@@ -180,7 +194,7 @@ class CreateTodoTool(BaseTool):
 
         # 解析日期部分
         date_part = now
-        
+
         if "明天" in datetime_str:
             date_part = now + timedelta(days=1)
             datetime_str = datetime_str.replace("明天", "")
@@ -199,7 +213,7 @@ class CreateTodoTool(BaseTool):
 
         # 解析时间部分
         time_part = None
-        
+
         # 匹配 HH:MM 格式
         time_match = re.search(r"(\d{1,2}):(\d{2})", datetime_str)
         if time_match:
@@ -210,7 +224,7 @@ class CreateTodoTool(BaseTool):
             # 匹配 上午/下午 X 点 格式
             am_match = re.search(r"上午\s*(\d{1,2})\s*点?", datetime_str)
             pm_match = re.search(r"下午\s*(\d{1,2})\s*点?", datetime_str)
-            
+
             if am_match:
                 hour = int(am_match.group(1))
                 time_part = (hour, 0)
@@ -232,10 +246,12 @@ class CreateTodoTool(BaseTool):
 
         # 组合日期和时间
         if time_part:
-            result = date_part.replace(hour=time_part[0], minute=time_part[1], second=0, microsecond=0)
+            result = date_part.replace(
+                hour=time_part[0], minute=time_part[1], second=0, microsecond=0)
         else:
             # 没有时间部分，默认设置为当天的 18:00
-            result = date_part.replace(hour=18, minute=0, second=0, microsecond=0)
+            result = date_part.replace(
+                hour=18, minute=0, second=0, microsecond=0)
 
         # 转换为毫秒时间戳
         return int(result.timestamp() * 1000)
@@ -249,7 +265,18 @@ class ListTodoCategoriesTool(BaseTool):
     """
 
     name = "list_todo_categories"
-    description = "获取所有待办分类列表。创建待办时可以通过分类 ID 将待办归类。"
+    description = """获取所有待办分类列表。
+
+【使用场景】
+- 用户创建待办时，需要让用户选择分类
+- 用户想查看有哪些分类
+
+【返回格式】
+返回分类列表，包含 ID 和名称，便于用户选择。
+
+【调用时机】
+在调用 create_todo 之前，如果没有指定分类，必须先调用此工具获取分类列表让用户选择。
+"""
 
     class ArgsSchema(ToolSchema):
         pass
@@ -262,13 +289,26 @@ class ListTodoCategoriesTool(BaseTool):
             categories = direct_list_todo_categories()
 
             if not categories:
-                return "暂无待办分类。可以在待办页面创建分类。"
+                return """暂无待办分类。
 
-            lines = ["📋 待办分类列表："]
+您可以：
+1. 直接创建待办（不指定分类）
+2. 在待办页面创建新分类
+
+请问要直接创建待办吗？"""
+
+            # 优化返回格式，便于 AI 理解和用户选择
+            lines = ["📋 您有以下待办分类：", ""]
+            for i, cat in enumerate(categories, 1):
+                desc = f" - {cat['description']}" if cat.get('description') else ""
+                lines.append(f"{i}. {cat['name']}{desc} (ID: {cat['id']})")
+            
+            lines.append("")
+            lines.append('请选择一个分类，或者说"不需要分类"直接创建待办。')
+            lines.append("")
+            lines.append("【分类数据】")
             for cat in categories:
-                lines.append(f"  - ID: {cat['id']} | 名称: {cat['name']}")
-                if cat.get('description'):
-                    lines.append(f"    描述: {cat['description']}")
+                lines.append(f"ID: {cat['id']}, 名称: {cat['name']}")
 
             return "\n".join(lines)
 
@@ -345,14 +385,15 @@ class ListTodosTool(BaseTool):
                 status_icon = "✅" if todo['status'] == 'completed' else "⏳"
                 priority_str = priority_names.get(todo.get('priority'), '中')
                 status_str = status_names.get(todo.get('status'), '未知')
-                
+
                 lines.append(f"  {status_icon} [{todo['id']}] {todo['title']}")
                 lines.append(f"      状态: {status_str} | 优先级: {priority_str}")
-                
+
                 if todo.get('due_date'):
                     from datetime import datetime
                     dt = datetime.fromtimestamp(todo['due_date'] / 1000)
-                    is_overdue = dt < datetime.now() and todo['status'] != 'completed'
+                    is_overdue = dt < datetime.now(
+                    ) and todo['status'] != 'completed'
                     due_str = dt.strftime('%Y-%m-%d %H:%M')
                     if is_overdue:
                         lines.append(f"      ⚠️ 截止: {due_str} (已逾期)")

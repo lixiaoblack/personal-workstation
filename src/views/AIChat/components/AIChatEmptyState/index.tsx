@@ -1,3 +1,12 @@
+/*
+ * @Author: wanglx
+ * @Date: 2026-02-17 20:27:06
+ * @LastEditors: wanglx
+ * @LastEditTime: 2026-03-02 09:31:58
+ * @Description:
+ *
+ * Copyright (c) 2026 by ${git_name_email}, All Rights Reserved.
+ */
 /**
  * AIChatEmptyState - 空状态组件
  * 显示欢迎页面和快捷操作
@@ -51,7 +60,9 @@ const AIChatEmptyState: React.FC<AIChatEmptyStateProps> = memo(
             {/* Todo 快捷入口 */}
             <div className="mt-4 pt-4 border-t border-border w-full max-w-md">
               <p className="text-xs text-text-tertiary mb-3 flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">checklist</span>
+                <span className="material-symbols-outlined text-sm">
+                  checklist
+                </span>
                 待办快捷入口
               </p>
               <div className="flex flex-wrap gap-2 justify-center">

@@ -64,6 +64,7 @@ class SearchNotesTool(BaseTool):
         """语义搜索笔记"""
         try:
             from api.direct_api import direct_search_notes
+            from rag.notes_vectorstore import EmbeddingConfigError
 
             # 尝试在现有事件循环中运行
             try:
@@ -112,6 +113,9 @@ class SearchNotesTool(BaseTool):
 
             return "\n".join(lines)
 
+        except EmbeddingConfigError as e:
+            logger.warning(f"嵌入模型未配置: {e}")
+            return f"⚠️ {str(e)}\n\n请前往「设置 → AI 设置 → 嵌入模型」添加并启用嵌入模型。"
         except Exception as e:
             logger.error(f"语义搜索笔记失败: {e}")
             return f"❌ 搜索失败：{str(e)}"
@@ -125,6 +129,7 @@ class SearchNotesTool(BaseTool):
         """异步执行语义搜索（Deep Agent 会调用此方法）"""
         try:
             from api.direct_api import direct_search_notes
+            from rag.notes_vectorstore import EmbeddingConfigError
 
             results = await direct_search_notes(query, k=limit, file_path_filter=file_path_filter)
 
@@ -154,6 +159,9 @@ class SearchNotesTool(BaseTool):
 
             return "\n".join(lines)
 
+        except EmbeddingConfigError as e:
+            logger.warning(f"嵌入模型未配置: {e}")
+            return f"⚠️ {str(e)}\n\n请前往「设置 → AI 设置 → 嵌入模型」添加并启用嵌入模型。"
         except Exception as e:
             logger.error(f"语义搜索笔记失败: {e}")
             return f"❌ 搜索失败：{str(e)}"

@@ -304,6 +304,7 @@ export function syncModelConfigsToPython(): void {
           id: config.id,
           provider: config.provider,
           modelId: config.modelId,
+          usageType: config.usageType || "llm", // 添加模型用途类型
           maxTokens: config.maxTokens,
           temperature: config.temperature,
         };

@@ -32,13 +32,18 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from .vectorstore import LanceDBVectorStore, Document, get_vectorstore
-from .embeddings import get_embedding_service
+from .embeddings import get_embedding_service, init_embedding_service_from_config
 from .text_splitter import SmartTextSplitter, TextChunk
 
 logger = logging.getLogger(__name__)
 
 # Notes 向量集合名称
 NOTES_COLLECTION_ID = "__notes__"
+
+
+class EmbeddingConfigError(Exception):
+    """嵌入模型配置错误"""
+    pass
 
 
 @dataclass
@@ -214,14 +219,42 @@ class NotesVectorStore:
     def __init__(self):
         """初始化笔记向量存储"""
         self._vectorstore = get_vectorstore()
-        self._embedding_service = get_embedding_service()
+        self._embedding_service = None  # 延迟初始化
         self._markdown_splitter = MarkdownSplitter()
         self._initialized = False
+
+    def _ensure_embedding_service(self):
+        """
+        确保嵌入服务已初始化
+
+        Raises:
+            EmbeddingConfigError: 如果没有配置嵌入模型
+        """
+        if self._embedding_service is not None:
+            return
+
+        # 从模型路由获取嵌入模型配置
+        from model_router import model_router
+        config = model_router.get_default_embedding_config()
+
+        if config is None:
+            raise EmbeddingConfigError(
+                "未配置嵌入模型。请在 AI 设置中添加并启用嵌入模型（如 OpenAI text-embedding-3-small）。"
+            )
+
+        # 从配置初始化嵌入服务
+        self._embedding_service = init_embedding_service_from_config(config)
+        logger.info(
+            f"[NotesVectorStore] 使用嵌入模型: {config.provider.value} / {config.model_id}"
+        )
 
     async def _ensure_collection(self):
         """确保集合已创建"""
         if self._initialized:
             return
+
+        # 确保嵌入服务已初始化
+        self._ensure_embedding_service()
 
         if not self._vectorstore.collection_exists(NOTES_COLLECTION_ID):
             self._vectorstore.create_collection(

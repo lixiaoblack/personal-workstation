@@ -1094,6 +1094,7 @@ file_read(file_path="{attachments[0].get('path', '')}")
                         id=model_id,
                         provider=provider,
                         model_id=config_data.get("modelId", ""),
+                        usage_type=config_data.get("usageType", "llm"),
                         api_key=config_data.get("apiKey"),
                         api_base_url=config_data.get("apiBaseUrl"),
                         host=config_data.get("host"),

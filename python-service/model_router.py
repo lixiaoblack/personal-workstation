@@ -30,6 +30,7 @@ class ModelConfig:
     provider: ModelProvider
     model_id: str
     id: Optional[int] = None  # 模型配置 ID（用于查找）
+    usage_type: str = "llm"  # 模型用途：llm 或 embedding
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
     host: Optional[str] = None  # Ollama 使用
@@ -52,6 +53,7 @@ class ModelRouter:
     def __init__(self):
         self._models: Dict[int, BaseChatModel] = {}
         self._configs: Dict[int, ModelConfig] = {}
+        self._embedding_configs: Dict[int, ModelConfig] = {}  # 嵌入模型配置
 
     def create_chat_model(self, config: ModelConfig) -> BaseChatModel:
         """创建聊天模型"""
@@ -90,18 +92,25 @@ class ModelRouter:
     def register_model(self, model_id: int, config: ModelConfig) -> None:
         """注册模型配置"""
         self._configs[model_id] = config
-        # 预创建模型实例（可选，也可以延迟创建）
-        try:
-            self._models[model_id] = self.create_chat_model(config)
-            logger.info(f"已注册模型: {config.provider} / {config.model_id}")
-        except Exception as e:
-            logger.error(f"创建模型失败: {e}")
-            raise
+
+        # 根据用途类型分别存储
+        if config.usage_type == "embedding":
+            self._embedding_configs[model_id] = config
+            logger.info(f"已注册嵌入模型: {config.provider} / {config.model_id}")
+        else:
+            # 预创建 LLM 模型实例
+            try:
+                self._models[model_id] = self.create_chat_model(config)
+                logger.info(f"已注册 LLM 模型: {config.provider} / {config.model_id}")
+            except Exception as e:
+                logger.error(f"创建模型失败: {e}")
+                raise
 
     def unregister_model(self, model_id: int) -> None:
         """注销模型"""
-        self._configs.pop(model_id, None)
+        config = self._configs.pop(model_id, None)
         self._models.pop(model_id, None)
+        self._embedding_configs.pop(model_id, None)
 
     def get_model(self, model_id: int) -> Optional[BaseChatModel]:
         """获取模型实例"""
@@ -110,6 +119,32 @@ class ModelRouter:
     def get_config(self, model_id: int) -> Optional[ModelConfig]:
         """获取模型配置"""
         return self._configs.get(model_id)
+
+    def get_default_embedding_config(self) -> Optional[ModelConfig]:
+        """
+        获取默认嵌入模型配置
+
+        Returns:
+            默认嵌入模型配置，如果没有配置则返回 None
+        """
+        if not self._embedding_configs:
+            return None
+        # 返回第一个注册的嵌入模型配置
+        return next(iter(self._embedding_configs.values()))
+
+    def get_embedding_config(self, model_id: Optional[int] = None) -> Optional[ModelConfig]:
+        """
+        获取嵌入模型配置
+
+        Args:
+            model_id: 模型 ID，如果为 None 则返回默认配置
+
+        Returns:
+            嵌入模型配置
+        """
+        if model_id:
+            return self._embedding_configs.get(model_id)
+        return self.get_default_embedding_config()
 
     def chat(
         self,

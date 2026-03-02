@@ -289,3 +289,40 @@ def init_embedding_service(
     )
 
     return _global_embedding_service
+
+
+def init_embedding_service_from_config(config) -> EmbeddingService:
+    """
+    从模型配置初始化嵌入服务
+
+    Args:
+        config: ModelConfig 实例，包含 provider、model_id、api_key 等信息
+
+    Returns:
+        嵌入服务实例
+
+    Raises:
+        ValueError: 如果配置无效或不支持的提供商
+    """
+    from model_router import ModelProvider
+
+    # 根据 provider 确定 model_type
+    if config.provider == ModelProvider.OLLAMA:
+        model_type = EmbeddingModelType.OLLAMA
+        base_url = config.host or "http://127.0.0.1:11434"
+        api_key = None
+    else:
+        model_type = EmbeddingModelType.OPENAI
+        base_url = config.api_base_url
+        api_key = config.api_key
+
+    # 如果没有 API Key（在线模型），抛出错误
+    if model_type == EmbeddingModelType.OPENAI and not api_key:
+        raise ValueError("嵌入模型未配置 API Key，请在 AI 设置中配置嵌入模型")
+
+    return init_embedding_service(
+        model_type=model_type,
+        model_name=config.model_id,
+        api_key=api_key,
+        base_url=base_url,
+    )

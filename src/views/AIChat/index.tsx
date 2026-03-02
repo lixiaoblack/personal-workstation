@@ -43,10 +43,15 @@ import CreateKnowledgeModal from "../Knowledge/components/CreateKnowledgeModal";
 import type { ModelConfigListItem } from "@/types/electron";
 
 const AIChatComponent: React.FC = () => {
-  const { connectionState, sendChat, sendAgentChat, sendAskResponse, lastMessage } =
-    useWebSocket({
-      autoConnect: true,
-    });
+  const {
+    connectionState,
+    sendChat,
+    sendAgentChat,
+    sendAskResponse,
+    lastMessage,
+  } = useWebSocket({
+    autoConnect: true,
+  });
 
   // 从 MobX Store 获取模型状态
   const { models, currentModel, setCurrentModel } = modelStore;
@@ -161,9 +166,8 @@ const AIChatComponent: React.FC = () => {
   const loadMessages = useCallback(
     async (conversationId: number) => {
       try {
-        const conversation = await window.electronAPI.getConversationById(
-          conversationId
-        );
+        const conversation =
+          await window.electronAPI.getConversationById(conversationId);
         if (conversation) {
           setMessages(conversation.messages || []);
           setActiveConversation(conversation);
@@ -345,6 +349,14 @@ const AIChatComponent: React.FC = () => {
       currentStreamStateRef: streamStateRef.current,
       currentAgentSteps: agentStepsRef.current.length,
     });
+    console.log(
+      "[AIChat] MessageType.ASK =",
+      MessageType.ASK,
+      ", lastMessage.type =",
+      lastMessage.type,
+      ", 匹配:",
+      lastMessage.type === MessageType.ASK
+    );
 
     // 流式内容块 - 不使用去重逻辑，因为所有 chunk 可能有相同的 ID
     // 直接处理，避免被去重跳过
@@ -597,19 +609,30 @@ const AIChatComponent: React.FC = () => {
     // Ask 通用询问消息
     if (lastMessage.type === MessageType.ASK) {
       const askMsg = lastMessage as AskMessage;
-      console.log("[AIChat] 收到 ask 消息:", askMsg);
-      setAskState((prev) => ({
-        ...prev,
-        [askMsg.askId]: {
-          message: askMsg,
-          responded: false,
-        },
-      }));
+      console.log("[AIChat] ========== 收到 ask 消息 ==========");
+      console.log("[AIChat] askId:", askMsg.askId);
+      console.log("[AIChat] askType:", askMsg.askType);
+      console.log("[AIChat] title:", askMsg.title);
+      console.log("[AIChat] options:", askMsg.options);
+      console.log("[AIChat] 完整消息:", JSON.stringify(askMsg, null, 2));
+      console.log("[AIChat] ==============================");
+      setAskState((prev) => {
+        const newState = {
+          ...prev,
+          [askMsg.askId]: {
+            message: askMsg,
+            responded: false,
+          },
+        };
+        console.log("[AIChat] askState 更新后:", newState);
+        return newState;
+      });
     }
 
     // Ask 结果消息
     if (lastMessage.type === MessageType.ASK_RESULT) {
-      const askResult = lastMessage as import("@/types/electron").AskResultMessage;
+      const askResult =
+        lastMessage as import("@/types/electron").AskResultMessage;
       console.log("[AIChat] 收到 ask_result 消息:", askResult);
       setAskState((prev) => {
         const existing = prev[askResult.askId];
@@ -730,6 +753,20 @@ const AIChatComponent: React.FC = () => {
   const handleAskRespond = useCallback(
     (askId: string, action: "submit" | "cancel", value?: unknown) => {
       console.log("[AIChat] 发送 Ask 响应:", { askId, action, value });
+
+      // 立即更新 askState，将 responded 设为 true
+      setAskState((prev) => {
+        const existing = prev[askId];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [askId]: {
+            ...existing,
+            responded: true,
+          },
+        };
+      });
+
       // 通过 WebSocket 发送响应
       if (connectionState === ConnectionState.CONNECTED && sendAskResponse) {
         sendAskResponse({
@@ -1185,9 +1222,10 @@ const AIChatComponent: React.FC = () => {
                   )
                 )}
 
-              {/* Ask 通用询问卡片 */}
-              {streamState.status !== "streaming" &&
-                Object.entries(askState).map(([askId, state]) => (
+              {/* Ask 通用询问卡片 - 只显示未响应的 */}
+              {Object.entries(askState)
+                .filter(([, state]) => !state.responded)
+                .map(([askId, state]) => (
                   <div key={askId} className="flex justify-start mb-6">
                     <div className="w-11 shrink-0" />
                     <div className="flex-1 max-w-2xl">

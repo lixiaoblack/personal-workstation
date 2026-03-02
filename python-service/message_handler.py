@@ -29,11 +29,11 @@ class MessageHandler:
         self.send_callback = send_callback
         # 初始化 Ask 模块
         self.ask_handler = AskHandler(send_callback=send_callback)
-        
+
         # 设置 AskHandler 引用到 Todo 工具模块
         from agent.todo_tool import set_ask_handler
         set_ask_handler(self.ask_handler)
-        
+
         self.handlers = {
             "ping": self._handle_ping,
             "chat_message": self._handle_chat_message,
@@ -2049,7 +2049,9 @@ file_read(file_path="{attachments[0].get('path', '')}")
         后续处理通过上下文进行。
         """
         try:
+            logger.info(f"[Ask] 收到响应消息: {message}")
             success = await self.ask_handler.handle_response(message)
+            logger.info(f"[Ask] 响应处理结果: success={success}")
             return {
                 "type": "ask_response_ack",
                 "id": message.get("id"),

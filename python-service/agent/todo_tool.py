@@ -315,9 +315,10 @@ class ListTodoCategoriesTool(BaseTool):
             # 优化返回格式，便于 AI 理解和用户选择
             lines = ["📋 您有以下待办分类：", ""]
             for i, cat in enumerate(categories, 1):
-                desc = f" - {cat['description']}" if cat.get('description') else ""
+                desc = f" - {cat['description']}" if cat.get(
+                    'description') else ""
                 lines.append(f"{i}. {cat['name']}{desc} (ID: {cat['id']})")
-            
+
             lines.append("")
             lines.append('请选择一个分类，或者说"不需要分类"直接创建待办。')
             lines.append("")
@@ -558,7 +559,33 @@ class AskCategoryTool(BaseTool):
     args_schema = ArgsSchema
 
     def _run(self, title: Optional[str] = None) -> str:
-        """使用 Ask 模块让用户选择分类"""
+        """同步执行（作为降级方案，不推荐）"""
+        # 获取 AskHandler
+        ask_handler = get_ask_handler()
+        if not ask_handler:
+            # 如果没有 AskHandler，返回分类列表让 AI 处理
+            categories = direct_list_todo_categories()
+            if not categories:
+                return "no_categories:暂无分类，可以直接创建待办（不指定分类）"
+            return self._format_categories_for_ai(categories)
+
+        # 尝试在现有事件循环中运行
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果事件循环正在运行，我们不能在同步方法中等待异步结果
+                # 返回提示让用户直接选择
+                logger.warning("[AskCategoryTool] 事件循环正在运行，无法同步等待异步结果")
+                categories = direct_list_todo_categories()
+                return self._format_categories_for_ai(categories)
+            else:
+                return loop.run_until_complete(self._call_async(title))
+        except RuntimeError:
+            # 没有事件循环
+            return asyncio.run(self._call_async(title))
+
+    async def _call_async(self, title: Optional[str] = None) -> str:
+        """异步执行询问（Deep Agent 会调用此方法）"""
         try:
             # 获取分类列表
             categories = direct_list_todo_categories()
@@ -574,7 +601,7 @@ class AskCategoryTool(BaseTool):
                 return self._format_categories_for_ai(categories)
 
             # 构建 Ask 选项
-            from ask import AskOption, AskType
+            from ask.types import AskOption, AskType
 
             options = []
             for cat in categories:
@@ -592,19 +619,22 @@ class AskCategoryTool(BaseTool):
                 description="直接创建待办，不指定分类"
             ))
 
-            # 执行异步询问（同步包装）
+            # 执行异步询问
             ask_title = "选择待办分类"
             if title:
                 ask_title = f"「{title}」放到哪个分类？"
 
-            response = self._run_async_ask(
-                ask_handler=ask_handler,
+            logger.info(f"[AskCategoryTool] 发起异步询问: {ask_title}")
+
+            response = await ask_handler.ask_and_wait(
                 ask_type=AskType.SELECT,
                 title=ask_title,
                 description='请选择一个分类，或选择"不需要分类"直接创建',
                 options=options,
                 timeout=60000,  # 60秒超时
             )
+
+            logger.info(f"[AskCategoryTool] 收到响应: {response}")
 
             if response is None:
                 return "timeout:用户未响应，已超时"
@@ -628,30 +658,6 @@ class AskCategoryTool(BaseTool):
         except Exception as e:
             logger.error(f"[AskCategoryTool] 执行失败: {e}")
             return f"error:{str(e)}"
-
-    def _run_async_ask(self, ask_handler, **kwargs):
-        """在同步上下文中执行异步询问"""
-        try:
-            # 尝试在现有事件循环中运行
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # 如果事件循环正在运行，使用线程池
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        self._async_ask(ask_handler, **kwargs)
-                    )
-                    return future.result(timeout=kwargs.get('timeout', 60000) / 1000 + 10)
-            else:
-                return loop.run_until_complete(self._async_ask(ask_handler, **kwargs))
-        except RuntimeError:
-            # 没有事件循环，创建一个新的
-            return asyncio.run(self._async_ask(ask_handler, **kwargs))
-
-    async def _async_ask(self, ask_handler, **kwargs):
-        """异步执行询问"""
-        return await ask_handler.ask_and_wait(**kwargs)
 
     def _format_categories_for_ai(self, categories: List[Dict]) -> str:
         """格式化分类列表供 AI 处理（当 Ask 模块不可用时）"""

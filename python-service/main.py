@@ -249,12 +249,28 @@ class AgentService:
             msg_type = message.get("type")
             logger.debug(f"[AgentService] 收到消息类型: {msg_type}")
 
+            # agent_chat 消息需要异步处理，避免阻塞 WebSocket 消息接收
+            # 这样 ask_response 等消息可以在 Agent 执行期间被处理
+            if msg_type == "agent_chat":
+                # 创建后台任务处理 Agent 消息
+                asyncio.create_task(self._process_agent_chat(message))
+                return
+
             # 处理其他消息
             response = await self.message_handler.process(message)
             if response and self.ws_client:
                 await self.ws_client.send(response)
         except Exception as e:
             logger.error(f"消息处理错误: {e}")
+
+    async def _process_agent_chat(self, message: dict):
+        """异步处理 Agent 聊天消息"""
+        try:
+            response = await self.message_handler.process(message)
+            if response and self.ws_client:
+                await self.ws_client.send(response)
+        except Exception as e:
+            logger.error(f"Agent 消息处理错误: {e}")
 
     def on_connected(self):
         """连接成功回调"""

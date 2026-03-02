@@ -442,6 +442,15 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
       return;
     }
 
+    // 处理 Ask 响应消息 - 转发给 Python 服务
+    if (message.type === MessageType.ASK_RESPONSE) {
+      if (pythonClient && pythonClient.readyState === WebSocket.OPEN) {
+        pythonClient.send(JSON.stringify(message));
+        console.log("[WebSocket] Ask Response 消息已转发给 Python 服务");
+      }
+      return;
+    }
+
     // 处理来自 Python 的响应 - 转发给对应的渲染进程
     if (
       message.type === MessageType.CHAT_RESPONSE ||
@@ -453,7 +462,9 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
       message.type === MessageType.AGENT_THOUGHT ||
       message.type === MessageType.AGENT_TOOL_CALL ||
       message.type === MessageType.AGENT_TOOL_RESULT ||
-      message.type === MessageType.KNOWLEDGE_ASK_ADD
+      message.type === MessageType.KNOWLEDGE_ASK_ADD ||
+      message.type === MessageType.ASK ||
+      message.type === MessageType.ASK_RESULT
     ) {
       const clientInfo = clients.get(ws);
       // 确保消息来自 Python 客户端

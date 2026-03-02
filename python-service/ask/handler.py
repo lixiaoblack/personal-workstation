@@ -287,8 +287,13 @@ class AskHandler:
         Returns:
             是否处理成功
         """
+        logger.info(f"[AskHandler] handle_response 收到消息: {message}")
         response = AskResponse.from_dict(message)
-        return await self.registry.set_response(response.ask_id, response)
+        logger.info(
+            f"[AskHandler] 解析后的响应: ask_id={response.ask_id}, action={response.action}, value={response.value}")
+        result = await self.registry.set_response(response.ask_id, response)
+        logger.info(f"[AskHandler] set_response 结果: {result}")
+        return result
 
     async def result(
         self,

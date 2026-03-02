@@ -117,6 +117,7 @@ class AskMessage:
     def to_dict(self) -> Dict[str, Any]:
         result = {
             "type": "ask",
+            "id": self.ask_id,  # 使用 askId 作为消息 id
             "askId": self.ask_id,
             "askType": self.ask_type.value,
             "title": self.title,
@@ -172,6 +173,7 @@ class AskResult:
     def to_dict(self) -> Dict[str, Any]:
         result = {
             "type": "ask_result",
+            "id": self.ask_id,  # 使用 askId 作为消息 id
             "askId": self.ask_id,
             "success": self.success,
             "timestamp": int(time.time() * 1000),

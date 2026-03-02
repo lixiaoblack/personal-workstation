@@ -74,8 +74,11 @@ class AskRegistry:
         """
         async with self._lock:
             session = self._sessions.get(ask_id)
+            logger.info(
+                f"[AskRegistry] set_response: ask_id={ask_id}, session存在={session is not None}")
             if not session:
-                logger.warning(f"[AskRegistry] 未找到询问: {ask_id}")
+                logger.warning(
+                    f"[AskRegistry] 未找到询问: {ask_id}, 当前会话: {list(self._sessions.keys())}")
                 return False
 
             if session.completed:
@@ -85,8 +88,8 @@ class AskRegistry:
             session.response = response
             session.completed = True
             session.event.set()
-            logger.debug(
-                f"[AskRegistry] 设置响应: {ask_id}, action={response.action}")
+            logger.info(
+                f"[AskRegistry] 设置响应成功: {ask_id}, action={response.action}, event已设置")
             return True
 
     async def wait_for_response(

@@ -240,10 +240,7 @@ export function useWebSocket(
       action: "submit" | "cancel";
       value?: unknown;
     }): boolean => {
-      const message = createMessage(
-        MessageType.ASK_RESPONSE,
-        options
-      );
+      const message = createMessage(MessageType.ASK_RESPONSE, options);
       return send(message);
     },
     [send]

@@ -56,6 +56,21 @@
 
 ### 新增 (Added)
 
+### 新增 (Added) - v0.5.36
+
+- **AI 语义创建 Todo 功能完善**
+  - Ask 模块集成到 AI 创建待办流程
+  - 用户说"帮我添加一个待办"时弹出分类选择卡片
+  - WebSocket 消息路由支持 ASK/ASK_RESULT/ASK_RESPONSE 类型
+  - agent_chat 消息异步处理，避免阻塞 WebSocket 消息循环
+  - AskCard 组件用户响应后立即消失
+  - AskCategoryTool 添加 `_call_async` 方法支持 Deep Agent 异步调用
+
+### 修复 (Fixed) - v0.5.36
+
+- WebSocket 消息循环阻塞导致 ask_response 无法被处理
+- AskCard 用户响应后仍显示"处理中"状态
+
 ### 新增 (Added) - v0.5.35
 
 - **附件功能完整修复**

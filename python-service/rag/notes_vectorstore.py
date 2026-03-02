@@ -32,18 +32,13 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from .vectorstore import LanceDBVectorStore, Document, get_vectorstore
-from .embeddings import get_embedding_service, init_embedding_service_from_config
+from .embeddings import get_embedding_service, init_embedding_service_from_config, EmbeddingConfigError
 from .text_splitter import SmartTextSplitter, TextChunk
 
 logger = logging.getLogger(__name__)
 
 # Notes 向量集合名称
 NOTES_COLLECTION_ID = "__notes__"
-
-
-class EmbeddingConfigError(Exception):
-    """嵌入模型配置错误"""
-    pass
 
 
 @dataclass

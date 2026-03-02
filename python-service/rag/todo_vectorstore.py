@@ -33,7 +33,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from .vectorstore import LanceDBVectorStore, Document, get_vectorstore
-from .embeddings import get_embedding_service
+from .embeddings import get_embedding_service, EmbeddingConfigError
 
 logger = logging.getLogger(__name__)
 
@@ -123,13 +123,34 @@ class TodoVectorStore:
     def __init__(self):
         """初始化待办向量存储"""
         self._vectorstore = get_vectorstore()
-        self._embedding_service = get_embedding_service()
+        self._embedding_service = None  # 延迟初始化
         self._initialized = False
+
+    def _ensure_embedding_service(self):
+        """
+        确保嵌入服务已初始化
+
+        Raises:
+            EmbeddingConfigError: 如果没有配置嵌入模型
+        """
+        if self._embedding_service is not None:
+            return
+
+        # 获取嵌入服务（会自动从模型配置初始化）
+        self._embedding_service = get_embedding_service()
+
+        if self._embedding_service is None:
+            raise EmbeddingConfigError(
+                "未配置嵌入模型。请在 AI 设置中添加并启用嵌入模型。"
+            )
 
     async def _ensure_collection(self):
         """确保集合已创建"""
         if self._initialized:
             return
+
+        # 确保嵌入服务已初始化
+        self._ensure_embedding_service()
 
         if not self._vectorstore.collection_exists(TODO_COLLECTION_ID):
             self._vectorstore.create_collection(

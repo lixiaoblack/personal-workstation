@@ -29,6 +29,11 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
+class EmbeddingConfigError(Exception):
+    """嵌入模型配置错误"""
+    pass
+
+
 class EmbeddingModelType(str, Enum):
     """嵌入模型类型"""
     OLLAMA = "ollama"
@@ -152,6 +157,10 @@ class EmbeddingService:
 
     def _get_openai_embeddings(self, texts: List[str]) -> List[List[float]]:
         """使用 OpenAI API 获取嵌入向量"""
+        # 对于百炼等非标准 API，使用 httpx 直接调用
+        if self._base_url and "dashscope.aliyuncs.com" in self._base_url:
+            return self._get_bailian_embeddings(texts)
+
         from langchain_openai import OpenAIEmbeddings
 
         if not self._embedding_model:
@@ -168,6 +177,42 @@ class EmbeddingService:
             logger.error(f"OpenAI 嵌入失败: {e}")
             # 返回零向量作为降级
             return [[0.0] * self._dimension for _ in texts]
+
+    def _get_bailian_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """使用百炼 API 获取嵌入向量（特殊格式）"""
+        import httpx
+
+        embeddings = []
+
+        # 百炼嵌入 API 格式与 OpenAI 不同
+        # 参考: https://help.aliyun.com/document_detail/2712532.html
+        with httpx.Client(timeout=60.0) as client:
+            for text in texts:
+                try:
+                    response = client.post(
+                        f"{self._base_url}/embeddings",
+                        headers={
+                            "Authorization": f"Bearer {self._api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": self._model_name,
+                            "input": text,  # 百炼使用字符串而非数组
+                        }
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    # 解析响应
+                    if "data" in data and len(data["data"]) > 0:
+                        embeddings.append(data["data"][0].get("embedding", []))
+                    else:
+                        logger.warning(f"百炼嵌入响应格式异常: {data}")
+                        embeddings.append([0.0] * self._dimension)
+                except Exception as e:
+                    logger.error(f"百炼嵌入失败: {e}")
+                    embeddings.append([0.0] * self._dimension)
+
+        return embeddings
 
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -245,18 +290,48 @@ def get_embedding_service(
     """
     获取全局嵌入服务实例
 
+    如果全局服务未初始化，会自动从模型配置中获取嵌入模型配置。
+
     Args:
-        model_type: 模型类型
+        model_type: 模型类型（可选，用于强制指定）
         **kwargs: 其他参数
 
     Returns:
         嵌入服务实例
+
+    Raises:
+        EmbeddingConfigError: 如果没有配置嵌入模型
     """
     global _global_embedding_service
 
     if _global_embedding_service is None or model_type:
-        _global_embedding_service = EmbeddingService(
-            model_type=model_type, **kwargs)
+        if model_type:
+            # 如果指定了模型类型，直接创建
+            _global_embedding_service = EmbeddingService(
+                model_type=model_type, **kwargs)
+        else:
+            # 自动从模型配置获取
+            try:
+                from model_router import model_router
+                config = model_router.get_default_embedding_config()
+
+                if config:
+                    _global_embedding_service = init_embedding_service_from_config(config)
+                    logger.info(
+                        f"[Embeddings] 自动初始化嵌入服务: {config.provider.value} / {config.model_id}"
+                    )
+                else:
+                    # 没有配置，抛出异常
+                    raise EmbeddingConfigError(
+                        "未配置嵌入模型。请在 AI 设置中添加并启用嵌入模型（如 OpenAI text-embedding-3-small）。"
+                    )
+            except EmbeddingConfigError:
+                raise
+            except Exception as e:
+                logger.error(f"[Embeddings] 获取嵌入模型配置失败: {e}")
+                raise EmbeddingConfigError(
+                    f"获取嵌入模型配置失败: {e}"
+                )
 
     return _global_embedding_service
 

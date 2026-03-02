@@ -40,10 +40,11 @@ async def get_grouped_conversations():
         conversations = [dict(row) for row in rows]
 
     # 分组逻辑
+    from datetime import timedelta
     now = datetime.now()
     today = datetime(now.year, now.month, now.day)
-    yesterday = datetime(today.year, today.month, today.day - 1)
-    week_ago = datetime(today.year, today.month, today.day - 7)
+    yesterday = today - timedelta(days=1)
+    week_ago = today - timedelta(days=7)
 
     groups = {"今天": [], "昨天": [], "本周": [], "更早": []}
 

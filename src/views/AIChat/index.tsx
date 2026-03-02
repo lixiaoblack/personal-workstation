@@ -23,6 +23,7 @@ import type {
   KnowledgeAskAddMessage,
   AttachmentInfo,
   KnowledgeOption,
+  AskMessage,
 } from "@/types/electron";
 
 // 配置和类型
@@ -37,11 +38,12 @@ import AIChatStreamingMessage from "./components/AIChatStreamingMessage";
 import AIChatEmptyState from "./components/AIChatEmptyState";
 import AIChatInput, { TagItem, AttachmentFile } from "./components/AIChatInput";
 import KnowledgeSelectCard from "./components/KnowledgeSelectCard";
+import AskCard from "./components/AskCard";
 import CreateKnowledgeModal from "../Knowledge/components/CreateKnowledgeModal";
 import type { ModelConfigListItem } from "@/types/electron";
 
 const AIChatComponent: React.FC = () => {
-  const { connectionState, sendChat, sendAgentChat, lastMessage } =
+  const { connectionState, sendChat, sendAgentChat, sendAskResponse, lastMessage } =
     useWebSocket({
       autoConnect: true,
     });
@@ -98,6 +100,19 @@ const AIChatComponent: React.FC = () => {
         documentName?: string;
         chunkCount?: number;
         error?: string;
+      };
+    };
+  }>({});
+
+  // Ask 通用询问状态
+  const [askState, setAskState] = useState<{
+    [askId: string]: {
+      message: AskMessage;
+      responded: boolean;
+      result?: {
+        success: boolean;
+        message?: string;
+        data?: Record<string, unknown>;
       };
     };
   }>({});
@@ -578,6 +593,41 @@ const AIChatComponent: React.FC = () => {
         },
       }));
     }
+
+    // Ask 通用询问消息
+    if (lastMessage.type === MessageType.ASK) {
+      const askMsg = lastMessage as AskMessage;
+      console.log("[AIChat] 收到 ask 消息:", askMsg);
+      setAskState((prev) => ({
+        ...prev,
+        [askMsg.askId]: {
+          message: askMsg,
+          responded: false,
+        },
+      }));
+    }
+
+    // Ask 结果消息
+    if (lastMessage.type === MessageType.ASK_RESULT) {
+      const askResult = lastMessage as import("@/types/electron").AskResultMessage;
+      console.log("[AIChat] 收到 ask_result 消息:", askResult);
+      setAskState((prev) => {
+        const existing = prev[askResult.askId];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [askResult.askId]: {
+            ...existing,
+            responded: true,
+            result: {
+              success: askResult.success,
+              message: askResult.message,
+              data: askResult.data,
+            },
+          },
+        };
+      });
+    }
   }, [
     lastMessage,
     loadMessages,
@@ -673,6 +723,23 @@ const AIChatComponent: React.FC = () => {
       await loadMessages(conversationId);
     },
     [loadMessages]
+  );
+
+  // ===== Ask 响应处理 =====
+
+  const handleAskRespond = useCallback(
+    (askId: string, action: "submit" | "cancel", value?: unknown) => {
+      console.log("[AIChat] 发送 Ask 响应:", { askId, action, value });
+      // 通过 WebSocket 发送响应
+      if (connectionState === ConnectionState.CONNECTED && sendAskResponse) {
+        sendAskResponse({
+          askId,
+          action,
+          value,
+        });
+      }
+    },
+    [connectionState, sendAskResponse]
   );
 
   // ===== 发送消息 =====
@@ -1117,6 +1184,22 @@ const AIChatComponent: React.FC = () => {
                     </div>
                   )
                 )}
+
+              {/* Ask 通用询问卡片 */}
+              {streamState.status !== "streaming" &&
+                Object.entries(askState).map(([askId, state]) => (
+                  <div key={askId} className="flex justify-start mb-6">
+                    <div className="w-11 shrink-0" />
+                    <div className="flex-1 max-w-2xl">
+                      <AskCard
+                        message={state.message}
+                        onRespond={handleAskRespond}
+                        responded={state.responded}
+                        result={state.result}
+                      />
+                    </div>
+                  </div>
+                ))}
 
               <div ref={messagesEndRef} />
             </div>

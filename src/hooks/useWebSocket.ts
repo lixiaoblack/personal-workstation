@@ -42,6 +42,11 @@ interface UseWebSocketReturn {
   send: (message: WebSocketMessage) => boolean;
   sendChat: (options: SendChatOptions) => boolean;
   sendAgentChat: (options: SendChatOptions) => boolean;
+  sendAskResponse: (options: {
+    askId: string;
+    action: "submit" | "cancel";
+    value?: unknown;
+  }) => boolean;
   lastMessage: WebSocketMessage | null;
 }
 
@@ -228,6 +233,22 @@ export function useWebSocket(
     [send]
   );
 
+  // 发送 Ask 响应消息
+  const sendAskResponse = useCallback(
+    (options: {
+      askId: string;
+      action: "submit" | "cancel";
+      value?: unknown;
+    }): boolean => {
+      const message = createMessage(
+        MessageType.ASK_RESPONSE,
+        options
+      );
+      return send(message);
+    },
+    [send]
+  );
+
   // 自动连接
   useEffect(() => {
     if (autoConnect) {
@@ -246,6 +267,7 @@ export function useWebSocket(
     send,
     sendChat,
     sendAgentChat,
+    sendAskResponse,
     lastMessage,
   };
 }

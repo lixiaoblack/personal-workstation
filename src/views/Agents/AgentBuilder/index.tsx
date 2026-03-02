@@ -155,7 +155,10 @@ const AgentBuilder: React.FC = () => {
   const handleAdvancedConfigChange = (value: AdvancedConfigValue) => {
     setFormData((prev) => ({
       ...prev,
-      parameters: value.parameters,
+      parameters: {
+        ...value.parameters,
+        opening_message: value.opening_message,
+      },
     }));
   };
 
@@ -280,6 +283,7 @@ const AgentBuilder: React.FC = () => {
               max_tokens: (formData.parameters?.max_tokens as number) ?? 4096,
               top_p: (formData.parameters?.top_p as number) ?? 1,
             },
+            opening_message: (formData.parameters?.opening_message as string) || "",
           }}
           onChange={handleAdvancedConfigChange}
         />

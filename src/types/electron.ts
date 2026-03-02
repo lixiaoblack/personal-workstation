@@ -162,6 +162,13 @@ import type {
   KnowledgeAllStorageInfoResult,
 } from "../../electron/types";
 
+// 从 preload 导入 Agent 相关类型
+import type {
+  AgentConfig,
+  CreateAgentInput,
+  UpdateAgentInput,
+} from "../../electron/preload";
+
 // WebSocket 服务器信息
 export interface WsServerInfo {
   running: boolean;
@@ -736,6 +743,40 @@ export interface ElectronAPI {
   todoGetStats: () => Promise<TodoStats>;
   todoTestNotification: () => Promise<boolean>;
   todoCompleteAndCreateNext: (id: number) => Promise<Todo | null>;
+
+  // ========== Agent 智能体模块 ==========
+
+  // 智能体管理
+  agentList: () => Promise<{
+    success: boolean;
+    data: AgentConfig[];
+    count: number;
+    error?: string;
+  }>;
+  agentGet: (agentId: string) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
+  agentCreate: (input: CreateAgentInput) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
+  agentUpdate: (agentId: string, input: UpdateAgentInput) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
+  agentDelete: (agentId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  agentDuplicate: (agentId: string) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
 
   // 分组浮窗操作
   categoryFloatToggle: (

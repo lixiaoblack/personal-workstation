@@ -100,3 +100,34 @@ class OcrSaveToKnowledgeRequest(BaseModel):
     knowledge_id: str
     title: str
     content: str
+
+
+# ==================== 智能体模型 ====================
+
+class AgentCreate(BaseModel):
+    """创建智能体请求"""
+    name: str
+    description: Optional[str] = None
+    avatar: Optional[str] = None
+    model_id: Optional[int] = None
+    model_name: Optional[str] = None
+    system_prompt: Optional[str] = None
+    tools: Optional[List[str]] = []
+    knowledge_ids: Optional[List[str]] = []
+    skills: Optional[List[str]] = []
+    parameters: Optional[Dict[str, Any]] = {}
+
+
+class AgentUpdate(BaseModel):
+    """更新智能体请求"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    avatar: Optional[str] = None
+    model_id: Optional[int] = None
+    model_name: Optional[str] = None
+    system_prompt: Optional[str] = None
+    tools: Optional[List[str]] = None
+    knowledge_ids: Optional[List[str]] = None
+    skills: Optional[List[str]] = None
+    parameters: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None

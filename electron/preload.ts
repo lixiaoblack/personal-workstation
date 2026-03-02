@@ -541,6 +541,51 @@ export interface TodoStats {
   todayDue: number;
 }
 
+// Agent 智能体模块相关类型
+export interface AgentConfig {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar: string | null;
+  model_id: number | null;
+  model_name: string | null;
+  system_prompt: string | null;
+  tools: string[];
+  knowledge_ids: string[];
+  skills: string[];
+  parameters: Record<string, unknown>;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CreateAgentInput {
+  name: string;
+  description?: string;
+  avatar?: string;
+  model_id?: number;
+  model_name?: string;
+  system_prompt?: string;
+  tools?: string[];
+  knowledge_ids?: string[];
+  skills?: string[];
+  parameters?: Record<string, unknown>;
+}
+
+export interface UpdateAgentInput {
+  name?: string;
+  description?: string;
+  avatar?: string;
+  model_id?: number;
+  model_name?: string;
+  system_prompt?: string;
+  tools?: string[];
+  knowledge_ids?: string[];
+  skills?: string[];
+  parameters?: Record<string, unknown>;
+  status?: string;
+}
+
 // 通过 contextBridge 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld("electronAPI", {
   // 应用环境信息
@@ -1074,6 +1119,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("todo:testNotification"),
   todoCompleteAndCreateNext: (id: number): Promise<Todo | null> =>
     ipcRenderer.invoke("todo:completeAndCreateNext", id),
+
+  // ========== Agent 智能体模块 ==========
+
+  // 智能体管理
+  agentList: () =>
+    ipcRenderer.invoke("agent:list"),
+  agentGet: (agentId: string) =>
+    ipcRenderer.invoke("agent:get", agentId),
+  agentCreate: (input: Record<string, unknown>) =>
+    ipcRenderer.invoke("agent:create", input),
+  agentUpdate: (agentId: string, input: Record<string, unknown>) =>
+    ipcRenderer.invoke("agent:update", agentId, input),
+  agentDelete: (agentId: string) =>
+    ipcRenderer.invoke("agent:delete", agentId),
+  agentDuplicate: (agentId: string) =>
+    ipcRenderer.invoke("agent:duplicate", agentId),
 
   // 分组浮窗操作
   categoryFloatToggle: (categoryId: number, categoryData: TodoCategory) =>
@@ -1647,6 +1708,40 @@ export interface ElectronAPI {
   todoGetStats: () => Promise<TodoStats>;
   todoTestNotification: () => Promise<boolean>;
   todoCompleteAndCreateNext: (id: number) => Promise<Todo | null>;
+
+  // ========== Agent 智能体模块 ==========
+
+  // 智能体管理
+  agentList: () => Promise<{
+    success: boolean;
+    data: AgentConfig[];
+    count: number;
+    error?: string;
+  }>;
+  agentGet: (agentId: string) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
+  agentCreate: (input: CreateAgentInput) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
+  agentUpdate: (agentId: string, input: UpdateAgentInput) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
+  agentDelete: (agentId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  agentDuplicate: (agentId: string) => Promise<{
+    success: boolean;
+    data?: AgentConfig;
+    error?: string;
+  }>;
 
   // 分组浮窗操作
   categoryFloatToggle: (

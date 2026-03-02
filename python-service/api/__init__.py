@@ -9,12 +9,13 @@ from .models import (
     KnowledgeCreate, KnowledgeUpdate,
     ConversationCreate, ConversationUpdate,
     MessageCreate, MemorySave, SummaryCreate,
-    UserProfileUpdate, OcrRecognizeRequest, OcrSaveToKnowledgeRequest
+    UserProfileUpdate, OcrRecognizeRequest, OcrSaveToKnowledgeRequest,
+    AgentCreate, AgentUpdate
 )
 from .routers import (
     knowledge_router, conversation_router,
     memory_router, user_router, ocr_router, llm_router,
-    notes_router
+    notes_router, agents_router
 )
 from .direct_api import (
     direct_list_knowledge, direct_get_knowledge, direct_create_knowledge,
@@ -33,10 +34,11 @@ __all__ = [
     "ConversationCreate", "ConversationUpdate",
     "MessageCreate", "MemorySave", "SummaryCreate",
     "UserProfileUpdate", "OcrRecognizeRequest", "OcrSaveToKnowledgeRequest",
+    "AgentCreate", "AgentUpdate",
     # 路由
     "knowledge_router", "conversation_router",
     "memory_router", "user_router", "ocr_router", "llm_router",
-    "notes_router",
+    "notes_router", "agents_router",
     # 直接调用接口
     "direct_list_knowledge", "direct_get_knowledge", "direct_create_knowledge",
     "direct_list_conversations", "direct_get_conversation", "direct_get_messages",

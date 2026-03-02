@@ -11,6 +11,7 @@ from .user import router as user_router
 from .ocr import router as ocr_router
 from .llm import router as llm_router
 from .notes import router as notes_router
+from .agents import router as agents_router
 
 __all__ = [
     "knowledge_router",
@@ -20,4 +21,5 @@ __all__ = [
     "ocr_router",
     "llm_router",
     "notes_router",
+    "agents_router",
 ]

@@ -15,6 +15,7 @@ import ForgotPassword from "@/views/ForgotPassword";
 import { Settings } from "@/views/Settings";
 import { AISettings } from "@/views/Settings/AISettings";
 import { AIChat } from "@/views/AIChat";
+import Agents from "@/views/Agents";
 import Knowledge from "@/views/Knowledge";
 import Notes from "@/views/Notes";
 import Todo from "@/views/Todo";
@@ -141,6 +142,11 @@ const protectedRoutes: RouteObject[] = [
           {
             path: "/ai-chat",
             element: <AIChat />,
+          },
+          // 智能体
+          {
+            path: "/agents",
+            element: <Agents />,
           },
           // 知识库
           {

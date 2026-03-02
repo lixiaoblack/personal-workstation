@@ -1,0 +1,30 @@
+// 智能体管理页面样式
+// 主要使用 Tailwind CSS，此处仅做补充
+
+.agents-page
+  // 头部样式
+  .agents-header
+    background-color: var(--color-bg-primary)
+
+  // 内容区域
+  .agents-content
+    background-color: var(--color-bg-primary)
+
+  // 卡片网格
+  .agents-grid
+    // 响应式列数通过 Tailwind grid-cols-* 控制
+
+// Ant Design 组件样式覆盖
+.agents-page
+  // 搜索框
+  .ant-input
+    background-color: var(--color-bg-secondary)
+    border-color: var(--color-border)
+    color: var(--color-text-primary)
+
+    &::placeholder
+      color: var(--color-text-tertiary)
+
+    &:focus
+      border-color: var(--color-primary)
+      box-shadow: 0 0 0 2px rgba(60, 131, 246, 0.1)

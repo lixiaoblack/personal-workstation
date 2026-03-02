@@ -60,3 +60,52 @@ def execute_with_retry(conn, sql: str, params: tuple = (), max_retries: int = 3)
                 time.sleep(0.1 * (i + 1))
                 continue
             raise
+
+
+def init_agents_table():
+    """
+    初始化智能体表
+
+    智能体表存储用户创建的智能体配置。
+    """
+    conn = get_connection()
+    try:
+        # 创建智能体表
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS agents (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                avatar TEXT,
+                model_id INTEGER,
+                model_name TEXT,
+                system_prompt TEXT,
+                tools TEXT DEFAULT '[]',
+                knowledge_ids TEXT DEFAULT '[]',
+                skills TEXT DEFAULT '[]',
+                parameters TEXT DEFAULT '{}',
+                status TEXT DEFAULT 'active',
+                created_at INTEGER,
+                updated_at INTEGER
+            )
+        """)
+
+        # 创建索引
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_agents_created_at ON agents(created_at)
+        """)
+
+        conn.commit()
+        logger.info("智能体表初始化完成")
+    except Exception as e:
+        logger.error(f"初始化智能体表失败: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+# 应用启动时初始化表
+init_agents_table()

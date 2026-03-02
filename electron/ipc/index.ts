@@ -21,6 +21,7 @@ import { registerPostmanIpc } from "./registerPostmanIpc";
 import { registerModuleIpc } from "./registerModuleIpc";
 import { registerNotesIpc } from "./registerNotesIpc";
 import { registerTodoIpc } from "./registerTodoIpc";
+import { registerAgentBuilderIpc } from "./registerAgentBuilderIpc";
 
 // 导出用户认证相关函数
 export { getCurrentToken, setCurrentToken, getCurrentUser };
@@ -63,6 +64,9 @@ export function registerAllIpcHandlers(mainWindow: BrowserWindow | null): void {
 
   // Todo 待办模块
   registerTodoIpc();
+
+  // 智能体搭建模块
+  registerAgentBuilderIpc();
 
   console.log("[IPC] 所有 IPC 处理器已注册");
 }

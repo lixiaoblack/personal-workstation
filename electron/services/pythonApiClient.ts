@@ -31,15 +31,37 @@ interface ApiResponse<T = unknown> {
  * 检查 Python HTTP 服务是否可用
  */
 export async function checkPythonApiHealth(): Promise<boolean> {
-  try {
-    const response = await request<{ status: string }>("/health", {
-      timeout: 2000,
-      retries: 1,
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname: PYTHON_API_HOST,
+        port: PYTHON_API_PORT,
+        path: "/health",
+        method: "GET",
+        timeout: 2000,
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json.status === "healthy");
+          } catch {
+            resolve(false);
+          }
+        });
+      }
+    );
+
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
     });
-    return response.success && response.data?.status === "healthy";
-  } catch {
-    return false;
-  }
+
+    req.end();
+  });
 }
 
 /**

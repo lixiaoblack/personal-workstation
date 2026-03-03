@@ -87,18 +87,33 @@ class CreateTodoTool(BaseTool):
 - 返回 "cancelled" → 用户取消，不要创建待办
 - 返回 "timeout" → 可以询问用户是否继续创建
 
-【重要】提醒时间和截止时间：
-- 创建待办时应该设置提醒时间（reminder_time）
-- 如果用户没有指定提醒时间，默认设置为截止时间前 1 小时
-- 如果用户没有指定截止时间，可以不设置
+【🔴🔴🔴 重要：时间设置规则 🔴🔴🔴】
 
-支持的参数：
+**必须为每个待办设置截止时间！**
+
+1. **从文件提取任务时**：
+   - 仔细分析文件内容，提取任务的时间信息
+   - 如果文件中有明确时间（如"3月5日前完成"），使用该时间
+   - 如果没有明确时间，根据任务性质设置合理的截止时间
+
+2. **没有明确时间时的默认规则**：
+   - 简单任务：设置为今天 18:00
+   - 复杂任务：设置为明天 18:00
+   - 紧急任务：设置为今天稍后时间
+
+3. **提醒时间**：
+   - 如果用户没有指定，自动设置为截止时间前 1 小时
+   - 紧急任务可设置为截止时间前 30 分钟
+
+【自然语言时间格式】
+- 截止时间："今天18:00"、"明天下午3点"、"下周一"、"3月5日"、"2024-03-15 18:00"
+- 提醒时间：格式同上
+
+【其他参数】
 - 标题（必填）
 - 描述/详情
 - 分类 ID（通过 ask_todo_category 或 create_todo_category 获取）
 - 优先级：low（低）、medium（中）、high（高）、urgent（紧急）
-- 截止时间：支持自然语言如"明天下午3点"、"下周一"、"2024-01-15 18:00"
-- 提醒时间：格式同 due_date，建议设置为截止时间前 1 小时
 - 重复类型：none（不重复）、daily（每天）、weekly（每周）、monthly（每月）
 """
 
@@ -159,6 +174,16 @@ class CreateTodoTool(BaseTool):
             due_date_ts = None
             if due_date:
                 due_date_ts = self._parse_datetime(due_date)
+            else:
+                # 🔴 如果没有指定截止时间，设置默认截止时间为今天 18:00
+                from datetime import datetime, timedelta
+                now = datetime.now()
+                default_due = now.replace(hour=18, minute=0, second=0, microsecond=0)
+                # 如果已经过了今天 18:00，设置为明天 18:00
+                if now >= default_due:
+                    default_due = default_due + timedelta(days=1)
+                due_date_ts = int(default_due.timestamp() * 1000)
+                logger.info(f"[CreateTodoTool] 未指定截止时间，自动设置为: {default_due.strftime('%Y-%m-%d %H:%M')}")
 
             # 解析提醒时间
             # 如果没有指定提醒时间但有截止时间，默认设置为截止时间前 1 小时

@@ -91,12 +91,12 @@ const AskSelect: React.FC<{
           dataSource={options}
           renderItem={(option) => (
             <List.Item
-              className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg cursor-pointer transition-colors"
+              className="!py-1.5 !px-2 !border-b-0 hover:bg-bg-tertiary/50 rounded cursor-pointer transition-colors"
               onClick={() => !disabled && handleSelect(option.id)}
             >
               <Radio value={option.id} className="w-full">
                 <div className="flex flex-col">
-                  <span className="text-text-primary">{option.label}</span>
+                  <span className="text-text-primary text-sm">{option.label}</span>
                   {option.description && (
                     <span className="text-xs text-text-tertiary">
                       {option.description}
@@ -110,8 +110,9 @@ const AskSelect: React.FC<{
       </Radio.Group>
       {/* 当选中需要输入的选项时，显示输入框 */}
       {needInput && (
-        <div className="mt-3 ml-6">
+        <div className="mt-2 ml-5">
           <Input
+            size="small"
             placeholder={String(selectedOption?.metadata?.inputPlaceholder || "请输入")}
             value={getInputValue()}
             onChange={(e) => handleInputChange(e.target.value)}
@@ -142,10 +143,10 @@ const AskMulti: React.FC<{
     <List
       dataSource={options}
       renderItem={(option) => (
-        <List.Item className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg transition-colors">
+        <List.Item className="!py-1.5 !px-2 !border-b-0 hover:bg-bg-tertiary/50 rounded transition-colors">
           <Checkbox value={option.id} className="w-full">
             <div className="flex flex-col">
-              <span className="text-text-primary">{option.label}</span>
+              <span className="text-text-primary text-sm">{option.label}</span>
               {option.description && (
                 <span className="text-xs text-text-tertiary">
                   {option.description}
@@ -167,23 +168,23 @@ const AskConfirm: React.FC<{
   onChange: (value: boolean) => void;
   disabled: boolean;
 }> = memo(({ value, onChange, disabled }) => (
-  <div className="flex gap-3 justify-center py-2">
+  <div className="flex gap-2 justify-center py-1">
     <Button
+      size="small"
       type={value === true ? "primary" : "default"}
       icon={<CheckCircleOutlined />}
       onClick={() => onChange(true)}
       disabled={disabled}
-      className="min-w-[100px]"
     >
       确认
     </Button>
     <Button
+      size="small"
       type={value === false ? "primary" : "default"}
       danger={value === false}
       icon={<CloseCircleOutlined />}
       onClick={() => onChange(false)}
       disabled={disabled}
-      className="min-w-[100px]"
     >
       取消
     </Button>
@@ -200,12 +201,12 @@ const AskInput: React.FC<{
   disabled: boolean;
 }> = memo(({ config, value = "", onChange, disabled }) => (
   <Input
+    size="small"
     placeholder={config?.placeholder}
     defaultValue={config?.defaultValue}
     value={value}
     onChange={(e) => onChange(e.target.value)}
     disabled={disabled}
-    className="mt-2"
     status={config?.required && !value.trim() ? "error" : undefined}
   />
 ));
@@ -252,9 +253,10 @@ const AskCascade: React.FC<{
       {level > 0 && (
         <Button
           type="link"
+          size="small"
           onClick={handleBack}
           disabled={disabled}
-          className="mb-2 p-0"
+          className="mb-1 p-0 text-xs"
         >
           ← 返回上一级
         </Button>
@@ -263,12 +265,12 @@ const AskCascade: React.FC<{
         dataSource={currentOptions}
         renderItem={(option) => (
           <List.Item
-            className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg cursor-pointer transition-colors"
+            className="!py-1.5 !px-2 !border-b-0 hover:bg-bg-tertiary/50 rounded cursor-pointer transition-colors"
             onClick={() => !disabled && handleSelect(option.id)}
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex flex-col">
-                <span className="text-text-primary">{option.label}</span>
+                <span className="text-text-primary text-sm">{option.label}</span>
                 {option.description && (
                   <span className="text-xs text-text-tertiary">
                     {option.description}
@@ -276,7 +278,7 @@ const AskCascade: React.FC<{
                 )}
               </div>
               {option.children && option.children.length > 0 && (
-                <span className="text-text-tertiary">→</span>
+                <span className="text-text-tertiary text-xs">→</span>
               )}
             </div>
           </List.Item>
@@ -316,19 +318,19 @@ const AskCard: React.FC<AskCardProps> = memo(
     // 渲染结果
     if (responded && result) {
       return (
-        <div className="p-4 bg-bg-secondary rounded-xl border border-border">
-          <div className="flex items-center gap-3">
+        <div className="p-3 bg-bg-secondary rounded-lg border border-border">
+          <div className="flex items-center gap-2">
             {result.success ? (
-              <CheckCircleOutlined className="text-success text-lg" />
+              <CheckCircleOutlined className="text-success" />
             ) : (
-              <CloseCircleOutlined className="text-error text-lg" />
+              <CloseCircleOutlined className="text-error" />
             )}
             <div>
-              <div className="text-text-primary font-medium">
+              <div className="text-text-primary text-sm font-medium">
                 {message.title}
               </div>
               {result.message && (
-                <div className="text-sm text-text-secondary">
+                <div className="text-xs text-text-secondary">
                   {result.message}
                 </div>
               )}
@@ -340,25 +342,25 @@ const AskCard: React.FC<AskCardProps> = memo(
 
     // 渲染询问内容
     return (
-      <div className="p-4 bg-bg-secondary rounded-xl border border-border">
+      <div className="p-3 bg-bg-secondary rounded-lg border border-border">
         {/* 标题和描述 */}
-        <div className="mb-4">
-          <div className="text-text-primary font-medium mb-1">
+        <div className="mb-2">
+          <div className="text-text-primary text-sm font-medium">
             {message.title}
           </div>
           {message.description && (
-            <div className="text-sm text-text-secondary">
+            <div className="text-xs text-text-secondary">
               {message.description}
             </div>
           )}
         </div>
 
         {/* 交互内容 */}
-        <div className="mb-4">
+        <div className="mb-2">
           {loading && (
-            <div className="flex items-center justify-center py-4">
-              <Spin indicator={<LoadingOutlined spin />} />
-              <span className="ml-2 text-text-secondary">处理中...</span>
+            <div className="flex items-center justify-center py-2">
+              <Spin indicator={<LoadingOutlined spin />} size="small" />
+              <span className="ml-2 text-xs text-text-secondary">处理中...</span>
             </div>
           )}
 
@@ -407,7 +409,7 @@ const AskCard: React.FC<AskCardProps> = memo(
           )}
 
           {!loading && message.askType === "api_select" && (
-            <div className="text-center py-4 text-text-secondary">
+            <div className="text-center py-2 text-xs text-text-secondary">
               API 动态选项加载中...
             </div>
           )}
@@ -416,10 +418,10 @@ const AskCard: React.FC<AskCardProps> = memo(
         {/* 操作按钮 */}
         {!loading && !responded && (
           <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
-            <Button onClick={handleCancel} disabled={isDisabled}>
+            <Button size="small" onClick={handleCancel} disabled={isDisabled}>
               跳过
             </Button>
-            <Button type="primary" onClick={handleSubmit} disabled={isDisabled}>
+            <Button size="small" type="primary" onClick={handleSubmit} disabled={isDisabled}>
               确认
             </Button>
           </div>

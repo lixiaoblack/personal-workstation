@@ -40,38 +40,89 @@ interface AskCardProps {
 // 单选组件
 const AskSelect: React.FC<{
   options: AskOption[];
-  value?: string;
-  onChange: (value: string) => void;
+  value?: string | { id: string; input?: string };
+  onChange: (value: string | { id: string; input?: string }) => void;
   disabled: boolean;
-}> = memo(({ options, value, onChange, disabled }) => (
-  <Radio.Group
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    disabled={disabled}
-    className="w-full"
-  >
-    <List
-      dataSource={options}
-      renderItem={(option) => (
-        <List.Item
-          className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg cursor-pointer transition-colors"
-          onClick={() => !disabled && onChange(option.id)}
-        >
-          <Radio value={option.id} className="w-full">
-            <div className="flex flex-col">
-              <span className="text-text-primary">{option.label}</span>
-              {option.description && (
-                <span className="text-xs text-text-tertiary">
-                  {option.description}
-                </span>
-              )}
-            </div>
-          </Radio>
-        </List.Item>
+}> = memo(({ options, value, onChange, disabled }) => {
+  // 获取当前选中的选项 ID
+  const selectedId = typeof value === "string" ? value : value?.id;
+  // 获取当前选中的选项
+  const selectedOption = options.find((o) => o.id === selectedId);
+  // 是否需要输入
+  const needInput = Boolean(selectedOption?.metadata?.inputRequired);
+  // 输入值
+  const [inputValue, setInputValue] = useState("");
+
+  const handleSelect = (id: string) => {
+    const option = options.find((o) => o.id === id);
+    if (option?.metadata?.inputRequired) {
+      // 需要输入的选项，设置为对象
+      onChange({ id, input: "" });
+    } else {
+      // 普通选项，直接设置 ID
+      onChange(id);
+    }
+  };
+
+  const handleInputChange = (newInputValue: string) => {
+    setInputValue(newInputValue);
+    if (typeof value === "object" && value?.id) {
+      onChange({ ...value, input: newInputValue });
+    }
+  };
+
+  // 获取输入框的值
+  const getInputValue = (): string => {
+    if (typeof value === "object" && value?.input !== undefined) {
+      return value.input;
+    }
+    return inputValue;
+  };
+
+  return (
+    <div>
+      <Radio.Group
+        value={selectedId}
+        onChange={(e) => handleSelect(e.target.value)}
+        disabled={disabled}
+        className="w-full"
+      >
+        <List
+          dataSource={options}
+          renderItem={(option) => (
+            <List.Item
+              className="!py-2 !px-3 hover:bg-bg-tertiary/50 rounded-lg cursor-pointer transition-colors"
+              onClick={() => !disabled && handleSelect(option.id)}
+            >
+              <Radio value={option.id} className="w-full">
+                <div className="flex flex-col">
+                  <span className="text-text-primary">{option.label}</span>
+                  {option.description && (
+                    <span className="text-xs text-text-tertiary">
+                      {option.description}
+                    </span>
+                  )}
+                </div>
+              </Radio>
+            </List.Item>
+          )}
+        />
+      </Radio.Group>
+      {/* 当选中需要输入的选项时，显示输入框 */}
+      {needInput && (
+        <div className="mt-3 ml-6">
+          <Input
+            placeholder={String(selectedOption?.metadata?.inputPlaceholder || "请输入")}
+            value={getInputValue()}
+            onChange={(e) => handleInputChange(e.target.value)}
+            disabled={disabled}
+            className="w-full"
+          />
+        </div>
       )}
-    />
-  </Radio.Group>
-));
+    </div>
+  );
+});
 
 AskSelect.displayName = "AskSelect";
 

@@ -670,22 +670,21 @@ class AskCategoryTool(BaseTool):
 - 用户创建待办但没有指定分类时，使用此工具让用户选择
 
 【返回值】
-- 如果用户选择了分类：返回 "selected:分类ID"
-- 如果用户选择“不需要分类”：返回 "none:用户选择不指定分类"
-- 如果用户取消：返回 "cancelled:用户取消了创建待办"
-- 如果超时：返回 "timeout:用户未响应，已超时"
-- 如果没有分类：弹出 UI 显示“暂无分类”提示和“不需要分类”、“取消”选项
+- 返回 "selected:xxx" → 用户选择了现有分类，xxx 为分类 ID
+- 返回 "none:xxx" → 用户选择不指定分类
+- 返回 "new_category:分类名" → 用户选择新建分类，需要调用 create_todo_category 创建
+- 返回 "cancelled" → 用户取消操作
+- 返回 "timeout" → 请求超时
 
-【🔴 返回后必须立即调用 create_todo】
-此工具返回后，必须立即调用 create_todo 工具创建待办：
+【🔴 返回后必须立即调用相应工具】
 - 返回 "selected:xxx" → create_todo(category_id=xxx, ...)
-- 返回 "none:xxx" → create_todo(category_id=null, ...)，不传 category_id 参数
-- 返回 "cancelled" → 告知用户已取消，不调用 create_todo
-- 返回 "timeout" → 可以询问用户是否继续
+- 返回 "none:xxx" → create_todo(...) 不传 category_id
+- 返回 "new_category:分类名" → 先调用 create_todo_category(name="分类名")，获取分类 ID 后再调用 create_todo
+- 返回 "cancelled" → 告知用户已取消，不执行后续操作
 
 【调用时机】
-【🔴 强制】在 create_todo 之前，如果用户没有指定分类，必须调用此工具让用户确认。
-即使没有分类也必须调用，让用户选择是否直接创建或取消。
+在 create_todo 之前，如果用户没有明确指定分类，调用此工具让用户选择。
+用户可以选择现有分类、新建分类、不指定分类或取消。
 """
 
     class ArgsSchema(ToolSchema):
@@ -767,6 +766,14 @@ class AskCategoryTool(BaseTool):
                 description="直接创建待办，不指定分类"
             ))
 
+            # 添加"新建分类"选项（带输入框）
+            options.append(AskOption(
+                id="new_category",
+                label="➕ 新建分类",
+                description="创建一个新的待办分类",
+                metadata={"inputRequired": True, "inputPlaceholder": "请输入分类名称"}
+            ))
+
             # 添加取消选项
             options.append(AskOption(
                 id="cancel",
@@ -809,6 +816,13 @@ class AskCategoryTool(BaseTool):
                 elif value == "info":
                     # 用户点击了“暂无分类”提示，应该选择其他选项
                     return "info:请选择其他选项，如“不需要分类”或“取消”"
+                elif isinstance(value, dict) and value.get("id") == "new_category":
+                    # 用户选择新建分类，并输入了分类名称
+                    category_name = value.get("input", "").strip()
+                    if category_name:
+                        return f"new_category:{category_name}"
+                    else:
+                        return "error:未输入分类名称"
                 else:
                     # 返回分类 ID
                     return f"selected:{value}"

@@ -236,6 +236,8 @@ class DeepAgentWrapper:
 
     # 类级别的附件路径映射（用于修正 file_read 工具的路径）
     _attachment_paths: Dict[str, str] = {}
+    # 类级别的附件标志（用于强制工具调用）
+    _has_attachments: bool = False
 
     def __init__(
         self,
@@ -271,7 +273,16 @@ class DeepAgentWrapper:
             paths: 文件名 -> 文件路径 的映射字典
         """
         cls._attachment_paths = paths
-        logger.info(f"[DeepAgent] 设置附件路径映射: {paths}")
+        cls._has_attachments = bool(paths)  # 设置附件标志
+        logger.info(f"[DeepAgent] 设置附件路径映射: {paths}, has_attachments={cls._has_attachments}")
+
+    @classmethod
+    def clear_attachment_flag(cls):
+        """
+        清除附件标志（在处理完成后调用）
+        """
+        cls._has_attachments = False
+        cls._attachment_paths = {}
 
     @classmethod
     def get_correct_file_path(cls, provided_path: str) -> str:
@@ -755,6 +766,8 @@ class DeepAgentWrapper:
             iteration = 0
             # 快速通道：跟踪是否检测到真正的工具调用
             has_real_tool_call = False
+            # 🔴 新增：跟踪是否已强制要求工具调用（用于附件场景）
+            forced_tool_call_sent = False
 
             # 追踪历史消息数量，用于区分新旧消息
             # formatted_messages 包含历史消息 + 新用户问题
@@ -765,7 +778,7 @@ class DeepAgentWrapper:
             processed_message_count = history_message_count
 
             logger.info(
-                f"[DeepAgent] 开始流式执行，history_message_count={history_message_count}, formatted_messages={len(formatted_messages)}")
+                f"[DeepAgent] 开始流式执行，history_message_count={history_message_count}, formatted_messages={len(formatted_messages)}, has_attachments={self._has_attachments}")
 
             # 流式执行 Agent
             async for event in self._agent.astream({"messages": formatted_messages}):
@@ -830,7 +843,17 @@ class DeepAgentWrapper:
                     # 快速通道逻辑：
                     # - 如果没有真正的工具调用，不发送 thought/tool_call 步骤
                     # - 直接发送流式内容
+                    # 🔴 但如果有附件，必须强制调用 file_read 工具
                     if not has_real_tool_call:
+                        # 🔴 检查是否有附件但模型没有调用工具
+                        if self._has_attachments and not forced_tool_call_sent:
+                            # 有附件但没有工具调用，强制要求模型调用 file_read
+                            logger.warning(
+                                f"[DeepAgent] 检测到附件但没有工具调用，强制要求 file_read")
+                            forced_tool_call_sent = True
+                            # 不输出内容，而是让 Agent 继续
+                            continue
+
                         # 没有工具调用，直接流式输出
                         if content:
                             yield {

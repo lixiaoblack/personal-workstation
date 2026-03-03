@@ -322,6 +322,7 @@ class AgentHandler(BaseHandler):
 
             # 如果有附件，设置附件路径映射并构建附件上下文
             attachment_context = ""
+            file_contents = ""  # 存储文件内容
             if attachments:
                 # 设置附件路径映射，用于修正 file_read 工具的路径
                 attachment_paths = {}
@@ -339,10 +340,39 @@ class AgentHandler(BaseHandler):
 文件类型: {att_type}
 文件大小: {att_size} 字节""")
 
+                    # 🔴 新增：直接读取文件内容
+                    try:
+                        import os
+                        if os.path.exists(att_path) and os.path.isfile(att_path):
+                            # 检查文件大小，限制在 100KB 以内
+                            if att_size > 100 * 1024:
+                                file_contents += f"""\n[文件: {att_name}]
+文件过大（{att_size / 1024:.1f}KB），请使用 file_read 工具读取。
+"""
+                            else:
+                                with open(att_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                    content_text = f.read()
+                                    file_contents += f"""\n[文件: {att_name} 内容]
+{content_text}\n"""
+                                logger.info(f"[DeepAgent] 已读取文件: {att_name}, 长度: {len(content_text)}")
+                        else:
+                            logger.warning(f"[DeepAgent] 文件不存在: {att_path}")
+                    except Exception as e:
+                        logger.error(f"[DeepAgent] 读取文件失败: {e}")
+                        file_contents += f"""\n[文件: {att_name}]
+读取失败: {str(e)}\n"""
+
                 # 设置附件路径映射（用于修正 LLM 可能编造的路径）
                 DeepAgentWrapper.set_attachment_paths(attachment_paths)
 
-                attachment_context = f"""
+                # 🔴 修改：如果有文件内容，直接注入到消息中
+                if file_contents:
+                    attachment_context = f"""
+[用户上传了以下文件，内容如下]
+{file_contents}
+"""
+                else:
+                    attachment_context = f"""
 [重要：用户上传了以下文件]
 {chr(10).join(attachment_info)}
 
@@ -623,6 +653,8 @@ file_read(file_path="{attachments[0].get('path', '')}")
                     logger.info(
                         f"[DeepAgent] 发送 knowledge_ask_add 消息，附件: {att.get('name')}")
 
+            # 清除附件标志
+            DeepAgentWrapper.clear_attachment_flag()
             logger.info(f"[DeepAgent] 执行完成")
             return {"completed": True}  # 返回标记表示 Deep Agent 已完成执行
 

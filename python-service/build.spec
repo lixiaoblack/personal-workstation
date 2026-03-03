@@ -16,6 +16,9 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 # 获取当前目录
 SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
 
+# 自定义 hooks 目录，用于覆盖标准 hooks
+CUSTOM_HOOKS_DIR = os.path.join(SPEC_DIR, 'hooks')
+
 # 收集数据文件
 datas = [
     # Skills 目录
@@ -114,6 +117,8 @@ hiddenimports = [
     'agent.deep_agent',
     'agent.graph',
     'agent.state',
+    'workflow',
+    'workflow.executor',
     'rag',
     'rag.embeddings',
     'rag.vectorstore',
@@ -138,7 +143,7 @@ a = Analysis(
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=[],
+    hookspath=[CUSTOM_HOOKS_DIR],  # 使用自定义 hooks 目录覆盖标准 hooks
     hooksconfig={},
     runtime_hooks=[],
     excludes=[

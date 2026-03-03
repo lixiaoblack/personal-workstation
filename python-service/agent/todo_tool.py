@@ -178,12 +178,14 @@ class CreateTodoTool(BaseTool):
                 # 🔴 如果没有指定截止时间，设置默认截止时间为今天 18:00
                 from datetime import datetime, timedelta
                 now = datetime.now()
-                default_due = now.replace(hour=18, minute=0, second=0, microsecond=0)
+                default_due = now.replace(
+                    hour=18, minute=0, second=0, microsecond=0)
                 # 如果已经过了今天 18:00，设置为明天 18:00
                 if now >= default_due:
                     default_due = default_due + timedelta(days=1)
                 due_date_ts = int(default_due.timestamp() * 1000)
-                logger.info(f"[CreateTodoTool] 未指定截止时间，自动设置为: {default_due.strftime('%Y-%m-%d %H:%M')}")
+                logger.info(
+                    f"[CreateTodoTool] 未指定截止时间，自动设置为: {default_due.strftime('%Y-%m-%d %H:%M')}")
 
             # 解析提醒时间
             # 如果没有指定提醒时间但有截止时间，默认设置为截止时间前 1 小时

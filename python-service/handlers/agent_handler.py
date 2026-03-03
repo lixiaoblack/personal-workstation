@@ -93,6 +93,7 @@ class AgentHandler(BaseHandler):
         # 智能体特有参数
         agent_id = message.get("agentId")  # 智能体 ID
         agent_config = message.get("agentConfig", {})  # 智能体配置
+        workflow_id = message.get("workflowId")  # 工作流 ID（从消息中获取）
 
         # 如果有智能体配置，优先使用配置中的参数
         if agent_config:
@@ -116,6 +117,10 @@ class AgentHandler(BaseHandler):
             agent_temperature = agent_config.get("temperature")
             # 智能体最大 token 数
             agent_max_tokens = agent_config.get("maxTokens")
+            # 智能体绑定的工作流 ID（优先使用消息中的 workflow_id）
+            if not workflow_id and agent_config.get("workflowId"):
+                workflow_id = agent_config.get("workflowId")
+                logger.info(f"[Agent] 智能体绑定工作流: {workflow_id}")
         else:
             custom_system_prompt = None
             enabled_tools = []
@@ -128,6 +133,7 @@ class AgentHandler(BaseHandler):
         logger.info(f"[Agent] 使用 Deep Agent: {use_deep_agent}")
         logger.info(f"[Agent] 附件数量: {len(attachments)}")
         logger.info(f"[Agent] 智能体 ID: {agent_id}")
+        logger.info(f"[Agent] 工作流 ID: {workflow_id}")
         if agent_config:
             logger.info(f"[Agent] 智能体配置: name={agent_config.get('name')}, "
                         f"custom_prompt={bool(custom_system_prompt)}, "
@@ -136,6 +142,17 @@ class AgentHandler(BaseHandler):
             for att in attachments:
                 logger.info(
                     f"[Agent] 附件: {att.get('name')} | 路径: {att.get('path')} | 类型: {att.get('type')}")
+
+        # 如果智能体绑定了工作流，使用工作流执行
+        if workflow_id:
+            logger.info(f"[Agent] 智能体绑定工作流 {workflow_id}，委托给 WorkflowHandler")
+            return await self._execute_workflow(
+                workflow_id=workflow_id,
+                content=content,
+                conversation_id=conversation_id,
+                incoming_history=incoming_history,
+                msg_id=msg_id,
+            )
 
         try:
             from langchain_core.messages import HumanMessage
@@ -205,6 +222,75 @@ class AgentHandler(BaseHandler):
         except Exception as e:
             import traceback
             logger.error(f"[Agent] 处理消息错误: {e}")
+            logger.error(f"[Agent] 错误堆栈: {traceback.format_exc()}")
+            if self.send_callback:
+                await self.send_callback({
+                    "type": "chat_error",
+                    "id": msg_id,
+                    "timestamp": int(time.time() * 1000),
+                    "error": str(e),
+                    "conversationId": conversation_id,
+                })
+            return None
+
+    async def _execute_workflow(
+        self,
+        workflow_id: str,
+        content: str,
+        conversation_id: str,
+        incoming_history: list,
+        msg_id: str,
+    ) -> Optional[dict]:
+        """
+        执行工作流（委托给 WorkflowHandler）
+
+        当智能体绑定了工作流时，使用此方法执行工作流。
+        工作流执行结果通过流式消息返回给前端。
+
+        Args:
+            workflow_id: 工作流 ID
+            content: 用户输入
+            conversation_id: 会话 ID
+            incoming_history: 历史消息
+            msg_id: 消息 ID
+
+        Returns:
+            执行结果
+        """
+        try:
+            from .workflow_handler import WorkflowHandler
+
+            # 创建 WorkflowHandler 实例并委托执行
+            workflow_handler = WorkflowHandler(
+                send_callback=self.send_callback)
+
+            # 构建工作流消息
+            workflow_message = {
+                "type": "workflow_chat",
+                "id": msg_id,
+                "workflowId": workflow_id,
+                "content": content,
+                "conversationId": conversation_id,
+                "history": incoming_history,
+            }
+
+            # 委托给 WorkflowHandler 处理
+            return await workflow_handler.handle(workflow_message)
+
+        except ImportError as e:
+            logger.error(f"[Agent] 导入 WorkflowHandler 失败: {e}")
+            if self.send_callback:
+                await self.send_callback({
+                    "type": "chat_error",
+                    "id": msg_id,
+                    "timestamp": int(time.time() * 1000),
+                    "error": f"工作流模块不可用: {str(e)}",
+                    "conversationId": conversation_id,
+                })
+            return None
+        except Exception as e:
+            import traceback
+            logger.error(f"[Agent] 执行工作流错误: {e}")
             logger.error(f"[Agent] 错误堆栈: {traceback.format_exc()}")
             if self.send_callback:
                 await self.send_callback({

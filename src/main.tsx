@@ -12,6 +12,9 @@ import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import "./styles/global.css";
 
+// 配置 Monaco Editor 使用本地版本（必须在其他导入之前）
+import "./config/monaco";
+
 // 引入本地字体（离线可用）
 import "@fontsource/material-symbols-outlined";
 import "@fontsource/inter/400.css";

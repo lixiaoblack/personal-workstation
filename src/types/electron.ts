@@ -96,6 +96,14 @@ export type {
   MemoryListResponseMessage,
   MemoryDeleteResponseMessage,
   MemoryGenerateSummaryResponseMessage,
+  // Workflow 工作流相关类型
+  WorkflowChatMessage,
+  WorkflowStreamStartMessage,
+  WorkflowStreamChunkMessage,
+  WorkflowStreamEndMessage,
+  WorkflowNodeStatusMessage,
+  WorkflowErrorMessage,
+  WorkflowNodeStatus,
   // 文件相关类型
   FileMetadata,
   FileSelectResult,

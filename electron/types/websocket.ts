@@ -120,6 +120,14 @@ export enum MessageType {
   TODO_CREATED = "todo_created", // 待办创建通知（Agent -> 前端）
   TODO_UPDATED = "todo_updated", // 待办更新通知
   TODO_DELETED = "todo_deleted", // 待办删除通知
+
+  // ==================== Workflow 工作流相关 ====================
+  WORKFLOW_CHAT = "workflow_chat", // 工作流聊天消息
+  WORKFLOW_STREAM_START = "workflow_stream_start", // 工作流流式开始
+  WORKFLOW_STREAM_CHUNK = "workflow_stream_chunk", // 工作流流式内容块
+  WORKFLOW_STREAM_END = "workflow_stream_end", // 工作流流式结束
+  WORKFLOW_NODE_STATUS = "workflow_node_status", // 工作流节点状态
+  WORKFLOW_ERROR = "workflow_error", // 工作流错误
 }
 
 // 基础消息结构
@@ -182,6 +190,7 @@ export interface AgentChatMessage extends BaseMessage {
   }>; // 附件列表
   // 智能体特有参数
   agentId?: string; // 智能体 ID
+  workflowId?: string; // 工作流 ID（智能体绑定的工workflow
   agentConfig?: {
     name: string;
     description?: string;
@@ -189,6 +198,7 @@ export interface AgentChatMessage extends BaseMessage {
     modelId?: number; // 智能体绑定的模型 ID
     tools?: string[]; // 启用的工具列表
     knowledgeIds?: string[]; // 绑定的知识库 ID 列表
+    workflowId?: string; // 绑定的工作流 ID
     temperature?: number; // 温度参数
     maxTokens?: number; // 最大 token 数
   }; // 智能体配置
@@ -1198,6 +1208,125 @@ export interface TodoDeletedMessage extends BaseMessage {
   todoId: string;
 }
 
+// ==================== Workflow 工作流消息类型 ====================
+
+/**
+ * 工作流节点状态
+ */
+export type WorkflowNodeStatus =
+  | "pending" // 等待执行
+  | "running" // 执行中
+  | "completed" // 已完成
+  | "failed" // 失败
+  | "waiting" // 等待用户交互
+  | "skipped"; // 跳过
+
+/**
+ * 工作流聊天消息
+ *
+ * 与 Agent 聊天隔离，使用 WorkflowExecutor 执行
+ */
+export interface WorkflowChatMessage extends BaseMessage {
+  type: MessageType.WORKFLOW_CHAT;
+  /** 工作流 ID */
+  workflowId: string;
+  /** 用户输入 */
+  content: string;
+  /** 会话 ID */
+  conversationId?: string;
+  /** 历史消息 */
+  history?: HistoryMessageItem[];
+  /** 初始变量 */
+  variables?: Record<string, unknown>;
+}
+
+/**
+ * 工作流流式开始消息
+ */
+export interface WorkflowStreamStartMessage extends BaseMessage {
+  type: MessageType.WORKFLOW_STREAM_START;
+  /** 工作流 ID */
+  workflowId: string;
+  /** 会话 ID */
+  conversationId: string;
+}
+
+/**
+ * 工作流流式内容块消息
+ */
+export interface WorkflowStreamChunkMessage extends BaseMessage {
+  type: MessageType.WORKFLOW_STREAM_CHUNK;
+  /** 工作流 ID */
+  workflowId: string;
+  /** 会话 ID */
+  conversationId: string;
+  /** 当前执行的节点 ID */
+  nodeId: string;
+  /** 内容块 */
+  content: string;
+  /** 累计内容 */
+  fullContent: string;
+}
+
+/**
+ * 工作流流式结束消息
+ */
+export interface WorkflowStreamEndMessage extends BaseMessage {
+  type: MessageType.WORKFLOW_STREAM_END;
+  /** 工作流 ID */
+  workflowId: string;
+  /** 会话 ID */
+  conversationId: string;
+  /** 完整内容 */
+  fullContent: string;
+  /** 最终变量 */
+  variables?: Record<string, unknown>;
+  /** 节点执行结果 */
+  nodeResults?: Record<
+    string,
+    {
+      status: WorkflowNodeStatus;
+      output?: unknown;
+    }
+  >;
+}
+
+/**
+ * 工作流节点状态消息
+ */
+export interface WorkflowNodeStatusMessage extends BaseMessage {
+  type: MessageType.WORKFLOW_NODE_STATUS;
+  /** 工作流 ID */
+  workflowId: string;
+  /** 会话 ID */
+  conversationId: string;
+  /** 节点 ID */
+  nodeId: string;
+  /** 节点类型 */
+  nodeType?: string;
+  /** 节点状态 */
+  status: WorkflowNodeStatus;
+  /** 输出内容 */
+  output?: unknown;
+  /** 错误信息 */
+  error?: string;
+}
+
+/**
+ * 工作流错误消息
+ */
+export interface WorkflowErrorMessage extends BaseMessage {
+  type: MessageType.WORKFLOW_ERROR;
+  /** 工作流 ID */
+  workflowId: string;
+  /** 会话 ID */
+  conversationId?: string;
+  /** 错误信息 */
+  error: string;
+  /** 出错的节点 ID */
+  nodeId?: string;
+}
+
 // 保存记忆
 export interface MemorySaveMessage extends BaseMessage {
   type: MessageType.MEMORY_SAVE;
@@ -1398,7 +1527,14 @@ export type WebSocketMessage =
   // Todo 待办相关
   | TodoCreatedMessage
   | TodoUpdatedMessage
-  | TodoDeletedMessage;
+  | TodoDeletedMessage
+  // Workflow 工作流相关
+  | WorkflowChatMessage
+  | WorkflowStreamStartMessage
+  | WorkflowStreamChunkMessage
+  | WorkflowStreamEndMessage
+  | WorkflowNodeStatusMessage
+  | WorkflowErrorMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

@@ -11,33 +11,57 @@
  * AIChatEmptyState - 空状态组件
  * 显示欢迎页面和快捷操作
  */
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ModelConfig } from "@/types/electron";
+import type { AgentConfig } from "../../../../../electron/preload";
 
 interface AIChatEmptyStateProps {
   llmModels: ModelConfig[];
   onSelectSuggestion: (suggestion: string) => void;
+  selectedAgent?: AgentConfig | null;
 }
 
 const AIChatEmptyState: React.FC<AIChatEmptyStateProps> = memo(
-  ({ llmModels, onSelectSuggestion }) => {
+  ({ llmModels, onSelectSuggestion, selectedAgent }) => {
     const navigate = useNavigate();
+
+    // 从 Agent parameters 中获取欢迎语
+    const openingMessage = useMemo(() => {
+      if (selectedAgent?.parameters?.opening_message) {
+        return selectedAgent.parameters.opening_message as string;
+      }
+      return null;
+    }, [selectedAgent]);
+
+    // 获取 Agent 名称
+    const agentName = selectedAgent?.name || "AI 助手";
+    const agentAvatar = selectedAgent?.avatar || "🤖";
 
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
         <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <span className="material-symbols-outlined text-4xl text-primary">
-            smart_toy
-          </span>
+          {selectedAgent ? (
+            <span className="text-4xl">{agentAvatar}</span>
+          ) : (
+            <span className="material-symbols-outlined text-4xl text-primary">
+              smart_toy
+            </span>
+          )}
         </div>
         <h3 className="text-lg font-semibold text-text-primary mb-2">
-          开始与 AI 对话
+          {openingMessage ? (
+            <span className="whitespace-pre-wrap">{openingMessage}</span>
+          ) : (
+            <>{selectedAgent ? `开始与 ${agentName} 对话` : "开始与 AI 对话"}</>
+          )}
         </h3>
         <p className="text-sm text-text-tertiary max-w-md mb-6">
-          {llmModels.length > 0
-            ? "我是一个智能助手，可以帮助您解答问题、编写代码、分析数据等。"
-            : "请先在设置中配置模型，才能开始对话。"}
+          {selectedAgent?.description
+            ? selectedAgent.description
+            : llmModels.length > 0
+              ? "我是一个智能助手，可以帮助您解答问题、编写代码、分析数据等。"
+              : "请先在设置中配置模型，才能开始对话。"}
         </p>
         {llmModels.length > 0 && (
           <>

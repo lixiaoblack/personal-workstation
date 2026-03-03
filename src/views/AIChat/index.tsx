@@ -2,11 +2,13 @@
  * AIChat AI 聊天页面
  * 基于 ant-design-x 构建的专业 AI 对话界面
  * 支持流式传输、对话历史、模型选择、Markdown 渲染
+ * 支持选择 Agent 进行对话
  * 使用 MobX 管理模型状态
  */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Modal, Input, message } from "antd";
 import { observer } from "mobx-react-lite";
+import { useSearchParams } from "react-router-dom";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { modelStore } from "@/stores";
 import { MessageType, ConnectionState } from "@/types/electron";
@@ -42,7 +44,13 @@ import AskCard from "./components/AskCard";
 import CreateKnowledgeModal from "../Knowledge/components/CreateKnowledgeModal";
 import type { ModelConfigListItem } from "@/types/electron";
 
+// Agent 类型
+import type { AgentConfig } from "../../../electron/preload";
+
 const AIChatComponent: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const agentIdFromUrl = searchParams.get("agentId");
+
   const {
     connectionState,
     sendChat,
@@ -60,6 +68,10 @@ const AIChatComponent: React.FC = () => {
 
   // Agent 模式开关
   const [agentMode, setAgentMode] = useState(true);
+
+  // Agent 列表和选中状态
+  const [agentList, setAgentList] = useState<AgentConfig[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<AgentConfig | null>(null);
 
   // 知识库列表和选中状态
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeInfo[]>([]);
@@ -198,10 +210,46 @@ const AIChatComponent: React.FC = () => {
     [models, setCurrentModel]
   );
 
+  // 初始化加载标记
+  const initializedRef = useRef(false);
+
   // 初始化加载
   useEffect(() => {
+    // 防止重复初始化
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     modelStore.loadModels();
     loadConversations();
+    // 加载 Agent 列表
+    (async () => {
+      try {
+        const result = await window.electronAPI.agentList();
+        if (result.success && result.data) {
+          setAgentList(result.data);
+          // 如果 URL 中有 agentId，自动选中
+          if (agentIdFromUrl) {
+            const agent = result.data.find(
+              (a: AgentConfig) => a.id === agentIdFromUrl
+            );
+            if (agent) {
+              setSelectedAgent(agent);
+              // 如果 Agent 有绑定的模型，自动选择
+              if (agent.model_id) {
+                // 使用 modelStore.models 获取最新模型列表
+                const currentModels = modelStore.models;
+                const model = currentModels.find(
+                  (m) => m.id === agent.model_id
+                );
+                if (model) modelStore.setCurrentModel(model);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("加载 Agent 列表失败:", error);
+      }
+    })();
     // 加载知识库列表
     (async () => {
       try {
@@ -225,10 +273,10 @@ const AIChatComponent: React.FC = () => {
     (async () => {
       try {
         setEmbeddingModelsLoading(true);
-        const models = await window.electronAPI.getModelConfigs();
-        if (models && models.length > 0) {
+        const modelConfigs = await window.electronAPI.getModelConfigs();
+        if (modelConfigs && modelConfigs.length > 0) {
           // 只筛选嵌入模型且已启用的
-          const embedding = models.filter(
+          const embedding = modelConfigs.filter(
             (m: ModelConfigListItem) => m.usageType === "embedding" && m.enabled
           );
           setEmbeddingModels(embedding);
@@ -239,7 +287,30 @@ const AIChatComponent: React.FC = () => {
         setEmbeddingModelsLoading(false);
       }
     })();
-  }, [loadConversations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadConversations, agentIdFromUrl]);
+
+  // 当选中 Agent 时，自动设置绑定的知识库为 Tags
+  useEffect(() => {
+    if (selectedAgent && selectedAgent.knowledge_ids.length > 0) {
+      // 将 Agent 绑定的知识库设置为 Tags
+      const knowledgeTags: TagItem[] = selectedAgent.knowledge_ids
+        .map((id): TagItem | null => {
+          const kb = knowledgeList.find((k) => k.id === id);
+          if (kb) {
+            return {
+              id: kb.id,
+              type: "knowledge",
+              label: kb.name,
+              trigger: "#",
+            };
+          }
+          return null;
+        })
+        .filter((t): t is TagItem => t !== null);
+      setSelectedTags(knowledgeTags);
+    }
+  }, [selectedAgent, knowledgeList]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -933,6 +1004,7 @@ const AIChatComponent: React.FC = () => {
         conversationId: String(conversationId),
         modelId: currentModel.id,
         knowledgeId,
+        selectedAgent: selectedAgent?.id,
       });
 
       sendAgentChat({
@@ -952,6 +1024,26 @@ const AIChatComponent: React.FC = () => {
                 mimeType: a.mimeType,
               }))
             : undefined,
+        // Agent 配置
+        agentId: selectedAgent?.id,
+        workflowId: selectedAgent?.workflow_id || undefined,
+        agentConfig: selectedAgent
+          ? {
+              name: selectedAgent.name,
+              description: selectedAgent.description || undefined,
+              systemPrompt: selectedAgent.system_prompt || undefined,
+              modelId: selectedAgent.model_id || undefined,
+              tools:
+                selectedAgent.tools.length > 0
+                  ? selectedAgent.tools
+                  : undefined,
+              knowledgeIds:
+                selectedAgent.knowledge_ids.length > 0
+                  ? selectedAgent.knowledge_ids
+                  : undefined,
+              workflowId: selectedAgent.workflow_id || undefined,
+            }
+          : undefined,
       });
     } else {
       console.log("[AIChat] 发送普通聊天消息:", {
@@ -980,6 +1072,7 @@ const AIChatComponent: React.FC = () => {
     knowledgeList,
     loadConversations,
     attachments,
+    selectedAgent,
   ]);
 
   // 知识库添加询问相关回调
@@ -1146,6 +1239,27 @@ const AIChatComponent: React.FC = () => {
     [embeddingModels, pendingAttachmentIdForCreate, handleSelectKnowledgeForAdd]
   );
 
+  // 处理选择 Agent
+  const handleSelectAgent = useCallback(
+    (agent: AgentConfig | null) => {
+      setSelectedAgent(agent);
+      // 更新 URL 参数
+      if (agent) {
+        setSearchParams({ agentId: agent.id });
+        // 如果 Agent 有绑定的模型，自动选择
+        if (agent.model_id) {
+          // 使用 modelStore.models 获取最新模型列表
+          const currentModels = modelStore.models;
+          const model = currentModels.find((m) => m.id === agent.model_id);
+          if (model) modelStore.setCurrentModel(model);
+        }
+      } else {
+        setSearchParams({});
+      }
+    },
+    [setSearchParams]
+  );
+
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* 对话历史侧边栏 */}
@@ -1166,6 +1280,9 @@ const AIChatComponent: React.FC = () => {
           llmModels={llmModels}
           connectionState={connectionState}
           onSelectModel={setCurrentModel}
+          agentList={agentList}
+          selectedAgent={selectedAgent}
+          onSelectAgent={handleSelectAgent}
         />
 
         {/* 消息列表 */}
@@ -1176,6 +1293,7 @@ const AIChatComponent: React.FC = () => {
             <AIChatEmptyState
               llmModels={llmModels}
               onSelectSuggestion={setInputValue}
+              selectedAgent={selectedAgent}
             />
           ) : (
             <div className="space-y-8">

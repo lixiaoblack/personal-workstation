@@ -26,6 +26,7 @@ from .memory_handler import MemoryHandler
 from .web_handler import WebHandler
 from .ask_handler import AskMsgHandler
 from .agent_handler import AgentHandler
+from .workflow_handler import WorkflowHandler
 
 __all__ = [
     "BaseHandler",
@@ -38,4 +39,5 @@ __all__ = [
     "WebHandler",
     "AskMsgHandler",
     "AgentHandler",
+    "WorkflowHandler",
 ]

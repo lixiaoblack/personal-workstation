@@ -8,6 +8,7 @@ import type {
   WebSocketMessage,
   ChatMessage,
   AgentChatMessage,
+  WorkflowChatMessage,
   HistoryMessageItem,
 } from "@/types/electron";
 
@@ -34,6 +35,7 @@ interface SendChatOptions {
   }>; // 附件列表
   // 智能体特有参数
   agentId?: string; // 智能体 ID
+  workflowId?: string; // 工作流 ID（智能体绑定的工workflow
   agentConfig?: {
     name: string;
     description?: string;
@@ -41,9 +43,18 @@ interface SendChatOptions {
     modelId?: number; // 智能体绑定的模型 ID
     tools?: string[]; // 启用的工具列表
     knowledgeIds?: string[]; // 绑定的知识库 ID 列表
+    workflowId?: string; // 绑定的工作流 ID
     temperature?: number; // 温度参数
     maxTokens?: number; // 最大 token 数
   }; // 智能体配置
+}
+
+interface SendWorkflowChatOptions {
+  workflowId: string;
+  content: string;
+  conversationId?: string;
+  history?: HistoryMessageItem[];
+  variables?: Record<string, unknown>;
 }
 
 interface UseWebSocketReturn {
@@ -54,6 +65,7 @@ interface UseWebSocketReturn {
   send: (message: WebSocketMessage) => boolean;
   sendChat: (options: SendChatOptions) => boolean;
   sendAgentChat: (options: SendChatOptions) => boolean;
+  sendWorkflowChat: (options: SendWorkflowChatOptions) => boolean;
   sendAskResponse: (options: {
     askId: string;
     action: "submit" | "cancel";
@@ -231,6 +243,7 @@ export function useWebSocket(
         knowledgeMetadata,
         attachments,
         agentId,
+        workflowId,
         agentConfig,
       } = options;
       const message = createMessage<AgentChatMessage>(MessageType.AGENT_CHAT, {
@@ -242,6 +255,7 @@ export function useWebSocket(
         knowledgeMetadata,
         attachments,
         agentId,
+        workflowId,
         agentConfig,
       });
       return send(message);
@@ -257,6 +271,26 @@ export function useWebSocket(
       value?: unknown;
     }): boolean => {
       const message = createMessage(MessageType.ASK_RESPONSE, options);
+      return send(message);
+    },
+    [send]
+  );
+
+  // 发送工作流聊天消息
+  const sendWorkflowChat = useCallback(
+    (options: SendWorkflowChatOptions): boolean => {
+      const { workflowId, content, conversationId, history, variables } =
+        options;
+      const message = createMessage<WorkflowChatMessage>(
+        MessageType.WORKFLOW_CHAT,
+        {
+          workflowId,
+          content,
+          conversationId,
+          history,
+          variables,
+        }
+      );
       return send(message);
     },
     [send]
@@ -280,6 +314,7 @@ export function useWebSocket(
     send,
     sendChat,
     sendAgentChat,
+    sendWorkflowChat,
     sendAskResponse,
     lastMessage,
   };

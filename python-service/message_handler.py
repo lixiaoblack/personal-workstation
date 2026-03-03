@@ -42,6 +42,7 @@ from handlers.memory_handler import MemoryHandler
 from handlers.web_handler import WebHandler
 from handlers.ask_handler import AskMsgHandler
 from handlers.agent_handler import AgentHandler
+from handlers.workflow_handler import WorkflowHandler
 
 # 导入 Ask 模块
 from ask import AskHandler
@@ -107,6 +108,10 @@ class MessageHandler:
         # 智能体/工作流处理器（新增）
         self.agent_handler = AgentHandler(send_callback=self.send_callback)
 
+        # 工作流聊天处理器（与 Agent 隔离）
+        self.workflow_handler = WorkflowHandler(
+            send_callback=self.send_callback)
+
     def _register_handlers(self):
         """注册消息类型到处理器的映射"""
         # 消息类型 -> 处理器方法 映射
@@ -120,6 +125,9 @@ class MessageHandler:
 
             # Agent 聊天（使用 AgentHandler）
             "agent_chat": self.agent_handler.handle,
+
+            # Workflow 聊天（使用 WorkflowHandler，与 Agent 隔离）
+            "workflow_chat": self.workflow_handler.handle,
 
             # 系统状态
             "system_status": self._handle_system_status,

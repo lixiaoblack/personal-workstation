@@ -1,6 +1,6 @@
 /**
  * AIChatHeader - 头部栏组件
- * 包含模型选择、连接状态显示
+ * 包含模型选择、Agent 选择、连接状态显示
  */
 import React, { memo, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,19 +8,67 @@ import { Dropdown, Tag, Tooltip } from "antd";
 import type { ModelConfig } from "@/types/electron";
 import { ConnectionState } from "@/types/electron";
 import { PROVIDER_LABELS, isOllamaModel } from "../../config";
+import type { AgentConfig } from "../../../../../electron/preload";
 
 interface AIChatHeaderProps {
   currentModel: ModelConfig | null;
   llmModels: ModelConfig[];
   connectionState: ConnectionState;
   onSelectModel: (model: ModelConfig) => void;
+  // Agent 相关
+  agentList?: AgentConfig[];
+  selectedAgent?: AgentConfig | null;
+  onSelectAgent?: (agent: AgentConfig | null) => void;
 }
 
 const AIChatHeader: React.FC<AIChatHeaderProps> = memo(
-  ({ currentModel, llmModels, connectionState, onSelectModel }) => {
+  ({
+    currentModel,
+    llmModels,
+    connectionState,
+    onSelectModel,
+    agentList = [],
+    selectedAgent,
+    onSelectAgent,
+  }) => {
     const navigate = useNavigate();
 
-    // 模型选择下拉菜单
+    // Agent 选择下拉菜单
+    const agentMenuItems = useMemo(() => {
+      const items = [
+        {
+          key: "none",
+          label: (
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-text-secondary">
+                smart_toy
+              </span>
+              <span>默认助手</span>
+            </div>
+          ),
+          onClick: () => onSelectAgent?.(null),
+        },
+        ...agentList.map((agent) => ({
+          key: agent.id,
+          label: (
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{agent.avatar || "🤖"}</span>
+              <span className="font-medium">{agent.name}</span>
+              {agent.workflow_id && (
+                <Tag
+                  color="blue"
+                  className="text-[10px] leading-tight px-1.5 py-0 m-0"
+                >
+                  工作流
+                </Tag>
+              )}
+            </div>
+          ),
+          onClick: () => onSelectAgent?.(agent),
+        })),
+      ];
+      return items;
+    }, [agentList, onSelectAgent]);
     const modelMenuItems = useMemo(() => {
       return llmModels.map((model) => {
         const providerInfo = PROVIDER_LABELS[model.provider] || {
@@ -110,14 +158,39 @@ const AIChatHeader: React.FC<AIChatHeaderProps> = memo(
     return (
       <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-bg-secondary/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">
-              smart_toy
-            </span>
-            <h2 className="text-text-primary font-bold tracking-tight">
-              AI 助手
-            </h2>
-          </div>
+          {/* Agent 选择器 */}
+          {agentList.length > 0 && (
+            <Dropdown menu={{ items: agentMenuItems }} trigger={["click"]}>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 rounded-full border border-primary/30 cursor-pointer hover:border-primary/50 transition-colors">
+                <span className="text-lg">{selectedAgent?.avatar || "🤖"}</span>
+                <span className="text-sm font-medium text-text-primary">
+                  {selectedAgent?.name || "AI 助手"}
+                </span>
+                {selectedAgent?.workflow_id && (
+                  <Tag
+                    color="blue"
+                    className="text-[10px] leading-tight px-1.5 py-0 m-0"
+                  >
+                    工作流
+                  </Tag>
+                )}
+                <span className="material-symbols-outlined text-base text-text-tertiary">
+                  expand_more
+                </span>
+              </div>
+            </Dropdown>
+          )}
+          {/* 未选择 Agent 时显示标题 */}
+          {agentList.length === 0 && (
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">
+                smart_toy
+              </span>
+              <h2 className="text-text-primary font-bold tracking-tight">
+                AI 助手
+              </h2>
+            </div>
+          )}
           <div className="h-6 w-[1px] bg-border"></div>
           <div className="flex items-center gap-4">
             {/* 模型选择 */}
@@ -172,14 +245,26 @@ const AIChatHeader: React.FC<AIChatHeaderProps> = memo(
         <div className="flex items-center gap-4">
           {renderConnectionStatus()}
           <div className="flex items-center gap-1">
-            <button
-              className="p-2 text-text-tertiary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-all"
-              onClick={() => navigate("/settings/ai")}
-            >
-              <span className="material-symbols-outlined text-xl">
-                settings
-              </span>
-            </button>
+            <Tooltip title="Agent 管理">
+              <button
+                className="p-2 text-text-tertiary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-all"
+                onClick={() => navigate("/agents")}
+              >
+                <span className="material-symbols-outlined text-xl">
+                  smart_toy
+                </span>
+              </button>
+            </Tooltip>
+            <Tooltip title="设置">
+              <button
+                className="p-2 text-text-tertiary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-all"
+                onClick={() => navigate("/settings/ai")}
+              >
+                <span className="material-symbols-outlined text-xl">
+                  settings
+                </span>
+              </button>
+            </Tooltip>
           </div>
         </div>
       </header>

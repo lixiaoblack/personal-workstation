@@ -2,11 +2,17 @@
  * 路由配置文件
  * 管理应用的所有路由
  */
-import { createHashRouter, Navigate } from "react-router-dom";
+import { createHashRouter, Navigate, useParams } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 
 // 布局组件
 import { WLayout } from "@/components/WLayout";
+
+// Agent 聊天重定向组件
+const AgentChatRedirect: React.FC = () => {
+  const { agentId } = useParams<{ agentId: string }>();
+  return <Navigate to={`/ai-chat?agentId=${agentId}`} replace />;
+};
 
 // 页面组件
 import Home from "@/views/Home";
@@ -17,7 +23,7 @@ import { AISettings } from "@/views/Settings/AISettings";
 import { AIChat } from "@/views/AIChat";
 import Agents from "@/views/Agents";
 import AgentBuilder from "@/views/Agents/AgentBuilder";
-import AgentChat from "@/views/Agents/AgentChat";
+
 import WorkflowList from "@/views/Workflow/WorkflowList";
 import WorkflowEditor from "@/views/Workflow/WorkflowEditor";
 import Knowledge from "@/views/Knowledge";
@@ -162,7 +168,7 @@ const protectedRoutes: RouteObject[] = [
           },
           {
             path: "/agents/:agentId/chat",
-            element: <AgentChat />,
+            element: <AgentChatRedirect />,
           },
           // 工作流
           {

@@ -354,7 +354,8 @@ class AgentHandler(BaseHandler):
                                     content_text = f.read()
                                     file_contents += f"""\n[文件: {att_name} 内容]
 {content_text}\n"""
-                                logger.info(f"[DeepAgent] 已读取文件: {att_name}, 长度: {len(content_text)}")
+                                logger.info(
+                                    f"[DeepAgent] 已读取文件: {att_name}, 长度: {len(content_text)}")
                         else:
                             logger.warning(f"[DeepAgent] 文件不存在: {att_path}")
                     except Exception as e:

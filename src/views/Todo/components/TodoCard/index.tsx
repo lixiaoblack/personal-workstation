@@ -238,8 +238,8 @@ export const TodoCard: React.FC<TodoCardProps> = ({
           </div>
         </div>
 
-        {/* 待办列表 */}
-        <div className="space-y-4">
+        {/* 待办列表 - 添加最大高度和滚动 */}
+        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
           {sortedTodos.map((todo) => {
             const timeInfo = formatTime(todo.dueDate);
             const isCompleted = todo.status === "completed";

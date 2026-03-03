@@ -96,7 +96,9 @@ const AskSelect: React.FC<{
             >
               <Radio value={option.id} className="w-full">
                 <div className="flex flex-col">
-                  <span className="text-text-primary text-sm">{option.label}</span>
+                  <span className="text-text-primary text-sm">
+                    {option.label}
+                  </span>
                   {option.description && (
                     <span className="text-xs text-text-tertiary">
                       {option.description}
@@ -113,7 +115,9 @@ const AskSelect: React.FC<{
         <div className="mt-2 ml-5">
           <Input
             size="small"
-            placeholder={String(selectedOption?.metadata?.inputPlaceholder || "请输入")}
+            placeholder={String(
+              selectedOption?.metadata?.inputPlaceholder || "请输入"
+            )}
             value={getInputValue()}
             onChange={(e) => handleInputChange(e.target.value)}
             disabled={disabled}
@@ -270,7 +274,9 @@ const AskCascade: React.FC<{
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex flex-col">
-                <span className="text-text-primary text-sm">{option.label}</span>
+                <span className="text-text-primary text-sm">
+                  {option.label}
+                </span>
                 {option.description && (
                   <span className="text-xs text-text-tertiary">
                     {option.description}
@@ -360,7 +366,9 @@ const AskCard: React.FC<AskCardProps> = memo(
           {loading && (
             <div className="flex items-center justify-center py-2">
               <Spin indicator={<LoadingOutlined spin />} size="small" />
-              <span className="ml-2 text-xs text-text-secondary">处理中...</span>
+              <span className="ml-2 text-xs text-text-secondary">
+                处理中...
+              </span>
             </div>
           )}
 
@@ -421,7 +429,12 @@ const AskCard: React.FC<AskCardProps> = memo(
             <Button size="small" onClick={handleCancel} disabled={isDisabled}>
               跳过
             </Button>
-            <Button size="small" type="primary" onClick={handleSubmit} disabled={isDisabled}>
+            <Button
+              size="small"
+              type="primary"
+              onClick={handleSubmit}
+              disabled={isDisabled}
+            >
               确认
             </Button>
           </div>

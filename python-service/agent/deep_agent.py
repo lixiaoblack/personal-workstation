@@ -274,7 +274,8 @@ class DeepAgentWrapper:
         """
         cls._attachment_paths = paths
         cls._has_attachments = bool(paths)  # 设置附件标志
-        logger.info(f"[DeepAgent] 设置附件路径映射: {paths}, has_attachments={cls._has_attachments}")
+        logger.info(
+            f"[DeepAgent] 设置附件路径映射: {paths}, has_attachments={cls._has_attachments}")
 
     @classmethod
     def clear_attachment_flag(cls):

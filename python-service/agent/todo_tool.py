@@ -410,7 +410,21 @@ class CreateTodoCategoryTool(BaseTool):
 - name: 分类名称（必填）
 - description: 分类描述（可选）
 - color: 颜色（可选，十六进制如 #FF5733）
-- icon: 图标名称（可选）
+- icon: 图标名称（可选，见下方可用图标）
+
+【可用图标】（Material Symbols）
+- folder: 文件夹
+- work: 工作
+- favorite: 生活
+- school: 学习
+- fitness_center: 健身
+- shopping_cart: 购物
+- flight: 旅行
+- celebration: 娱乐
+- restaurant: 饮食
+- medical_services: 医疗
+- payments: 财务
+- code: 开发
 
 【返回】
 创建成功后返回分类信息，包含 ID，可用于后续创建待办时指定分类。
@@ -424,11 +438,11 @@ class CreateTodoCategoryTool(BaseTool):
         )
         color: Optional[str] = Field(
             default=None,
-            description="颜色（十六进制如 #FF5733）"
+            description="颜色（十六进制如 #3B82F6, #F97316, #A855F7, #EF4444, #10B981）"
         )
         icon: Optional[str] = Field(
-            default=None,
-            description="图标名称"
+            default="folder",
+            description="图标名称，可用值：folder, work, favorite, school, fitness_center, shopping_cart, flight, celebration, restaurant, medical_services, payments, code"
         )
 
     args_schema = ArgsSchema
@@ -740,7 +754,7 @@ class AskCategoryTool(BaseTool):
             from ask.types import AskOption, AskType
 
             options = []
-            
+
             if categories:
                 # 有分类时，显示分类列表
                 for cat in categories:

@@ -609,6 +609,13 @@ class AskCategoryTool(BaseTool):
 - 如果超时：返回 "timeout:用户未响应，已超时"
 - 如果没有分类：弹出 UI 显示“暂无分类”提示和“不需要分类”、“取消”选项
 
+【🔴 返回后必须立即调用 create_todo】
+此工具返回后，必须立即调用 create_todo 工具创建待办：
+- 返回 "selected:xxx" → create_todo(category_id=xxx, ...)
+- 返回 "none:xxx" → create_todo(category_id=null, ...)，不传 category_id 参数
+- 返回 "cancelled" → 告知用户已取消，不调用 create_todo
+- 返回 "timeout" → 可以询问用户是否继续
+
 【调用时机】
 【🔴 强制】在 create_todo 之前，如果用户没有指定分类，必须调用此工具让用户确认。
 即使没有分类也必须调用，让用户选择是否直接创建或取消。

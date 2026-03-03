@@ -75,7 +75,12 @@ class CreateTodoTool(BaseTool):
 3. 根据返回结果设置 category_id：
    - 返回 "selected:xxx" → 使用 xxx 作为 category_id
    - 返回 "none:xxx" → category_id 设为 null（不指定分类）
-   - 返回 "timeout" 或 "cancelled" → 询问用户是否继续创建
+   - 返回 "cancelled" → 用户取消，不要创建待办
+   - 返回 "timeout" → 可以询问用户是否继续创建
+
+【🔴 即使没有分类也要调用 ask_todo_category】
+ask_todo_category 会处理无分类的情况，弹出 UI 让用户选择是否直接创建或取消。
+不要在没有调用 ask_todo_category 的情况下直接创建待办。
 
 【重要】提醒时间和截止时间：
 - 创建待办时应该设置提醒时间（reminder_time）
@@ -360,11 +365,12 @@ class ListTodoCategoriesTool(BaseTool):
             if not categories:
                 return """暂无待办分类。
 
-您可以：
-1. 直接创建待办（不指定分类）
-2. 在待办页面创建新分类
+【重要】创建待办前仍需确认：
+必须调用 ask_todo_category 工具让用户确认是否直接创建（不指定分类）。
 
-请问要直接创建待办吗？"""
+用户可以选择：
+1. 直接创建待办（不指定分类）
+2. 取消创建，先去待办页面创建分类"""
 
             # 优化返回格式，便于 AI 理解和用户选择
             lines = ["📋 您有以下待办分类：", ""]
@@ -597,12 +603,15 @@ class AskCategoryTool(BaseTool):
 - 用户创建待办但没有指定分类时，使用此工具让用户选择
 
 【返回值】
-- 如果用户选择了分类：返回分类 ID
-- 如果用户取消：返回 "cancelled"
-- 如果超时：返回 "timeout"
+- 如果用户选择了分类：返回 "selected:分类ID"
+- 如果用户选择“不需要分类”：返回 "none:用户选择不指定分类"
+- 如果用户取消：返回 "cancelled:用户取消了创建待办"
+- 如果超时：返回 "timeout:用户未响应，已超时"
+- 如果没有分类：弹出 UI 显示“暂无分类”提示和“不需要分类”、“取消”选项
 
 【调用时机】
-在 create_todo 之前，如果用户没有指定分类，调用此工具让用户选择。
+【🔴 强制】在 create_todo 之前，如果用户没有指定分类，必须调用此工具让用户确认。
+即使没有分类也必须调用，让用户选择是否直接创建或取消。
 """
 
     class ArgsSchema(ToolSchema):
@@ -645,26 +654,36 @@ class AskCategoryTool(BaseTool):
             # 获取分类列表
             categories = direct_list_todo_categories()
 
-            if not categories:
-                return "no_categories:暂无分类，可以直接创建待办（不指定分类）"
-
             # 获取 AskHandler
             ask_handler = get_ask_handler()
             if not ask_handler:
                 # 如果没有 AskHandler，返回分类列表让 AI 处理
                 logger.warning("[AskCategoryTool] AskHandler 未设置，返回分类列表")
+                if not categories:
+                    return "no_categories:暂无分类，请询问用户是否直接创建待办（不指定分类）"
                 return self._format_categories_for_ai(categories)
 
             # 构建 Ask 选项
             from ask.types import AskOption, AskType
 
             options = []
-            for cat in categories:
+            
+            if categories:
+                # 有分类时，显示分类列表
+                for cat in categories:
+                    options.append(AskOption(
+                        id=str(cat['id']),
+                        label=cat['name'],
+                        description=cat.get('description'),
+                        metadata={"category_id": cat['id']}
+                    ))
+            else:
+                # 没有分类时，显示提示信息
                 options.append(AskOption(
-                    id=str(cat['id']),
-                    label=cat['name'],
-                    description=cat.get('description'),
-                    metadata={"category_id": cat['id']}
+                    id="info",
+                    label="暂无分类",
+                    description="当前没有待办分类，可以选择直接创建或不指定分类",
+                    metadata={}
                 ))
 
             # 添加"不需要分类"选项
@@ -672,6 +691,13 @@ class AskCategoryTool(BaseTool):
                 id="none",
                 label="不需要分类",
                 description="直接创建待办，不指定分类"
+            ))
+
+            # 添加取消选项
+            options.append(AskOption(
+                id="cancel",
+                label="取消",
+                description="取消创建待办"
             ))
 
             # 执行异步询问
@@ -704,6 +730,11 @@ class AskCategoryTool(BaseTool):
             elif action == "submit":
                 if value == "none":
                     return "none:用户选择不指定分类"
+                elif value == "cancel":
+                    return "cancelled:用户取消了创建待办"
+                elif value == "info":
+                    # 用户点击了“暂无分类”提示，应该选择其他选项
+                    return "info:请选择其他选项，如“不需要分类”或“取消”"
                 else:
                     # 返回分类 ID
                     return f"selected:{value}"

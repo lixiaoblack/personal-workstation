@@ -352,6 +352,44 @@ def direct_get_todo_category(category_id: int) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
 
 
+def direct_create_todo_category(
+    name: str,
+    description: Optional[str] = None,
+    color: Optional[str] = None,
+    icon: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    直接调用：创建待办分类
+
+    Args:
+        name: 分类名称（必填）
+        description: 分类描述
+        color: 颜色（十六进制）
+        icon: 图标名称
+
+    Returns:
+        创建的分类
+    """
+    now = int(time.time() * 1000)
+
+    with get_db() as conn:
+        # 获取当前最大排序号
+        cursor = conn.execute("SELECT MAX(sort_order) FROM todo_categories")
+        max_order = cursor.fetchone()[0]
+        sort_order = (max_order or 0) + 1
+
+        cursor = conn.execute("""
+            INSERT INTO todo_categories 
+            (name, description, color, icon, sort_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (name, description, color, icon, sort_order, now, now))
+        category_id = cursor.lastrowid
+        conn.commit()
+
+        # 返回创建的分类
+        return direct_get_todo_category(category_id)
+
+
 def direct_create_todo(
     title: str,
     description: Optional[str] = None,

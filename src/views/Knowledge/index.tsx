@@ -102,9 +102,8 @@ const KnowledgePage: React.FC = () => {
   const loadDocuments = useCallback(async (knowledgeId: string) => {
     setDocsLoading(true);
     try {
-      const result = await window.electronAPI.listKnowledgeDocuments(
-        knowledgeId
-      );
+      const result =
+        await window.electronAPI.listKnowledgeDocuments(knowledgeId);
       if (result.success) {
         // 默认已处理的文档状态为 ready
         setDocuments(
@@ -156,6 +155,8 @@ const KnowledgePage: React.FC = () => {
         embeddingModel:
           selectedModel.provider === "ollama" ? "ollama" : "openai",
         embeddingModelName: selectedModel.modelId,
+        embeddingModelConfigId: selectedModel.id,
+        dimension: selectedModel.dimension,
       });
 
       if (result.success) {

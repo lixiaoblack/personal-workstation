@@ -34,6 +34,7 @@ class ModelConfig:
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
     host: Optional[str] = None  # Ollama 使用
+    dimension: Optional[int] = None  # 向量维度（嵌入模型）
     max_tokens: int = 4096
     temperature: float = 0.7
     extra_params: Optional[Dict[str, Any]] = None

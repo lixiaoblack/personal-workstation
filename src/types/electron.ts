@@ -14,6 +14,7 @@ export type {
   ResetPasswordData,
   StorageInfo,
   ClearCacheResult,
+  ClearDataResult,
   AvatarSelectResult,
   WebSocketMessage,
   ChatMessage,
@@ -123,6 +124,7 @@ import type {
   ResetPasswordData,
   StorageInfo,
   ClearCacheResult,
+  ClearDataResult,
   AvatarSelectResult,
   PythonEnvironment,
   PythonDetectOptions,
@@ -167,6 +169,8 @@ import type {
   AgentConfig,
   CreateAgentInput,
   UpdateAgentInput,
+  AgentConversation,
+  AgentMessage,
 } from "../../electron/preload";
 
 // WebSocket 服务器信息
@@ -205,6 +209,9 @@ export interface ElectronAPI {
   // 存储管理
   getStorageInfo: () => Promise<StorageInfo>;
   clearCache: () => Promise<ClearCacheResult>;
+  clearAllData: () => Promise<ClearDataResult>;
+  openDatabaseDir: () => Promise<boolean>;
+  openVectorDbDir: () => Promise<boolean>;
 
   // 头像管理
   selectAvatar: () => Promise<AvatarSelectResult>;
@@ -301,6 +308,8 @@ export interface ElectronAPI {
     description?: string;
     embeddingModel?: "ollama" | "openai";
     embeddingModelName?: string;
+    embeddingModelConfigId?: number;
+    dimension?: number;
   }) => Promise<{
     success: boolean;
     knowledge: KnowledgeInfo[];
@@ -692,9 +701,7 @@ export interface ElectronAPI {
     filePath: string,
     content: string
   ) => Promise<{ success: boolean; chunkCount?: number; error?: string }>;
-  notesIndexAllNotes: (
-    rootPath: string
-  ) => Promise<{
+  notesIndexAllNotes: (rootPath: string) => Promise<{
     success: boolean;
     indexedCount?: number;
     totalFiles?: number;
@@ -763,7 +770,10 @@ export interface ElectronAPI {
     data?: AgentConfig;
     error?: string;
   }>;
-  agentUpdate: (agentId: string, input: UpdateAgentInput) => Promise<{
+  agentUpdate: (
+    agentId: string,
+    input: UpdateAgentInput
+  ) => Promise<{
     success: boolean;
     data?: AgentConfig;
     error?: string;
@@ -775,6 +785,60 @@ export interface ElectronAPI {
   agentDuplicate: (agentId: string) => Promise<{
     success: boolean;
     data?: AgentConfig;
+    error?: string;
+  }>;
+
+  // 智能体对话管理
+  agentConversationList: (agentId: string) => Promise<{
+    success: boolean;
+    data: AgentConversation[];
+    count: number;
+    error?: string;
+  }>;
+  agentConversationGet: (conversationId: number) => Promise<{
+    success: boolean;
+    data?: AgentConversation;
+    error?: string;
+  }>;
+  agentConversationCreate: (agentId: string) => Promise<{
+    success: boolean;
+    data?: AgentConversation;
+    error?: string;
+  }>;
+  agentConversationDelete: (conversationId: number) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  agentConversationUpdateTitle: (
+    conversationId: number,
+    title: string
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  agentConversationAutoTitle: (conversationId: number) => Promise<{
+    success: boolean;
+    title?: string;
+    error?: string;
+  }>;
+  agentMessageAdd: (message: {
+    conversation_id: number;
+    role: "user" | "assistant" | "system";
+    content: string;
+    tokens_used?: number;
+    timestamp: number;
+    metadata?: Record<string, unknown>;
+  }) => Promise<{
+    success: boolean;
+    messageId?: number;
+    error?: string;
+  }>;
+  agentMessageRecent: (
+    conversationId: number,
+    limit?: number
+  ) => Promise<{
+    success: boolean;
+    data?: AgentMessage[];
     error?: string;
   }>;
 
@@ -1186,12 +1250,6 @@ export interface TodoStats {
   completed: number;
   overdue: number;
   todayDue: number;
-}
-
-declare global {
-  interface Window {
-    electronAPI: ElectronAPI;
-  }
 }
 
 export {};

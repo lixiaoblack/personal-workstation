@@ -8,9 +8,33 @@ Agent 可以直接导入并使用这些函数。
 import json
 import time
 import uuid
+import logging
 from typing import Optional, List, Dict, Any
 
-from .database import get_db
+from .database import get_db, get_db_path
+
+logger = logging.getLogger(__name__)
+
+
+def direct_get_database_info() -> Dict[str, Any]:
+    """
+    直接调用：获取数据库信息（用于调试）
+
+    Returns:
+        数据库路径和状态信息
+    """
+    db_path = get_db_path()
+    import os
+    exists = os.path.exists(db_path) if db_path else False
+
+    info = {
+        "db_path": db_path,
+        "exists": exists,
+        "env_db_path": os.environ.get("DB_PATH"),
+    }
+
+    logger.info(f"[Database] 数据库信息: {info}")
+    return info
 
 
 # ==================== 知识库直接调用 ====================

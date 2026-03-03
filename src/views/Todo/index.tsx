@@ -257,6 +257,33 @@ const Todo: React.FC = () => {
     [deleteCategory, message]
   );
 
+  // 删除未分类的所有待办
+  const handleDeleteUncategorizedTodos = useCallback(
+    async (_categoryId: number) => {
+      // _categoryId 参数是为了匹配 onDeleteCategory 的调用签名，实际不使用
+      // 删除所有未分类的待办
+      const uncategorizedTodos = todos.filter((t) => !t.categoryId);
+      if (uncategorizedTodos.length === 0) {
+        message.info("暂无待删除的待办事项");
+        return;
+      }
+
+      // 批量删除
+      let successCount = 0;
+      for (const todo of uncategorizedTodos) {
+        const result = await deleteTodo(todo.id);
+        if (result) {
+          successCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        message.success(`已删除 ${successCount} 个待办事项`);
+      }
+    },
+    [todos, deleteTodo, message]
+  );
+
   return (
     <div className="todo flex h-full overflow-hidden">
       <main className="relative flex flex-1 flex-col overflow-hidden">
@@ -339,7 +366,8 @@ const Todo: React.FC = () => {
                 progress_activity
               </span>
             </div>
-          ) : categories.length === 0 ? (
+          ) : categories.length === 0 &&
+            (!todosByCategory[0] || todosByCategory[0].length === 0) ? (
             <div className="flex flex-col items-center justify-center h-full text-text-tertiary">
               <span className="material-symbols-outlined text-6xl mb-4">
                 checklist
@@ -389,7 +417,7 @@ const Todo: React.FC = () => {
                   onDeleteTodo={handleDeleteTodo}
                   onCreateTodo={handleCreateTodoFromCard}
                   onUpdateCategory={() => {}}
-                  onDeleteCategory={() => {}}
+                  onDeleteCategory={handleDeleteUncategorizedTodos}
                 />
               )}
 

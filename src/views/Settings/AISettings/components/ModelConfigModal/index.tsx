@@ -84,6 +84,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [host, setHost] = useState("http://127.0.0.1:11434");
   const [priority, setPriority] = useState(10);
+  const [dimension, setDimension] = useState<number | null>(null); // 向量维度（嵌入模型）
   const [maxTokens, setMaxTokens] = useState<number | null>(4096);
   const [temperature, setTemperature] = useState<number | null>(0.7);
 
@@ -121,6 +122,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       setName(config.name);
       setModelId(config.modelId);
       setPriority(config.priority);
+      setDimension(config.dimension || null);
       setMaxTokens(config.maxTokens || null);
       setTemperature(config.temperature || null);
 
@@ -150,6 +152,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
       setApiBaseUrl(defaultApiUrls.openai);
       setHost("http://127.0.0.1:11434");
       setPriority(10);
+      setDimension(null);
       setMaxTokens(4096);
       setTemperature(0.7);
     }
@@ -216,6 +219,8 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
         name: name.trim(),
         modelId: modelId.trim(),
         priority,
+        dimension:
+          usageType === "embedding" ? dimension || undefined : undefined,
         maxTokens: maxTokens || undefined,
         temperature: temperature || undefined,
       };
@@ -330,8 +335,8 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
                     ollamaLoading
                       ? "正在获取模型列表..."
                       : ollamaModels.length > 0
-                      ? "选择模型"
-                      : "暂无可用模型"
+                        ? "选择模型"
+                        : "暂无可用模型"
                   }
                   value={modelId || undefined}
                   onChange={handleOllamaModelSelect}
@@ -480,18 +485,35 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
               onChange={(v) => setPriority(v || 10)}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-text-tertiary">
-              最大 Token
-            </label>
-            <InputNumber
-              className="w-full"
-              min={1}
-              value={maxTokens}
-              onChange={(v) => setMaxTokens(v)}
-              placeholder="4096"
-            />
-          </div>
+          {/* 向量维度 - 仅嵌入模型显示 */}
+          {usageType === "embedding" ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text-tertiary">
+                向量维度 <span className="text-error">*</span>
+              </label>
+              <InputNumber
+                className="w-full"
+                min={64}
+                max={8192}
+                value={dimension}
+                onChange={(v) => setDimension(v)}
+                placeholder="768"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text-tertiary">
+                最大 Token
+              </label>
+              <InputNumber
+                className="w-full"
+                min={1}
+                value={maxTokens}
+                onChange={(v) => setMaxTokens(v)}
+                placeholder="4096"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-tertiary">
               温度
@@ -507,6 +529,14 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
             />
           </div>
         </div>
+
+        {/* 向量维度说明 - 仅嵌入模型显示 */}
+        {usageType === "embedding" && (
+          <p className="text-xs text-text-tertiary -mt-2">
+            常见维度: nomic-embed-text (768), mxbai-embed-large (1024),
+            text-embedding-3-small (1536), text-embedding-v4 (1024)
+          </p>
+        )}
       </div>
     </Modal>
   );

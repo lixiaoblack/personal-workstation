@@ -25,8 +25,10 @@ export const PROVIDER_LABELS: Record<string, { name: string; color: string }> =
 
 /**
  * 上下文配置：默认保留最近 N 条消息
+ * 注意：每个待办创建可能涉及多轮对话（用户请求 → AI 调用工具 → 工具结果 → AI 回复）
+ * 所以这个值应该足够大以支持多轮对话
  */
-export const DEFAULT_CONTEXT_LIMIT = 20;
+export const DEFAULT_CONTEXT_LIMIT = 50;
 
 /**
  * Agent 步骤显示配置

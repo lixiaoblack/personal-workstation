@@ -277,6 +277,13 @@ export const TodoCard: React.FC<TodoCardProps> = ({
                     {todo.title}
                   </p>
 
+                  {/* 描述 */}
+                  {todo.description && (
+                    <p className="text-xs text-text-tertiary truncate mt-0.5">
+                      {todo.description}
+                    </p>
+                  )}
+
                   {/* 时间状态 */}
                   {isCompleted ? (
                     <span className="text-[10px] uppercase tracking-wider text-green-500 flex items-center gap-1 mt-1">

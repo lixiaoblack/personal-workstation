@@ -18,7 +18,11 @@ export const AGENT_STATUS_TEXT: Record<string, string> = {
 
 // 可用工具列表
 export const AVAILABLE_TOOLS = [
-  { id: "knowledge_search", name: "知识库检索", description: "从知识库中检索相关信息" },
+  {
+    id: "knowledge_search",
+    name: "知识库检索",
+    description: "从知识库中检索相关信息",
+  },
   { id: "web_search", name: "网络搜索", description: "搜索互联网获取信息" },
   { id: "web_crawler", name: "网页采集", description: "采集网页内容" },
   { id: "todo_manage", name: "待办管理", description: "管理待办事项" },

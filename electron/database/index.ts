@@ -22,7 +22,9 @@ export function getDatabasePath(): string {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  return path.join(dataDir, "workstation.db");
+  const dbPath = path.join(dataDir, "workstation.db");
+  console.log(`[Database] 数据库路径: ${dbPath}`);
+  return dbPath;
 }
 
 /**
@@ -152,6 +154,20 @@ function runMigrations(database: Database.Database): void {
     console.error("[Database] 添加 usage_type 列失败:", error);
   }
 
+  // 数据迁移：为 model_configs 表添加 dimension 列（嵌入模型向量维度）
+  try {
+    const modelColumns = database
+      .prepare("PRAGMA table_info(model_configs)")
+      .all() as Array<{ name: string }>;
+    const hasDimension = modelColumns.some((col) => col.name === "dimension");
+    if (!hasDimension) {
+      database.exec(`ALTER TABLE model_configs ADD COLUMN dimension INTEGER`);
+      console.log("[Database] 已添加 model_configs.dimension 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 dimension 列失败:", error);
+  }
+
   // 模型配置索引（在列迁移之后创建）
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_model_configs_provider ON model_configs(provider);
@@ -248,6 +264,24 @@ function runMigrations(database: Database.Database): void {
     }
   } catch (error) {
     console.error("[Database] 添加 storage_path 列失败:", error);
+  }
+
+  // 数据迁移：为 knowledge 表添加 embedding_dimension 列（向量维度）
+  try {
+    const knowledgeColumns = database
+      .prepare("PRAGMA table_info(knowledge)")
+      .all() as Array<{ name: string }>;
+    const hasEmbeddingDimension = knowledgeColumns.some(
+      (col) => col.name === "embedding_dimension"
+    );
+    if (!hasEmbeddingDimension) {
+      database.exec(
+        `ALTER TABLE knowledge ADD COLUMN embedding_dimension INTEGER`
+      );
+      console.log("[Database] 已添加 knowledge.embedding_dimension 列");
+    }
+  } catch (error) {
+    console.error("[Database] 添加 embedding_dimension 列失败:", error);
   }
 
   // 知识库文档表
@@ -603,6 +637,46 @@ function runMigrations(database: Database.Database): void {
   `);
 
   console.log("[Database] Todo 模块数据表已创建");
+
+  // ========== Agent 智能体模块数据表 ==========
+
+  // 智能体对话表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS agent_conversations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_id TEXT NOT NULL,
+      title TEXT,
+      message_count INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 智能体消息表
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS agent_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tokens_used INTEGER,
+      timestamp INTEGER NOT NULL,
+      metadata TEXT,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Agent 对话索引
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_agent_conversations_agent_id ON agent_conversations(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_conversations_updated_at ON agent_conversations(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_agent_messages_conversation_id ON agent_messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_messages_timestamp ON agent_messages(timestamp);
+  `);
+
+  console.log("[Database] Agent 智能体模块数据表已创建");
 }
 
 export default {

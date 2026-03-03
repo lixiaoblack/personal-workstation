@@ -115,6 +115,11 @@ export enum MessageType {
   ASK = "ask", // 后端发起询问
   ASK_RESPONSE = "ask_response", // 用户响应询问
   ASK_RESULT = "ask_result", // 询问处理结果
+
+  // ==================== Todo 待办相关 ====================
+  TODO_CREATED = "todo_created", // 待办创建通知（Agent -> 前端）
+  TODO_UPDATED = "todo_updated", // 待办更新通知
+  TODO_DELETED = "todo_deleted", // 待办删除通知
 }
 
 // 基础消息结构
@@ -175,6 +180,18 @@ export interface AgentChatMessage extends BaseMessage {
     size: number;
     mimeType: string;
   }>; // 附件列表
+  // 智能体特有参数
+  agentId?: string; // 智能体 ID
+  agentConfig?: {
+    name: string;
+    description?: string;
+    systemPrompt?: string; // 自定义系统提示词
+    modelId?: number; // 智能体绑定的模型 ID
+    tools?: string[]; // 启用的工具列表
+    knowledgeIds?: string[]; // 绑定的知识库 ID 列表
+    temperature?: number; // 温度参数
+    maxTokens?: number; // 最大 token 数
+  }; // 智能体配置
 }
 
 // 聊天响应
@@ -1132,6 +1149,55 @@ export interface AskResultMessage extends BaseMessage {
   data?: Record<string, unknown>;
 }
 
+// ==================== Todo 待办消息类型 ====================
+
+/**
+ * 待办创建通知消息
+ */
+export interface TodoCreatedMessage extends BaseMessage {
+  type: MessageType.TODO_CREATED;
+  /** 待办数据 */
+  todo: {
+    id: string;
+    title: string;
+    description?: string;
+    status: string;
+    priority?: string;
+    dueDate?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+/**
+ * 待办更新通知消息
+ */
+export interface TodoUpdatedMessage extends BaseMessage {
+  type: MessageType.TODO_UPDATED;
+  /** 更新后的待办数据 */
+  todo: {
+    id: string;
+    title: string;
+    description?: string;
+    status: string;
+    priority?: string;
+    dueDate?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  /** 变更的字段 */
+  changes?: string[];
+}
+
+/**
+ * 待办删除通知消息
+ */
+export interface TodoDeletedMessage extends BaseMessage {
+  type: MessageType.TODO_DELETED;
+  /** 被删除的待办 ID */
+  todoId: string;
+}
+
 // 保存记忆
 export interface MemorySaveMessage extends BaseMessage {
   type: MessageType.MEMORY_SAVE;
@@ -1328,7 +1394,11 @@ export type WebSocketMessage =
   // Ask 通用交互模块
   | AskMessage
   | AskResponseMessage
-  | AskResultMessage;
+  | AskResultMessage
+  // Todo 待办相关
+  | TodoCreatedMessage
+  | TodoUpdatedMessage
+  | TodoDeletedMessage;
 
 // WebSocket 连接状态
 export enum ConnectionState {

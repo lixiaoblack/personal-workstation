@@ -70,7 +70,9 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({ value, onChange }) => {
                 <div className="text-sm font-medium text-text-primary">
                   {tool.name}
                 </div>
-                <div className="text-xs text-text-tertiary">{tool.description}</div>
+                <div className="text-xs text-text-tertiary">
+                  {tool.description}
+                </div>
               </div>
               <span className="material-symbols-outlined text-primary">
                 {isSelected ? "check_box" : "check_box_outline_blank"}

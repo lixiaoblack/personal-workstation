@@ -35,6 +35,12 @@ export const NAV_MENU_CONFIG: INavMenuItem[] = [
     path: "/agents",
   },
   {
+    key: "workflow",
+    icon: "account_tree",
+    label: "工作流",
+    path: "/workflow",
+  },
+  {
     key: "knowledge",
     icon: "database",
     label: "知识库",

@@ -9,12 +9,22 @@ export interface StorageInfo {
   cachePath: string;
   dataSize: number;
   logsSize: number;
+  vectorDbSize: number; // 向量数据库大小
+  vectorDbPath: string; // 向量数据库路径
 }
 
 // 清理缓存结果
 export interface ClearCacheResult {
   success: boolean;
   clearedSize: number;
+  error?: string;
+}
+
+// 数据清理结果
+export interface ClearDataResult {
+  success: boolean;
+  clearedTables: string[];
+  clearedVectorDb: boolean;
   error?: string;
 }
 

@@ -27,7 +27,11 @@ interface BasicConfigProps {
   models: Array<{ id: number; name: string; modelId: string }>;
 }
 
-const BasicConfig: React.FC<BasicConfigProps> = ({ value, onChange, models }) => {
+const BasicConfig: React.FC<BasicConfigProps> = ({
+  value,
+  onChange,
+  models,
+}) => {
   // 更新字段
   const updateField = <K extends keyof BasicConfigValue>(
     field: K,

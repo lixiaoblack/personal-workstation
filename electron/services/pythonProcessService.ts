@@ -195,6 +195,7 @@ export async function startPythonService(
 
     // 获取数据库路径
     const dbPath = getDatabasePath();
+    addLog("info", `传递数据库路径给 Python: ${dbPath}`);
 
     // 构建环境变量
     const env: NodeJS.ProcessEnv = {

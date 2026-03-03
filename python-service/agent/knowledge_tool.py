@@ -193,14 +193,79 @@ class KnowledgeRetrieverTool(BaseTool):
     ) -> List[Dict[str, Any]]:
         """搜索单个知识库"""
         from rag.vectorstore import get_vectorstore
-        from rag.embeddings import get_embedding_service
+        from rag.embeddings import get_embedding_service, EmbeddingService, EmbeddingModelType
+        from api.direct_api import direct_get_knowledge
 
         vectorstore = get_vectorstore()
-        embedding_service = get_embedding_service()
 
         # 检查知识库是否存在
         if not vectorstore.collection_exists(knowledge_id):
             return []
+
+        # 获取知识库信息
+        kb_info = direct_get_knowledge(knowledge_id)
+
+        # 获取实际向量维度
+        collection_dim = vectorstore.get_collection_dimension(knowledge_id)
+        logger.info(f"[Knowledge] 知识库 {knowledge_id} 向量维度: {collection_dim}")
+
+        # 确定嵌入模型配置
+        if kb_info:
+            embedding_model = kb_info.get("embedding_model", "ollama")
+            embedding_model_name = kb_info.get(
+                "embedding_model_name", "nomic-embed-text")
+            # 优先使用知识库配置的维度
+            configured_dim = kb_info.get("embedding_dimension")
+            logger.info(
+                f"[Knowledge] 知识库配置: {embedding_model}/{embedding_model_name}, 维度: {configured_dim or '未配置'}")
+        else:
+            # 回退到元数据
+            kb_metadata = self._knowledge_metadata.get(knowledge_id, {})
+            embedding_model = kb_metadata.get("embedding_model", "ollama")
+            embedding_model_name = kb_metadata.get(
+                "embedding_model_name", "nomic-embed-text")
+            configured_dim = None
+            logger.info(
+                f"[Knowledge] 从元数据获取配置: {embedding_model}/{embedding_model_name}")
+
+        # 根据配置创建嵌入服务
+        try:
+            if embedding_model == "ollama":
+                # Ollama 嵌入模型
+                embedding_service = EmbeddingService(
+                    model_type=EmbeddingModelType.OLLAMA,
+                    model_name=embedding_model_name
+                )
+            else:
+                # OpenAI/百炼等在线模型 - 需要获取配置
+                from model_router import model_router
+                config = model_router.get_default_embedding_config()
+
+                if config:
+                    from rag.embeddings import init_embedding_service_from_config
+                    embedding_service = init_embedding_service_from_config(
+                        config)
+                else:
+                    # 没有配置，使用全局默认
+                    embedding_service = get_embedding_service()
+
+            logger.info(
+                f"[Knowledge] 创建嵌入服务: {embedding_model}/{embedding_model_name}, 维度: {embedding_service.dimension}")
+        except Exception as e:
+            logger.warning(f"[Knowledge] 创建嵌入服务失败: {e}，使用全局默认")
+            embedding_service = get_embedding_service()
+
+        # 验证维度是否匹配
+        if collection_dim and embedding_service.dimension != collection_dim:
+            logger.error(
+                f"[Knowledge] 向量维度不匹配: 知识库维度={collection_dim}, "
+                f"嵌入模型维度={embedding_service.dimension}"
+            )
+            raise ValueError(
+                f"向量维度不匹配: 知识库使用 {collection_dim} 维，"
+                f"当前嵌入模型 {embedding_model_name} 生成 {embedding_service.dimension} 维向量。"
+                f"请使用与知识库创建时相同的嵌入模型。"
+            )
 
         # 检索
         results = await vectorstore.search(

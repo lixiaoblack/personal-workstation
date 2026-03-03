@@ -2,9 +2,10 @@
  * 存储管理服务
  * 提供缓存大小获取、清理等功能
  */
-import { app } from "electron";
+import { app, shell } from "electron";
 import fs from "fs";
 import path from "path";
+import type Database from "better-sqlite3";
 
 // 存储信息接口
 export interface StorageInfo {
@@ -13,6 +14,16 @@ export interface StorageInfo {
   cachePath: string; // 缓存路径
   dataSize: number; // 数据库大小（字节）
   logsSize: number; // 日志大小（字节）
+  vectorDbSize: number; // 向量数据库大小（字节）
+  vectorDbPath: string; // 向量数据库路径
+}
+
+// 数据清理结果
+export interface ClearDataResult {
+  success: boolean;
+  clearedTables: string[];
+  clearedVectorDb: boolean;
+  error?: string;
 }
 
 /**
@@ -59,6 +70,14 @@ export function getStorageInfo(): StorageInfo {
   const localStoragePath = path.join(userDataPath, "Local Storage");
   const indexedDBPath = path.join(userDataPath, "IndexedDB");
 
+  // 向量数据库路径
+  const homePath = app.getPath("home");
+  const vectorDbPath = path.join(
+    homePath,
+    ".personal-workstation",
+    "knowledge"
+  );
+
   // 计算各部分大小
   const cacheSize =
     getDirectorySize(cachePath) +
@@ -70,9 +89,10 @@ export function getStorageInfo(): StorageInfo {
 
   const dataSize = getDirectorySize(dataPath);
   const logsSize = getDirectorySize(logsPath);
+  const vectorDbSize = getDirectorySize(vectorDbPath);
 
   // 计算总大小（整个 userData 目录）
-  const totalSize = getDirectorySize(userDataPath);
+  const totalSize = getDirectorySize(userDataPath) + vectorDbSize;
 
   return {
     cacheSize,
@@ -80,6 +100,8 @@ export function getStorageInfo(): StorageInfo {
     cachePath: userDataPath,
     dataSize,
     logsSize,
+    vectorDbSize,
+    vectorDbPath,
   };
 }
 
@@ -145,4 +167,113 @@ export function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+/**
+ * 获取数据库路径
+ */
+export function getDatabasePath(): string {
+  const userDataPath = app.getPath("userData");
+  return path.join(userDataPath, "data");
+}
+
+/**
+ * 获取向量数据库路径
+ */
+export function getVectorDbPath(): string {
+  const homePath = app.getPath("home");
+  return path.join(homePath, ".personal-workstation", "knowledge");
+}
+
+/**
+ * 打开目录
+ */
+export function openDirectory(dirPath: string): boolean {
+  try {
+    // 确保目录存在
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    shell.openPath(dirPath);
+    return true;
+  } catch (error) {
+    console.error("打开目录失败:", error);
+    return false;
+  }
+}
+
+/**
+ * 清除除用户信息外的所有数据
+ * 包括：对话、消息、知识库、向量数据库、模型配置、待办、笔记等
+ * 保留：用户信息、登录会话
+ */
+export function clearAllData(db: Database.Database): ClearDataResult {
+  const clearedTables: string[] = [];
+  let clearedVectorDb = false;
+
+  try {
+    // 要清除的表（保留 users 和 sessions）
+    const tablesToClear = [
+      "conversations",
+      "messages",
+      "conversation_summaries",
+      "user_memory",
+      "knowledge",
+      "knowledge_documents",
+      "model_configs",
+      "todos",
+      "todo_categories",
+      "notes_files",
+      "notes_settings",
+      "agents",
+      "agent_conversations",
+      "agent_messages",
+      "workflows",
+      "postman_projects",
+      "postman_groups",
+      "postman_requests",
+      "postman_settings",
+      "postman_history",
+    ];
+
+    // 清除各表数据
+    for (const table of tablesToClear) {
+      try {
+        db.exec(`DELETE FROM ${table}`);
+        clearedTables.push(table);
+      } catch {
+        // 表可能不存在，忽略错误
+      }
+    }
+
+    // 清除向量数据库
+    const vectorDbPath = getVectorDbPath();
+    if (fs.existsSync(vectorDbPath)) {
+      try {
+        const files = fs.readdirSync(vectorDbPath);
+        for (const file of files) {
+          const filePath = path.join(vectorDbPath, file);
+          fs.rmSync(filePath, { recursive: true, force: true });
+        }
+        clearedVectorDb = true;
+      } catch (error) {
+        console.error("清除向量数据库失败:", error);
+      }
+    } else {
+      clearedVectorDb = true; // 目录不存在视为已清理
+    }
+
+    return {
+      success: true,
+      clearedTables,
+      clearedVectorDb,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      clearedTables,
+      clearedVectorDb,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

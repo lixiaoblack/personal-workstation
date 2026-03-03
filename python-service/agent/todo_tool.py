@@ -57,29 +57,45 @@ class CreateTodoTool(BaseTool):
     - 用户说"提醒我明天下午3点开会"
     - 用户说"添加一个高优先级任务：完成项目报告"
     - 用户说"创建一个待办：买牛奶，明天之前"
+
+    【重要】创建待办前必须先确认分类：
+    1. 如果用户没有指定分类，必须先调用 ask_todo_category 工具弹出 UI 让用户选择
+    2. ask_todo_category 会返回选中的分类 ID 或 "none"（不指定分类）
+    3. 根据返回结果设置 category_id 参数
+    4. 如果用户选择"不需要分类"，category_id 设置为 None
     """
 
     name = "create_todo"
     description = """创建待办事项。
 
-【重要】创建待办前必须先确认分类：
-1. 如果用户没有指定分类，调用 ask_todo_category 工具弹出 UI 让用户选择
-2. ask_todo_category 会返回选中的分类 ID 或 "none"（不指定分类）
-3. 根据返回结果设置 category_id 参数
+【🔴 强制流程 - 必须严格遵守】
+创建待办前必须先确认分类：
+1. 如果用户没有明确指定分类，必须先调用 ask_todo_category 工具让用户选择
+2. 等待 ask_todo_category 返回结果
+3. 根据返回结果设置 category_id：
+   - 返回 "selected:xxx" → 使用 xxx 作为 category_id
+   - 返回 "none:xxx" → category_id 设为 null（不指定分类）
+   - 返回 "timeout" 或 "cancelled" → 询问用户是否继续创建
+
+【重要】提醒时间和截止时间：
+- 创建待办时应该设置提醒时间（reminder_time）
+- 如果用户没有指定提醒时间，默认设置为截止时间前 1 小时
+- 如果用户没有指定截止时间，可以不设置
 
 支持的参数：
 - 标题（必填）
 - 描述/详情
 - 分类 ID（通过 ask_todo_category 获取）
 - 优先级：low（低）、medium（中）、high（高）、urgent（紧急）
-- 截止时间：支持自然语言如"明天下午3点"、"下周一"
+- 截止时间：支持自然语言如"明天下午3点"、"下周一"、"2024-01-15 18:00"
+- 提醒时间：格式同 due_date，建议设置为截止时间前 1 小时
 - 重复类型：none（不重复）、daily（每天）、weekly（每周）、monthly（每月）
 
 示例流程：
 用户: "帮我添加一个待办，明天下午3点开会"
-AI: 调用 ask_todo_category(title="明天下午3点开会")
-工具返回: "selected:1"
-AI: 调用 create_todo(title="明天下午3点开会", category_id=1, due_date="明天下午3点")
+步骤1: 调用 ask_todo_category(title="明天下午3点开会")
+步骤2: 等待返回，假设返回 "selected:1"
+步骤3: 调用 create_todo(title="明天下午3点开会", category_id=1, due_date="明天下午3点", reminder_time="明天下午2点")
 """
 
     class ArgsSchema(ToolSchema):
@@ -128,15 +144,27 @@ AI: 调用 create_todo(title="明天下午3点开会", category_id=1, due_date="
     ) -> str:
         """创建待办事项"""
         try:
+            # 调试日志：打印数据库路径和分类 ID
+            from api.direct_api import direct_get_database_info
+            db_info = direct_get_database_info()
+            logger.info(f"[CreateTodoTool] 数据库信息: {db_info}")
+            logger.info(
+                f"[CreateTodoTool] 创建待办: title={title}, category_id={category_id}, priority={priority}, due_date={due_date}, reminder_time={reminder_time}")
+
             # 解析截止时间
             due_date_ts = None
             if due_date:
                 due_date_ts = self._parse_datetime(due_date)
 
             # 解析提醒时间
+            # 如果没有指定提醒时间但有截止时间，默认设置为截止时间前 1 小时
             reminder_ts = None
             if reminder_time:
                 reminder_ts = self._parse_datetime(reminder_time)
+            elif due_date_ts:
+                # 自动设置提醒时间为截止时间前 1 小时
+                reminder_ts = due_date_ts - 60 * 60 * 1000  # 1 小时 = 60分钟 * 60秒 * 1000毫秒
+                logger.info(f"[CreateTodoTool] 自动设置提醒时间: 截止时间前 1 小时")
 
             # 解析标签
             tags_list = None
@@ -166,6 +194,24 @@ AI: 调用 create_todo(title="明天下午3点开会", category_id=1, due_date="
             )
 
             if result:
+                # 发送 todo_created 事件通知前端刷新
+                try:
+                    ask_handler = get_ask_handler()
+                    if ask_handler and hasattr(ask_handler, '_send_callback'):
+                        import asyncio
+                        callback = ask_handler._send_callback
+                        if callback:
+                            # 尝试发送事件通知
+                            asyncio.create_task(callback({
+                                "type": "todo_created",
+                                "data": result
+                            }))
+                            logger.info(
+                                f"[CreateTodoTool] 已发送 todo_created 事件")
+                except Exception as e:
+                    logger.warning(
+                        f"[CreateTodoTool] 发送 todo_created 事件失败: {e}")
+
                 # 格式化返回信息
                 info_parts = [f"✅ 已创建待办：{result['title']}"]
                 if result.get('priority'):
@@ -178,6 +224,11 @@ AI: 调用 create_todo(title="明天下午3点开会", category_id=1, due_date="
                     dt = datetime.fromtimestamp(result['due_date'] / 1000)
                     info_parts.append(
                         f"   截止时间：{dt.strftime('%Y-%m-%d %H:%M')}")
+                if result.get('reminder_time'):
+                    from datetime import datetime
+                    rt = datetime.fromtimestamp(result['reminder_time'] / 1000)
+                    info_parts.append(
+                        f"   提醒时间：{rt.strftime('%Y-%m-%d %H:%M')}")
                 if result.get('repeat_type') and result['repeat_type'] != 'none':
                     repeat_names = {"daily": "每天", "weekly": "每周",
                                     "monthly": "每月", "yearly": "每年"}

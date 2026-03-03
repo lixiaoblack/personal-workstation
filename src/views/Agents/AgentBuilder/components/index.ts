@@ -15,3 +15,6 @@ export type { KnowledgeBinderValue } from "./KnowledgeBinder";
 
 export { AdvancedConfig } from "./AdvancedConfig";
 export type { AdvancedConfigValue } from "./AdvancedConfig";
+
+export { WorkflowSelector } from "./WorkflowSelector";
+export type { WorkflowSelectorValue } from "./WorkflowSelector";

@@ -9,6 +9,7 @@ import type {
   ResetPasswordData,
   StorageInfo,
   ClearCacheResult,
+  ClearDataResult,
   AvatarSelectResult,
   ConnectionState,
   PythonEnvironment,
@@ -63,6 +64,28 @@ export interface WsServerInfo {
   pythonConnected: boolean;
 }
 
+// Agent 智能体相关类型
+export interface AgentConversation {
+  id: number;
+  agent_id: string;
+  title: string | null;
+  message_count: number;
+  created_at: number;
+  updated_at: number;
+  messages?: AgentMessage[];
+}
+
+export interface AgentMessage {
+  id: number;
+  conversation_id: number;
+  role: "user" | "assistant" | "system";
+  content: string;
+  tokens_used?: number;
+  timestamp: number;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+}
+
 // Skills 技能相关类型
 export interface SkillListResult {
   success: boolean;
@@ -92,6 +115,8 @@ export interface KnowledgeCreateInput {
   description?: string;
   embeddingModel?: "ollama" | "openai";
   embeddingModelName?: string;
+  embeddingModelConfigId?: number;
+  dimension?: number;
 }
 
 export interface KnowledgeListResult {
@@ -105,6 +130,7 @@ export interface KnowledgeAddDocumentResult {
   success: boolean;
   document?: KnowledgeDocumentInfo;
   error?: string;
+  warning?: string;
 }
 
 export interface KnowledgeSearchResultData {
@@ -125,6 +151,7 @@ export type {
   ResetPasswordData,
   StorageInfo,
   ClearCacheResult,
+  ClearDataResult,
   AvatarSelectResult,
   ConnectionState,
   PythonEnvironment,
@@ -554,6 +581,7 @@ export interface AgentConfig {
   knowledge_ids: string[];
   skills: string[];
   parameters: Record<string, unknown>;
+  workflow_id: string | null;
   status: string;
   created_at: number;
   updated_at: number;
@@ -570,6 +598,7 @@ export interface CreateAgentInput {
   knowledge_ids?: string[];
   skills?: string[];
   parameters?: Record<string, unknown>;
+  workflow_id?: string;
 }
 
 export interface UpdateAgentInput {
@@ -583,7 +612,74 @@ export interface UpdateAgentInput {
   knowledge_ids?: string[];
   skills?: string[];
   parameters?: Record<string, unknown>;
+  workflow_id?: string;
   status?: string;
+}
+
+// Workflow 工作流模块相关类型
+export type WorkflowNodeType =
+  | "start"
+  | "end"
+  | "llm"
+  | "tool"
+  | "knowledge"
+  | "condition"
+  | "loop"
+  | "file_select"
+  | "user_input"
+  | "human_review"
+  | "message"
+  | "webhook";
+
+export interface WorkflowNode {
+  id: string;
+  type: WorkflowNodeType;
+  position: { x: number; y: number };
+  data: Record<string, unknown>;
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+  label?: string;
+  data?: Record<string, unknown>;
+}
+
+export type WorkflowStatus = "draft" | "published" | "deleted";
+
+export interface WorkflowConfig {
+  id: string;
+  agent_id: string | null;
+  name: string;
+  description: string | null;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  variables: Record<string, unknown>;
+  status: WorkflowStatus;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CreateWorkflowInput {
+  name: string;
+  description?: string;
+  agent_id?: string;
+  nodes?: WorkflowNode[];
+  edges?: WorkflowEdge[];
+  variables?: Record<string, unknown>;
+}
+
+export interface UpdateWorkflowInput {
+  name?: string;
+  description?: string;
+  agent_id?: string;
+  nodes?: WorkflowNode[];
+  edges?: WorkflowEdge[];
+  variables?: Record<string, unknown>;
+  status?: WorkflowStatus;
 }
 
 // 通过 contextBridge 暴露安全的 API 给渲染进程
@@ -625,6 +721,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("storage:getInfo"),
   clearCache: (): Promise<ClearCacheResult> =>
     ipcRenderer.invoke("storage:clearCache"),
+  clearAllData: (): Promise<ClearDataResult> =>
+    ipcRenderer.invoke("storage:clearAllData"),
+  openDatabaseDir: (): Promise<boolean> =>
+    ipcRenderer.invoke("storage:openDatabaseDir"),
+  openVectorDbDir: (): Promise<boolean> =>
+    ipcRenderer.invoke("storage:openVectorDbDir"),
 
   // 头像管理
   selectAvatar: (): Promise<AvatarSelectResult> =>
@@ -1123,18 +1225,99 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ========== Agent 智能体模块 ==========
 
   // 智能体管理
-  agentList: () =>
-    ipcRenderer.invoke("agent:list"),
-  agentGet: (agentId: string) =>
-    ipcRenderer.invoke("agent:get", agentId),
+  agentList: () => ipcRenderer.invoke("agent:list"),
+  agentGet: (agentId: string) => ipcRenderer.invoke("agent:get", agentId),
   agentCreate: (input: Record<string, unknown>) =>
     ipcRenderer.invoke("agent:create", input),
   agentUpdate: (agentId: string, input: Record<string, unknown>) =>
     ipcRenderer.invoke("agent:update", agentId, input),
-  agentDelete: (agentId: string) =>
-    ipcRenderer.invoke("agent:delete", agentId),
+  agentDelete: (agentId: string) => ipcRenderer.invoke("agent:delete", agentId),
   agentDuplicate: (agentId: string) =>
     ipcRenderer.invoke("agent:duplicate", agentId),
+
+  // 智能体对话管理
+  agentConversationList: (agentId: string) =>
+    ipcRenderer.invoke("agent:conversations:list", agentId),
+  agentConversationGet: (conversationId: number) =>
+    ipcRenderer.invoke("agent:conversations:get", conversationId),
+  agentConversationCreate: (agentId: string) =>
+    ipcRenderer.invoke("agent:conversations:create", agentId),
+  agentConversationDelete: (conversationId: number) =>
+    ipcRenderer.invoke("agent:conversations:delete", conversationId),
+  agentConversationUpdateTitle: (conversationId: number, title: string) =>
+    ipcRenderer.invoke(
+      "agent:conversations:updateTitle",
+      conversationId,
+      title
+    ),
+  agentConversationAutoTitle: (conversationId: number) =>
+    ipcRenderer.invoke("agent:conversations:autoTitle", conversationId),
+  agentMessageAdd: (message: {
+    conversation_id: number;
+    role: "user" | "assistant" | "system";
+    content: string;
+    tokens_used?: number;
+    timestamp: number;
+    metadata?: Record<string, unknown>;
+  }) => ipcRenderer.invoke("agent:messages:add", message),
+  agentMessageRecent: (conversationId: number, limit?: number) =>
+    ipcRenderer.invoke("agent:messages:recent", conversationId, limit),
+
+  // ========== Workflow 工作流模块 ==========
+
+  // 工作流管理
+  workflowList: (filters?: { agent_id?: string; status?: string }) =>
+    ipcRenderer.invoke("workflow:list", filters),
+  workflowGet: (workflowId: string) =>
+    ipcRenderer.invoke("workflow:get", workflowId),
+  workflowCreate: (input: CreateWorkflowInput) =>
+    ipcRenderer.invoke("workflow:create", input),
+  workflowUpdate: (workflowId: string, input: UpdateWorkflowInput) =>
+    ipcRenderer.invoke("workflow:update", workflowId, input),
+  workflowDelete: (workflowId: string) =>
+    ipcRenderer.invoke("workflow:delete", workflowId),
+  workflowDuplicate: (workflowId: string) =>
+    ipcRenderer.invoke("workflow:duplicate", workflowId),
+  workflowPublish: (workflowId: string) =>
+    ipcRenderer.invoke("workflow:publish", workflowId),
+  workflowExecute: (workflowId: string, inputData?: Record<string, unknown>) =>
+    ipcRenderer.invoke("workflow:execute", workflowId, inputData),
+  workflowExecuteNode: (
+    workflowId: string,
+    nodeId: string,
+    inputVariables?: Record<string, unknown>
+  ) =>
+    ipcRenderer.invoke(
+      "workflow:executeNode",
+      workflowId,
+      nodeId,
+      inputVariables
+    ),
+  workflowExecuteFromNode: (
+    workflowId: string,
+    nodeId: string,
+    initialVariables?: Record<string, unknown>
+  ) =>
+    ipcRenderer.invoke(
+      "workflow:executeFromNode",
+      workflowId,
+      nodeId,
+      initialVariables
+    ),
+  workflowResume: (
+    executionId: string,
+    nodeId: string,
+    responseData: Record<string, unknown>
+  ) => ipcRenderer.invoke("workflow:resume", executionId, nodeId, responseData),
+  workflowSelectFiles: (options?: {
+    multiple?: boolean;
+    accept?: string;
+    maxSize?: number;
+  }) => ipcRenderer.invoke("workflow:selectFiles", options),
+  workflowReadFile: (filePath: string) =>
+    ipcRenderer.invoke("workflow:readFile", filePath),
+  workflowReadFileBase64: (filePath: string) =>
+    ipcRenderer.invoke("workflow:readFileBase64", filePath),
 
   // 分组浮窗操作
   categoryFloatToggle: (categoryId: number, categoryData: TodoCategory) =>
@@ -1241,6 +1424,9 @@ export interface ElectronAPI {
   // 存储管理
   getStorageInfo: () => Promise<StorageInfo>;
   clearCache: () => Promise<ClearCacheResult>;
+  clearAllData: () => Promise<ClearDataResult>;
+  openDatabaseDir: () => Promise<boolean>;
+  openVectorDbDir: () => Promise<boolean>;
 
   // 头像管理
   selectAvatar: () => Promise<AvatarSelectResult>;
@@ -1657,9 +1843,7 @@ export interface ElectronAPI {
     filePath: string,
     content: string
   ) => Promise<{ success: boolean; chunkCount?: number; error?: string }>;
-  notesIndexAllNotes: (
-    rootPath: string
-  ) => Promise<{
+  notesIndexAllNotes: (rootPath: string) => Promise<{
     success: boolean;
     indexedCount?: number;
     totalFiles?: number;
@@ -1728,7 +1912,10 @@ export interface ElectronAPI {
     data?: AgentConfig;
     error?: string;
   }>;
-  agentUpdate: (agentId: string, input: UpdateAgentInput) => Promise<{
+  agentUpdate: (
+    agentId: string,
+    input: UpdateAgentInput
+  ) => Promise<{
     success: boolean;
     data?: AgentConfig;
     error?: string;
@@ -1740,6 +1927,172 @@ export interface ElectronAPI {
   agentDuplicate: (agentId: string) => Promise<{
     success: boolean;
     data?: AgentConfig;
+    error?: string;
+  }>;
+
+  // 智能体对话管理
+  agentConversationList: (agentId: string) => Promise<{
+    success: boolean;
+    data: AgentConversation[];
+    count: number;
+    error?: string;
+  }>;
+  agentConversationGet: (conversationId: number) => Promise<{
+    success: boolean;
+    data?: AgentConversation;
+    error?: string;
+  }>;
+  agentConversationCreate: (agentId: string) => Promise<{
+    success: boolean;
+    data?: AgentConversation;
+    error?: string;
+  }>;
+  agentConversationDelete: (conversationId: number) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  agentConversationUpdateTitle: (
+    conversationId: number,
+    title: string
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  agentConversationAutoTitle: (conversationId: number) => Promise<{
+    success: boolean;
+    title?: string;
+    error?: string;
+  }>;
+  agentMessageAdd: (message: {
+    conversation_id: number;
+    role: "user" | "assistant" | "system";
+    content: string;
+    tokens_used?: number;
+    timestamp: number;
+    metadata?: Record<string, unknown>;
+  }) => Promise<{
+    success: boolean;
+    messageId?: number;
+    error?: string;
+  }>;
+  agentMessageRecent: (
+    conversationId: number,
+    limit?: number
+  ) => Promise<{
+    success: boolean;
+    data?: AgentMessage[];
+    error?: string;
+  }>;
+
+  // ========== Workflow 工作流模块 ==========
+
+  // 工作流管理
+  workflowList: (filters?: { agent_id?: string; status?: string }) => Promise<{
+    success: boolean;
+    data: WorkflowConfig[];
+    count: number;
+    error?: string;
+  }>;
+  workflowGet: (workflowId: string) => Promise<{
+    success: boolean;
+    data?: WorkflowConfig;
+    error?: string;
+  }>;
+  workflowCreate: (input: CreateWorkflowInput) => Promise<{
+    success: boolean;
+    data?: WorkflowConfig;
+    error?: string;
+  }>;
+  workflowUpdate: (
+    workflowId: string,
+    input: UpdateWorkflowInput
+  ) => Promise<{
+    success: boolean;
+    data?: WorkflowConfig;
+    error?: string;
+  }>;
+  workflowDelete: (workflowId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  workflowDuplicate: (workflowId: string) => Promise<{
+    success: boolean;
+    data?: WorkflowConfig;
+    error?: string;
+  }>;
+  workflowPublish: (workflowId: string) => Promise<{
+    success: boolean;
+    data?: WorkflowConfig;
+    error?: string;
+  }>;
+  workflowExecute: (
+    workflowId: string,
+    inputData?: Record<string, unknown>
+  ) => Promise<{
+    success: boolean;
+    execution_id?: string;
+    variables?: Record<string, unknown>;
+    error?: string;
+    status?: string;
+    waiting_for?: string;
+    node_id?: string;
+  }>;
+  workflowExecuteNode: (
+    workflowId: string,
+    nodeId: string,
+    inputVariables?: Record<string, unknown>
+  ) => Promise<{
+    success: boolean;
+    node_id?: string;
+    node_type?: string;
+    status?: string;
+    output?: unknown;
+    variables?: Record<string, unknown>;
+    error?: string;
+    execution_time?: number;
+  }>;
+  workflowExecuteFromNode: (
+    workflowId: string,
+    nodeId: string,
+    initialVariables?: Record<string, unknown>
+  ) => Promise<{
+    success: boolean;
+    execution_id?: string;
+    variables?: Record<string, unknown>;
+    node_results?: Record<string, unknown>;
+    error?: string;
+  }>;
+  workflowResume: (
+    executionId: string,
+    nodeId: string,
+    responseData: Record<string, unknown>
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  workflowSelectFiles: (options?: {
+    multiple?: boolean;
+    accept?: string;
+    maxSize?: number;
+  }) => Promise<{
+    success: boolean;
+    files?: Array<{
+      path: string;
+      name: string;
+      size: number;
+      content?: string;
+    }>;
+    error?: string;
+  }>;
+  workflowReadFile: (filePath: string) => Promise<{
+    success: boolean;
+    content?: string;
+    error?: string;
+  }>;
+  workflowReadFileBase64: (filePath: string) => Promise<{
+    success: boolean;
+    content?: string;
+    mimeType?: string;
     error?: string;
   }>;
 

@@ -23,6 +23,11 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+      // 允许下划线前缀的未使用变量
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   }
 );

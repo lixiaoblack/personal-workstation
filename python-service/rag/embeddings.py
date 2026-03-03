@@ -44,36 +44,8 @@ class EmbeddingService:
     """
     嵌入服务
 
-    支持自动选择嵌入模型：
-    - 如果配置了 OpenAI API Key，使用 OpenAI Embedding
-    - 否则使用 Ollama 本地模型
-
-    默认模型：
-    - Ollama: nomic-embed-text (维度: 768)
-    - OpenAI: text-embedding-3-small (维度: 1536)
+    所有配置（模型名称、维度等）都必须从外部配置传入。
     """
-
-    # 默认模型配置
-    DEFAULT_MODELS = {
-        EmbeddingModelType.OLLAMA: "nomic-embed-text",
-        EmbeddingModelType.OPENAI: "text-embedding-3-small",
-    }
-
-    # 模型维度
-    MODEL_DIMENSIONS = {
-        # Ollama 模型
-        "nomic-embed-text": 768,
-        "mxbai-embed-large": 1024,
-        # OpenAI 模型
-        "text-embedding-3-small": 1536,
-        "text-embedding-3-large": 3072,
-        "text-embedding-ada-002": 1536,
-        # 百炼模型
-        "text-embedding-v1": 1536,
-        "text-embedding-v2": 1536,
-        "text-embedding-v3": 1024,
-        "text-embedding-v4": 1024,
-    }
 
     def __init__(
         self,
@@ -82,20 +54,33 @@ class EmbeddingService:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         ollama_host: str = "http://127.0.0.1:11434",
+        dimension: Optional[int] = None,
     ):
         """
         初始化嵌入服务
 
         Args:
             model_type: 模型类型，None 时自动选择
-            model_name: 模型名称，None 时使用默认模型
+            model_name: 模型名称（必须提供）
             api_key: OpenAI API Key
             base_url: OpenAI API Base URL
             ollama_host: Ollama 服务地址
+            dimension: 向量维度（必须提供）
+
+        Raises:
+            ValueError: 如果缺少必要的配置（model_name 或 dimension）
         """
+        # 验证必要参数
+        if not model_name:
+            raise ValueError("嵌入模型名称 (model_name) 必须提供，请在 AI 设置中配置嵌入模型")
+        if not dimension:
+            raise ValueError("向量维度 (dimension) 必须提供，请在 AI 设置中配置嵌入模型的维度")
+
         self._ollama_host = ollama_host
         self._api_key = api_key
         self._base_url = base_url
+        self._model_name = model_name
+        self._dimension = dimension
 
         # 确定模型类型
         if model_type:
@@ -107,12 +92,6 @@ class EmbeddingService:
                 if api_key
                 else EmbeddingModelType.OLLAMA
             )
-
-        # 确定模型名称
-        self._model_name = model_name or self.DEFAULT_MODELS[self._model_type]
-
-        # 获取向量维度
-        self._dimension = self.MODEL_DIMENSIONS.get(self._model_name, 768)
 
         # 延迟初始化嵌入模型
         self._embedding_model: Optional[Any] = None
@@ -273,17 +252,29 @@ class EmbeddingService:
         从配置创建嵌入服务
 
         Args:
-            config: 配置字典
+            config: 配置字典，必须包含 model_name 和 dimension
 
         Returns:
             嵌入服务实例
+
+        Raises:
+            ValueError: 如果缺少必要配置
         """
+        model_name = config.get("model_name")
+        dimension = config.get("dimension")
+
+        if not model_name:
+            raise ValueError("配置中缺少 model_name")
+        if not dimension:
+            raise ValueError("配置中缺少 dimension")
+
         return cls(
             model_type=EmbeddingModelType(config.get("model_type", "ollama")),
-            model_name=config.get("model_name"),
+            model_name=model_name,
             api_key=config.get("api_key"),
             base_url=config.get("base_url"),
             ollama_host=config.get("ollama_host", "http://127.0.0.1:11434"),
+            dimension=dimension,
         )
 
 
@@ -350,18 +341,23 @@ def init_embedding_service(
     model_name: Optional[str] = None,
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
+    dimension: Optional[int] = None,
 ) -> EmbeddingService:
     """
     初始化全局嵌入服务
 
     Args:
         model_type: 模型类型
-        model_name: 模型名称
+        model_name: 模型名称（必须）
         api_key: API Key
         base_url: API Base URL
+        dimension: 向量维度（必须）
 
     Returns:
         嵌入服务实例
+
+    Raises:
+        ValueError: 如果缺少必要参数
     """
     global _global_embedding_service
 
@@ -370,6 +366,7 @@ def init_embedding_service(
         model_name=model_name,
         api_key=api_key,
         base_url=base_url,
+        dimension=dimension,
     )
 
     return _global_embedding_service
@@ -380,15 +377,23 @@ def init_embedding_service_from_config(config) -> EmbeddingService:
     从模型配置初始化嵌入服务
 
     Args:
-        config: ModelConfig 实例，包含 provider、model_id、api_key 等信息
+        config: ModelConfig 实例，包含 provider、model_id、api_key、dimension 等信息
 
     Returns:
         嵌入服务实例
 
     Raises:
-        ValueError: 如果配置无效或不支持的提供商
+        ValueError: 如果配置无效或缺少必要字段
     """
     from model_router import ModelProvider
+
+    # 验证必要字段
+    if not config.model_id:
+        raise ValueError("嵌入模型配置缺少 model_id")
+    if not config.dimension:
+        raise ValueError(
+            "嵌入模型配置缺少 dimension，请在 AI 设置中配置嵌入模型的向量维度"
+        )
 
     # 根据 provider 确定 model_type
     if config.provider == ModelProvider.OLLAMA:
@@ -409,4 +414,5 @@ def init_embedding_service_from_config(config) -> EmbeddingService:
         model_name=config.model_id,
         api_key=api_key,
         base_url=base_url,
+        dimension=config.dimension,
     )

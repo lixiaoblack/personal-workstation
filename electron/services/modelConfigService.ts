@@ -31,6 +31,7 @@ interface ModelConfigRow {
   enabled: number;
   is_default: number;
   priority: number;
+  dimension: number | null;
   status: string;
   last_error: string | null;
   max_tokens: number | null;
@@ -54,6 +55,7 @@ function rowToModelConfig(row: ModelConfigRow): ModelConfig {
     enabled: row.enabled === 1,
     isDefault: row.is_default === 1,
     priority: row.priority,
+    dimension: row.dimension || undefined,
     status: row.status as ModelConfigStatus,
     lastError: row.last_error || undefined,
     createdAt: row.created_at,
@@ -108,6 +110,7 @@ function modelConfigToRow(
   if ("enabled" in input) row.enabled = input.enabled ? 1 : 0;
   if ("isDefault" in input) row.is_default = input.isDefault ? 1 : 0;
   if ("priority" in input) row.priority = input.priority;
+  if ("dimension" in input) row.dimension = input.dimension;
   if ("status" in input) row.status = input.status;
   if ("lastError" in input) row.last_error = input.lastError;
   if ("maxTokens" in input) row.max_tokens = input.maxTokens;
@@ -127,7 +130,7 @@ export function getModelConfigs(
 ): ModelConfigListItem[] {
   const db = getDatabase();
   let query = `SELECT id, usage_type, provider, name, model_id, enabled, is_default, priority, 
-              status, last_error, created_at, updated_at
+              dimension, status, last_error, created_at, updated_at
        FROM model_configs`;
   const params: string[] = [];
 
@@ -149,6 +152,7 @@ export function getModelConfigs(
     enabled: row.enabled === 1,
     isDefault: row.is_default === 1,
     priority: row.priority,
+    dimension: row.dimension || undefined,
     status: row.status as ModelConfigStatus,
     lastError: row.last_error || undefined,
     createdAt: row.created_at,
@@ -241,11 +245,11 @@ export function createModelConfig(input: CreateModelConfigInput): ModelConfig {
   const stmt = db.prepare(`
     INSERT INTO model_configs (
       usage_type, provider, name, model_id, api_key, api_base_url, organization,
-      host, enabled, is_default, priority, status, max_tokens, 
+      host, enabled, is_default, priority, dimension, status, max_tokens,
       temperature, keep_alive, extra_params
     ) VALUES (
       @usage_type, @provider, @name, @model_id, @api_key, @api_base_url, @organization,
-      @host, @enabled, @is_default, @priority, @status, @max_tokens,
+      @host, @enabled, @is_default, @priority, @dimension, @status, @max_tokens,
       @temperature, @keep_alive, @extra_params
     )
   `);
@@ -262,6 +266,7 @@ export function createModelConfig(input: CreateModelConfigInput): ModelConfig {
     enabled: row.enabled ?? 0,
     is_default: row.is_default ?? 0,
     priority: row.priority ?? 10,
+    dimension: row.dimension || null,
     // 如果有 API Key（在线模型）或 host（Ollama），则标记为 active
     status: row.status || (row.api_key || row.host ? "active" : "inactive"),
     max_tokens: row.max_tokens || null,

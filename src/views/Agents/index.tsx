@@ -17,14 +17,8 @@ import "./index.sass";
 
 const AgentsPage: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    agents,
-    loading,
-    error,
-    fetchAgents,
-    deleteAgent,
-    duplicateAgent,
-  } = useAgents();
+  const { agents, loading, error, fetchAgents, deleteAgent, duplicateAgent } =
+    useAgents();
 
   // 搜索关键词
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -34,7 +28,7 @@ const AgentsPage: React.FC = () => {
     (agent) =>
       !searchKeyword ||
       agent.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (agent.description?.toLowerCase().includes(searchKeyword.toLowerCase()))
+      agent.description?.toLowerCase().includes(searchKeyword.toLowerCase())
   );
 
   // 点击智能体卡片 - 进入对话
@@ -112,7 +106,9 @@ const AgentsPage: React.FC = () => {
 
           {/* 刷新按钮 */}
           <Button
-            icon={<span className="material-symbols-outlined text-sm">refresh</span>}
+            icon={
+              <span className="material-symbols-outlined text-sm">refresh</span>
+            }
             onClick={handleRefresh}
             loading={loading}
           >

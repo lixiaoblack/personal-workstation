@@ -11,30 +11,15 @@ import { useAuth } from "@/contexts";
 
 // WHeader 组件属性
 export interface IWHeaderProps {
-  /** 搜索框占位文本 */
-  searchPlaceholder?: string;
-  /** 搜索回调 */
-  onSearch?: (value: string) => void;
   /** 通知点击回调 */
   onNotificationClick?: () => void;
 }
 
-const WHeader: React.FC<IWHeaderProps> = ({
-  searchPlaceholder = "搜索功能、任务或日志...",
-  onSearch,
-  onNotificationClick,
-}) => {
+const WHeader: React.FC<IWHeaderProps> = ({ onNotificationClick }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
-  // 处理搜索
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      onSearch?.((e.target as HTMLInputElement).value);
-    }
-  };
 
   // 处理退出登录
   const handleLogout = async () => {

@@ -394,7 +394,13 @@ const CategoryFloat: React.FC = () => {
                   >
                     {todo.title}
                   </div>
-                  <div className="flex items-center gap-2">
+                  {/* 描述 */}
+                  {todo.description && (
+                    <div className="text-xs text-text-tertiary truncate mt-0.5">
+                      {todo.description}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mt-0.5">
                     {timeInfo && (
                       <span
                         className={`text-xs ${getTimeStatusStyle(

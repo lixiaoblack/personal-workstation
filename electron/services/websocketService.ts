@@ -296,6 +296,17 @@ export function syncModelConfigsToPython(): void {
     // 获取已启用的模型配置
     const configs = getEnabledModelConfigs();
 
+    // 打印详细日志，调试 dimension 是否正确传递
+    console.log(
+      "[WebSocket] 同步模型配置到 Python 服务:",
+      configs.map((c) => ({
+        id: c.id,
+        modelId: c.modelId,
+        usageType: c.usageType,
+        dimension: c.dimension,
+      }))
+    );
+
     // 发送模型配置同步消息
     const message = createMessage("model_config_sync" as MessageType, {
       configs: configs.map((config) => {
@@ -305,6 +316,7 @@ export function syncModelConfigsToPython(): void {
           provider: config.provider,
           modelId: config.modelId,
           usageType: config.usageType || "llm", // 添加模型用途类型
+          dimension: config.dimension, // 向量维度（嵌入模型）
           maxTokens: config.maxTokens,
           temperature: config.temperature,
         };
@@ -465,13 +477,17 @@ async function handleClientMessage(ws: WebSocket, data: Buffer): Promise<void> {
       message.type === MessageType.AGENT_TOOL_RESULT ||
       message.type === MessageType.KNOWLEDGE_ASK_ADD ||
       message.type === MessageType.ASK ||
-      message.type === MessageType.ASK_RESULT
+      message.type === MessageType.ASK_RESULT ||
+      message.type === MessageType.TODO_CREATED ||
+      message.type === MessageType.TODO_UPDATED ||
+      message.type === MessageType.TODO_DELETED
     ) {
       const clientInfo = clients.get(ws);
       // 确保消息来自 Python 客户端
       if (clientInfo?.clientType === "python_agent") {
         // 广播给所有渲染进程客户端
         broadcastToRenderers(message);
+        console.log(`[WebSocket] ${message.type} 事件已广播给渲染进程`);
       }
       return;
     }

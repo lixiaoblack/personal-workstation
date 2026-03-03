@@ -21,7 +21,11 @@ import { registerPostmanIpc } from "./registerPostmanIpc";
 import { registerModuleIpc } from "./registerModuleIpc";
 import { registerNotesIpc } from "./registerNotesIpc";
 import { registerTodoIpc } from "./registerTodoIpc";
-import { registerAgentBuilderIpc } from "./registerAgentBuilderIpc";
+import {
+  registerAgentBuilderIpc,
+  registerAgentConversationIpc,
+} from "./registerAgentBuilderIpc";
+import { registerWorkflowIpc } from "./registerWorkflowIpc";
 
 // 导出用户认证相关函数
 export { getCurrentToken, setCurrentToken, getCurrentUser };
@@ -67,6 +71,12 @@ export function registerAllIpcHandlers(mainWindow: BrowserWindow | null): void {
 
   // 智能体搭建模块
   registerAgentBuilderIpc();
+
+  // 智能体对话模块
+  registerAgentConversationIpc();
+
+  // 工作流编排模块
+  registerWorkflowIpc();
 
   console.log("[IPC] 所有 IPC 处理器已注册");
 }

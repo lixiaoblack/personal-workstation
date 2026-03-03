@@ -17,6 +17,9 @@ import { AISettings } from "@/views/Settings/AISettings";
 import { AIChat } from "@/views/AIChat";
 import Agents from "@/views/Agents";
 import AgentBuilder from "@/views/Agents/AgentBuilder";
+import AgentChat from "@/views/Agents/AgentChat";
+import WorkflowList from "@/views/Workflow/WorkflowList";
+import WorkflowEditor from "@/views/Workflow/WorkflowEditor";
 import Knowledge from "@/views/Knowledge";
 import Notes from "@/views/Notes";
 import Todo from "@/views/Todo";
@@ -156,6 +159,19 @@ const protectedRoutes: RouteObject[] = [
           {
             path: "/agents/:id/edit",
             element: <AgentBuilder />,
+          },
+          {
+            path: "/agents/:agentId/chat",
+            element: <AgentChat />,
+          },
+          // 工作流
+          {
+            path: "/workflow",
+            element: <WorkflowList />,
+          },
+          {
+            path: "/workflow/edit",
+            element: <WorkflowEditor />,
           },
           // 知识库
           {

@@ -28,6 +28,7 @@ export interface BaseModelConfig {
   priority: number; // 优先级（用于降级策略）
   status: ModelConfigStatus; // 状态
   lastError?: string; // 最后错误信息
+  dimension?: number; // 向量维度（仅嵌入模型使用）
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +70,7 @@ export interface CreateModelConfigInput {
   enabled?: boolean;
   isDefault?: boolean;
   priority?: number;
+  dimension?: number; // 向量维度（仅嵌入模型）
   maxTokens?: number;
   temperature?: number;
   keepAlive?: string;
@@ -86,6 +88,7 @@ export interface UpdateModelConfigInput {
   enabled?: boolean;
   isDefault?: boolean;
   priority?: number;
+  dimension?: number; // 向量维度（仅嵌入模型）
   maxTokens?: number;
   temperature?: number;
   keepAlive?: string;
@@ -105,6 +108,7 @@ export interface ModelConfigListItem {
   isDefault: boolean;
   priority: number;
   status: ModelConfigStatus;
+  dimension?: number; // 向量维度（仅嵌入模型）
   lastError?: string;
   createdAt: string;
   updatedAt: string;
@@ -132,6 +136,7 @@ export const DEFAULT_EMBEDDING_MODEL_CONFIGS: Omit<
     name: "Nomic Embed Text",
     modelId: "nomic-embed-text",
     host: "http://127.0.0.1:11434",
+    dimension: 768,
     enabled: false,
     isDefault: false,
     priority: 1,
@@ -142,6 +147,7 @@ export const DEFAULT_EMBEDDING_MODEL_CONFIGS: Omit<
     name: "Mxbai Embed Large",
     modelId: "mxbai-embed-large",
     host: "http://127.0.0.1:11434",
+    dimension: 1024,
     enabled: false,
     isDefault: false,
     priority: 2,
@@ -151,6 +157,7 @@ export const DEFAULT_EMBEDDING_MODEL_CONFIGS: Omit<
     provider: "openai",
     name: "OpenAI text-embedding-3-small",
     modelId: "text-embedding-3-small",
+    dimension: 1536,
     enabled: false,
     isDefault: false,
     priority: 3,
@@ -161,6 +168,7 @@ export const DEFAULT_EMBEDDING_MODEL_CONFIGS: Omit<
     provider: "openai",
     name: "OpenAI text-embedding-3-large",
     modelId: "text-embedding-3-large",
+    dimension: 3072,
     enabled: false,
     isDefault: false,
     priority: 4,

@@ -32,6 +32,18 @@ interface SendChatOptions {
     size: number;
     mimeType: string;
   }>; // 附件列表
+  // 智能体特有参数
+  agentId?: string; // 智能体 ID
+  agentConfig?: {
+    name: string;
+    description?: string;
+    systemPrompt?: string; // 自定义系统提示词
+    modelId?: number; // 智能体绑定的模型 ID
+    tools?: string[]; // 启用的工具列表
+    knowledgeIds?: string[]; // 绑定的知识库 ID 列表
+    temperature?: number; // 温度参数
+    maxTokens?: number; // 最大 token 数
+  }; // 智能体配置
 }
 
 interface UseWebSocketReturn {
@@ -218,6 +230,8 @@ export function useWebSocket(
         knowledgeId,
         knowledgeMetadata,
         attachments,
+        agentId,
+        agentConfig,
       } = options;
       const message = createMessage<AgentChatMessage>(MessageType.AGENT_CHAT, {
         content,
@@ -227,6 +241,8 @@ export function useWebSocket(
         knowledgeId,
         knowledgeMetadata,
         attachments,
+        agentId,
+        agentConfig,
       });
       return send(message);
     },

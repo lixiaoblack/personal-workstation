@@ -21,30 +21,34 @@ router = APIRouter(prefix="/api/agents", tags=["智能体"])
 async def list_agents():
     """
     获取智能体列表
-    
+
     返回所有状态为 active 的智能体。
     """
     with get_db() as conn:
         cursor = conn.execute("""
             SELECT id, name, description, avatar, model_id, model_name,
                    system_prompt, tools, knowledge_ids, skills, parameters,
-                   status, created_at, updated_at
+                   workflow_id, status, created_at, updated_at
             FROM agents 
             WHERE status != 'deleted'
             ORDER BY updated_at DESC
         """)
         rows = cursor.fetchall()
-        
+
         agents = []
         for row in rows:
             agent = dict(row)
             # 解析 JSON 字段
-            agent["tools"] = json.loads(agent["tools"]) if agent["tools"] else []
-            agent["knowledge_ids"] = json.loads(agent["knowledge_ids"]) if agent["knowledge_ids"] else []
-            agent["skills"] = json.loads(agent["skills"]) if agent["skills"] else []
-            agent["parameters"] = json.loads(agent["parameters"]) if agent["parameters"] else {}
+            agent["tools"] = json.loads(
+                agent["tools"]) if agent["tools"] else []
+            agent["knowledge_ids"] = json.loads(
+                agent["knowledge_ids"]) if agent["knowledge_ids"] else []
+            agent["skills"] = json.loads(
+                agent["skills"]) if agent["skills"] else []
+            agent["parameters"] = json.loads(
+                agent["parameters"]) if agent["parameters"] else {}
             agents.append(agent)
-        
+
         return {
             "success": True,
             "data": agents,
@@ -56,10 +60,10 @@ async def list_agents():
 async def get_agent(agent_id: str):
     """
     获取智能体详情
-    
+
     Args:
         agent_id: 智能体 ID
-        
+
     Returns:
         智能体详细信息
     """
@@ -67,21 +71,24 @@ async def get_agent(agent_id: str):
         cursor = conn.execute("""
             SELECT id, name, description, avatar, model_id, model_name,
                    system_prompt, tools, knowledge_ids, skills, parameters,
-                   status, created_at, updated_at
+                   workflow_id, status, created_at, updated_at
             FROM agents WHERE id = ?
         """, (agent_id,))
         row = cursor.fetchone()
-        
+
         if not row:
             raise HTTPException(status_code=404, detail="智能体不存在")
-        
+
         agent = dict(row)
         # 解析 JSON 字段
         agent["tools"] = json.loads(agent["tools"]) if agent["tools"] else []
-        agent["knowledge_ids"] = json.loads(agent["knowledge_ids"]) if agent["knowledge_ids"] else []
-        agent["skills"] = json.loads(agent["skills"]) if agent["skills"] else []
-        agent["parameters"] = json.loads(agent["parameters"]) if agent["parameters"] else {}
-        
+        agent["knowledge_ids"] = json.loads(
+            agent["knowledge_ids"]) if agent["knowledge_ids"] else []
+        agent["skills"] = json.loads(
+            agent["skills"]) if agent["skills"] else []
+        agent["parameters"] = json.loads(
+            agent["parameters"]) if agent["parameters"] else {}
+
         return {"success": True, "data": agent}
 
 
@@ -89,33 +96,33 @@ async def get_agent(agent_id: str):
 async def create_agent(data: AgentCreate):
     """
     创建智能体
-    
+
     Args:
         data: 智能体创建参数
-        
+
     Returns:
         创建的智能体信息
     """
     agent_id = f"agent_{uuid.uuid4().hex}"
     now = int(time.time() * 1000)
-    
+
     with get_db() as conn:
         try:
             conn.execute("""
                 INSERT INTO agents 
                 (id, name, description, avatar, model_id, model_name,
                  system_prompt, tools, knowledge_ids, skills, parameters,
-                 status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 workflow_id, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 agent_id, data.name, data.description, data.avatar,
                 data.model_id, data.model_name, data.system_prompt,
                 json.dumps(data.tools), json.dumps(data.knowledge_ids),
                 json.dumps(data.skills), json.dumps(data.parameters),
-                "active", now, now
+                data.workflow_id, "active", now, now
             ))
             conn.commit()
-            
+
             return {
                 "success": True,
                 "data": {
@@ -130,6 +137,7 @@ async def create_agent(data: AgentCreate):
                     "knowledge_ids": data.knowledge_ids,
                     "skills": data.skills,
                     "parameters": data.parameters,
+                    "workflow_id": data.workflow_id,
                     "status": "active",
                     "created_at": now,
                     "updated_at": now
@@ -143,26 +151,27 @@ async def create_agent(data: AgentCreate):
 async def update_agent(agent_id: str, data: AgentUpdate):
     """
     更新智能体
-    
+
     Args:
         agent_id: 智能体 ID
         data: 更新参数
-        
+
     Returns:
         更新后的智能体信息
     """
     now = int(time.time() * 1000)
-    
+
     with get_db() as conn:
         # 检查智能体是否存在
-        cursor = conn.execute("SELECT id FROM agents WHERE id = ?", (agent_id,))
+        cursor = conn.execute(
+            "SELECT id FROM agents WHERE id = ?", (agent_id,))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="智能体不存在")
-        
+
         # 构建更新语句
         updates = []
         params = []
-        
+
         if data.name is not None:
             updates.append("name = ?")
             params.append(data.name)
@@ -196,18 +205,21 @@ async def update_agent(agent_id: str, data: AgentUpdate):
         if data.status is not None:
             updates.append("status = ?")
             params.append(data.status)
-        
+        if data.workflow_id is not None:
+            updates.append("workflow_id = ?")
+            params.append(data.workflow_id)
+
         if not updates:
             return await get_agent(agent_id)
-        
+
         updates.append("updated_at = ?")
         params.extend([now, agent_id])
-        
+
         conn.execute(
             f"UPDATE agents SET {', '.join(updates)} WHERE id = ?", params
         )
         conn.commit()
-        
+
         return await get_agent(agent_id)
 
 
@@ -215,15 +227,15 @@ async def update_agent(agent_id: str, data: AgentUpdate):
 async def delete_agent(agent_id: str):
     """
     删除智能体（软删除）
-    
+
     Args:
         agent_id: 智能体 ID
-        
+
     Returns:
         删除结果
     """
     now = int(time.time() * 1000)
-    
+
     with get_db() as conn:
         # 软删除：将状态设为 deleted
         cursor = conn.execute(
@@ -231,10 +243,10 @@ async def delete_agent(agent_id: str):
             ("deleted", now, agent_id)
         )
         conn.commit()
-        
+
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="智能体不存在")
-        
+
         return {"success": True, "message": "智能体已删除"}
 
 
@@ -242,10 +254,10 @@ async def delete_agent(agent_id: str):
 async def duplicate_agent(agent_id: str):
     """
     复制智能体
-    
+
     Args:
         agent_id: 要复制的智能体 ID
-        
+
     Returns:
         新创建的智能体信息
     """
@@ -253,25 +265,25 @@ async def duplicate_agent(agent_id: str):
         # 获取原智能体
         cursor = conn.execute("""
             SELECT name, description, avatar, model_id, model_name,
-                   system_prompt, tools, knowledge_ids, skills, parameters
+                   system_prompt, tools, knowledge_ids, skills, parameters, workflow_id
             FROM agents WHERE id = ?
         """, (agent_id,))
         row = cursor.fetchone()
-        
+
         if not row:
             raise HTTPException(status_code=404, detail="智能体不存在")
-        
+
         # 创建新智能体
         new_agent_id = f"agent_{uuid.uuid4().hex}"
         now = int(time.time() * 1000)
         original = dict(row)
-        
+
         conn.execute("""
             INSERT INTO agents 
             (id, name, description, avatar, model_id, model_name,
-             system_prompt, tools, knowledge_ids, skills, parameters,
+             system_prompt, tools, knowledge_ids, skills, parameters, workflow_id,
              status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             new_agent_id,
             f"{original['name']} (副本)",
@@ -284,8 +296,9 @@ async def duplicate_agent(agent_id: str):
             original['knowledge_ids'],
             original['skills'],
             original['parameters'],
+            original['workflow_id'],
             "active", now, now
         ))
         conn.commit()
-        
+
         return await get_agent(new_agent_id)

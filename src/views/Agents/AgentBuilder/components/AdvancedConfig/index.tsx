@@ -55,7 +55,9 @@ const AdvancedConfig: React.FC<AdvancedConfigProps> = ({ value, onChange }) => {
       {/* 温度 */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm text-text-secondary">温度 (Temperature)</label>
+          <label className="text-sm text-text-secondary">
+            温度 (Temperature)
+          </label>
           <span className="text-sm text-text-primary font-medium">
             {value.parameters?.temperature ?? 0.7}
           </span>

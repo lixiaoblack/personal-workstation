@@ -23,7 +23,10 @@ interface UseAgentsReturn {
   fetchAgents: () => Promise<void>;
   getAgent: (id: string) => Promise<AgentConfig | null>;
   createAgent: (input: CreateAgentInput) => Promise<AgentConfig | null>;
-  updateAgent: (id: string, input: UpdateAgentInput) => Promise<AgentConfig | null>;
+  updateAgent: (
+    id: string,
+    input: UpdateAgentInput
+  ) => Promise<AgentConfig | null>;
   deleteAgent: (id: string) => Promise<boolean>;
   duplicateAgent: (id: string) => Promise<AgentConfig | null>;
 }
@@ -56,15 +59,18 @@ export function useAgents(): UseAgentsReturn {
   }, []);
 
   // 获取单个智能体
-  const getAgent = useCallback(async (id: string): Promise<AgentConfig | null> => {
-    try {
-      const response: AgentResponse = await window.electronAPI.agentGet(id);
-      return response.success ? response.data || null : null;
-    } catch (err) {
-      console.error("获取智能体失败:", err);
-      return null;
-    }
-  }, []);
+  const getAgent = useCallback(
+    async (id: string): Promise<AgentConfig | null> => {
+      try {
+        const response: AgentResponse = await window.electronAPI.agentGet(id);
+        return response.success ? response.data || null : null;
+      } catch (err) {
+        console.error("获取智能体失败:", err);
+        return null;
+      }
+    },
+    []
+  );
 
   // 创建智能体
   const createAgent = useCallback(
@@ -73,7 +79,8 @@ export function useAgents(): UseAgentsReturn {
       setError(null);
 
       try {
-        const response: AgentResponse = await window.electronAPI.agentCreate(input);
+        const response: AgentResponse =
+          await window.electronAPI.agentCreate(input);
         if (response.success && response.data) {
           // 刷新列表
           await fetchAgents();
@@ -94,12 +101,18 @@ export function useAgents(): UseAgentsReturn {
 
   // 更新智能体
   const updateAgent = useCallback(
-    async (id: string, input: UpdateAgentInput): Promise<AgentConfig | null> => {
+    async (
+      id: string,
+      input: UpdateAgentInput
+    ): Promise<AgentConfig | null> => {
       setLoading(true);
       setError(null);
 
       try {
-        const response: AgentResponse = await window.electronAPI.agentUpdate(id, input);
+        const response: AgentResponse = await window.electronAPI.agentUpdate(
+          id,
+          input
+        );
         if (response.success && response.data) {
           // 更新本地状态
           setAgents((prev) =>
@@ -121,30 +134,27 @@ export function useAgents(): UseAgentsReturn {
   );
 
   // 删除智能体
-  const deleteAgent = useCallback(
-    async (id: string): Promise<boolean> => {
-      setLoading(true);
-      setError(null);
+  const deleteAgent = useCallback(async (id: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const response = await window.electronAPI.agentDelete(id);
-        if (response.success) {
-          // 从本地状态移除
-          setAgents((prev) => prev.filter((agent) => agent.id !== id));
-          return true;
-        } else {
-          setError(response.error || "删除智能体失败");
-          return false;
-        }
-      } catch (err) {
-        setError(String(err));
+    try {
+      const response = await window.electronAPI.agentDelete(id);
+      if (response.success) {
+        // 从本地状态移除
+        setAgents((prev) => prev.filter((agent) => agent.id !== id));
+        return true;
+      } else {
+        setError(response.error || "删除智能体失败");
         return false;
-      } finally {
-        setLoading(false);
       }
-    },
-    []
-  );
+    } catch (err) {
+      setError(String(err));
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // 复制智能体
   const duplicateAgent = useCallback(
@@ -153,7 +163,8 @@ export function useAgents(): UseAgentsReturn {
       setError(null);
 
       try {
-        const response: AgentResponse = await window.electronAPI.agentDuplicate(id);
+        const response: AgentResponse =
+          await window.electronAPI.agentDuplicate(id);
         if (response.success && response.data) {
           // 刷新列表
           await fetchAgents();

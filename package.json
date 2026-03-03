@@ -23,6 +23,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/material-symbols-outlined": "^5.2.36",
     "@monaco-editor/react": "^4.7.0",
+    "@xyflow/react": "^12.10.1",
     "adm-zip": "^0.5.16",
     "antd": "^6.3.0",
     "bcrypt": "^6.0.0",

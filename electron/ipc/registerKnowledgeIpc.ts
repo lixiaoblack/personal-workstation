@@ -33,7 +33,7 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
       if (wsInfo.pythonConnected) {
         // 通过 WebSocket 创建向量存储，使用本地数据库生成的 ID
         try {
-          await websocketService.sendKnowledgeRequest(
+          const pyResult = (await websocketService.sendKnowledgeRequest(
             MessageType.KNOWLEDGE_CREATE,
             {
               knowledgeId: knowledge.id,
@@ -41,11 +41,35 @@ export function registerKnowledgeIpc(mainWindow: BrowserWindow | null): void {
               description: input.description,
               embeddingModel: input.embeddingModel,
               embeddingModelName: input.embeddingModelName,
+              embeddingModelConfigId: input.embeddingModelConfigId,
+              dimension: input.dimension,
             }
-          );
+          )) as { success: boolean; error?: string };
+
+          if (!pyResult.success) {
+            // Python 端创建 LanceDB 集合失败，回滚本地记录
+            console.error(
+              "[KnowledgeIpc] Python 端创建向量存储失败:",
+              pyResult.error
+            );
+            await knowledgeService.deleteKnowledge(knowledge.id);
+            return {
+              success: false,
+              knowledge: [],
+              count: 0,
+              error: pyResult.error || "创建向量存储失败",
+            };
+          }
         } catch (pyError) {
           console.error("[KnowledgeIpc] Python 端创建向量存储失败:", pyError);
-          // Python 失败不回滚本地记录，用户可以稍后重试
+          // 通信失败，回滚本地记录
+          await knowledgeService.deleteKnowledge(knowledge.id);
+          return {
+            success: false,
+            knowledge: [],
+            count: 0,
+            error: String(pyError),
+          };
         }
       }
 

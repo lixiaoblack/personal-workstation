@@ -8,6 +8,7 @@ import { ipcMain } from "electron";
 import * as userService from "../services/userService";
 import * as storageService from "../services/storageService";
 import * as avatarService from "../services/avatarService";
+import { getDatabase } from "../database";
 import type { BrowserWindow } from "electron";
 
 // 当前登录用户的 Token
@@ -139,6 +140,24 @@ export function registerUserIpc(mainWindow: BrowserWindow | null): void {
   // 清理缓存
   ipcMain.handle("storage:clearCache", async () => {
     return storageService.clearCache();
+  });
+
+  // 清除所有数据（保留用户信息）
+  ipcMain.handle("storage:clearAllData", async () => {
+    const db = getDatabase();
+    return storageService.clearAllData(db);
+  });
+
+  // 打开数据库目录
+  ipcMain.handle("storage:openDatabaseDir", async () => {
+    const dbPath = storageService.getDatabasePath();
+    return storageService.openDirectory(dbPath);
+  });
+
+  // 打开向量数据库目录
+  ipcMain.handle("storage:openVectorDbDir", async () => {
+    const vectorDbPath = storageService.getVectorDbPath();
+    return storageService.openDirectory(vectorDbPath);
   });
 
   // ========== 媒体权限管理（macOS）==========

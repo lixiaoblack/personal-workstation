@@ -19,7 +19,10 @@ interface KnowledgeBinderProps {
   onChange: (value: KnowledgeBinderValue) => void;
 }
 
-const KnowledgeBinder: React.FC<KnowledgeBinderProps> = ({ value, onChange }) => {
+const KnowledgeBinder: React.FC<KnowledgeBinderProps> = ({
+  value,
+  onChange,
+}) => {
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeInfo[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -66,14 +69,8 @@ const KnowledgeBinder: React.FC<KnowledgeBinderProps> = ({ value, onChange }) =>
           <Spin />
         </div>
       ) : knowledgeList.length === 0 ? (
-        <Empty
-          description="暂无知识库"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        >
-          <a
-            href="#/knowledge"
-            className="text-primary text-sm"
-          >
+        <Empty description="暂无知识库" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+          <a href="#/knowledge" className="text-primary text-sm">
             去创建知识库
           </a>
         </Empty>

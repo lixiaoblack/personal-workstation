@@ -20,12 +20,14 @@ import {
   ToolSelector,
   KnowledgeBinder,
   AdvancedConfig,
+  WorkflowSelector,
 } from "./components";
 import type { BasicConfigValue } from "./components/BasicConfig";
 import type { PromptEditorValue } from "./components/PromptEditor";
 import type { ToolSelectorValue } from "./components/ToolSelector";
 import type { KnowledgeBinderValue } from "./components/KnowledgeBinder";
 import type { AdvancedConfigValue } from "./components/AdvancedConfig";
+import type { WorkflowSelectorValue } from "./components/WorkflowSelector";
 import "./AgentBuilder.sass";
 
 const AgentBuilder: React.FC = () => {
@@ -52,10 +54,13 @@ const AgentBuilder: React.FC = () => {
     knowledge_ids: [],
     skills: [],
     parameters: DEFAULT_AGENT_PARAMETERS,
+    workflow_id: undefined,
   });
 
   // 可用模型列表
-  const [models, setModels] = useState<Array<{ id: number; name: string; modelId: string }>>([]);
+  const [models, setModels] = useState<
+    Array<{ id: number; name: string; modelId: string }>
+  >([]);
 
   // 加载智能体数据（编辑模式）
   const loadAgentData = useCallback(async () => {
@@ -76,6 +81,7 @@ const AgentBuilder: React.FC = () => {
           knowledge_ids: agent.knowledge_ids || [],
           skills: agent.skills || [],
           parameters: agent.parameters || DEFAULT_AGENT_PARAMETERS,
+          workflow_id: agent.workflow_id ?? undefined,
         });
       } else {
         message.error("智能体不存在");
@@ -151,6 +157,14 @@ const AgentBuilder: React.FC = () => {
     }));
   };
 
+  // 更新工作流选择
+  const handleWorkflowSelectorChange = (value: WorkflowSelectorValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      workflow_id: value.workflow_id || undefined,
+    }));
+  };
+
   // 更新高级配置
   const handleAdvancedConfigChange = (value: AdvancedConfigValue) => {
     setFormData((prev) => ({
@@ -185,6 +199,7 @@ const AgentBuilder: React.FC = () => {
           knowledge_ids: formData.knowledge_ids,
           skills: formData.skills,
           parameters: formData.parameters,
+          workflow_id: formData.workflow_id,
         };
         const result = await updateAgent(id, updateInput);
         if (result) {
@@ -256,6 +271,10 @@ const AgentBuilder: React.FC = () => {
       ),
       children: (
         <div className="space-y-4">
+          <WorkflowSelector
+            value={{ workflow_id: formData.workflow_id || null }}
+            onChange={handleWorkflowSelectorChange}
+          />
           <ToolSelector
             value={{ tools: formData.tools || [] }}
             onChange={handleToolSelectorChange}
@@ -283,7 +302,8 @@ const AgentBuilder: React.FC = () => {
               max_tokens: (formData.parameters?.max_tokens as number) ?? 4096,
               top_p: (formData.parameters?.top_p as number) ?? 1,
             },
-            opening_message: (formData.parameters?.opening_message as string) || "",
+            opening_message:
+              (formData.parameters?.opening_message as string) || "",
           }}
           onChange={handleAdvancedConfigChange}
         />

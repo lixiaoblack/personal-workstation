@@ -116,6 +116,7 @@ class AgentCreate(BaseModel):
     knowledge_ids: Optional[List[str]] = []
     skills: Optional[List[str]] = []
     parameters: Optional[Dict[str, Any]] = {}
+    workflow_id: Optional[str] = None
 
 
 class AgentUpdate(BaseModel):
@@ -130,4 +131,47 @@ class AgentUpdate(BaseModel):
     knowledge_ids: Optional[List[str]] = None
     skills: Optional[List[str]] = None
     parameters: Optional[Dict[str, Any]] = None
+    workflow_id: Optional[str] = None
+    status: Optional[str] = None
+
+
+# ==================== 工作流模型 ====================
+
+class WorkflowNode(BaseModel):
+    """工作流节点"""
+    id: str
+    type: str  # start, end, llm, tool, knowledge, condition, loop, file_select, user_input, human_review, message, webhook
+    position: Dict[str, float]  # {x, y}
+    data: Dict[str, Any] = {}  # 节点配置数据
+
+
+class WorkflowEdge(BaseModel):
+    """工作流边（连线）"""
+    id: str
+    source: str  # 源节点 ID
+    target: str  # 目标节点 ID
+    sourceHandle: Optional[str] = None  # 源节点的连接点
+    targetHandle: Optional[str] = None  # 目标节点的连接点
+    label: Optional[str] = None  # 边标签（条件分支时使用）
+    data: Optional[Dict[str, Any]] = None  # 边配置数据
+
+
+class WorkflowCreate(BaseModel):
+    """创建工作流请求"""
+    name: str
+    description: Optional[str] = None
+    agent_id: Optional[str] = None
+    nodes: Optional[List[Dict[str, Any]]] = []
+    edges: Optional[List[Dict[str, Any]]] = []
+    variables: Optional[Dict[str, Any]] = {}
+
+
+class WorkflowUpdate(BaseModel):
+    """更新工作流请求"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    agent_id: Optional[str] = None
+    nodes: Optional[List[Dict[str, Any]]] = None
+    edges: Optional[List[Dict[str, Any]]] = None
+    variables: Optional[Dict[str, Any]] = None
     status: Optional[str] = None

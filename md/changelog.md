@@ -4,6 +4,30 @@
 
 ---
 
+## [0.5.65] - 2026-03-02
+
+### 新增 (Added)
+
+- **Workflow 工作流功能**
+  - 新增工作流编辑器页面，支持可视化节点编辑
+  - 支持多种节点类型：触发器、AI 对话、条件判断、知识库检索、工具调用等
+  - 节点拖拽、连接、配置功能
+  - 工作流保存和加载
+
+- **Todo WebSocket 消息类型**
+  - 添加 `TodoCreatedMessage`、`TodoUpdatedMessage`、`TodoDeletedMessage` 接口
+  - 支持待办变更实时同步到前端
+
+### 修复 (Fixed)
+
+- 修复 TypeScript 类型错误
+  - `WebSocketMessage` 联合类型缺少 Todo 相关消息类型
+  - `ElectronAPI` 接口缺少 `clearAllData`、`openDatabaseDir`、`openVectorDbDir` 方法
+  - `KnowledgeAddDocumentResult` 接口缺少 `warning` 属性
+  - 删除 `src/types/electron.ts` 中重复的 `Window` 接口声明
+
+---
+
 ## [0.5.61] - 2026-02-27
 
 ### 修复 (Fixed)

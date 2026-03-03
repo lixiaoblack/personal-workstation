@@ -34,7 +34,10 @@ const AgentCard: React.FC<AgentCardProps> = ({
 
   // 获取头像显示
   const getAvatarDisplay = () => {
-    if (agent.avatar && AGENT_AVATARS.includes(agent.avatar as typeof AGENT_AVATARS[number])) {
+    if (
+      agent.avatar &&
+      AGENT_AVATARS.includes(agent.avatar as (typeof AGENT_AVATARS)[number])
+    ) {
       return agent.avatar;
     }
     return "🤖";
@@ -54,7 +57,9 @@ const AgentCard: React.FC<AgentCardProps> = ({
     {
       key: "duplicate",
       label: "复制",
-      icon: <span className="material-symbols-outlined text-sm">content_copy</span>,
+      icon: (
+        <span className="material-symbols-outlined text-sm">content_copy</span>
+      ),
       onClick: (e) => {
         e.domEvent.stopPropagation();
         onDuplicate?.(agent);
@@ -112,7 +117,9 @@ const AgentCard: React.FC<AgentCardProps> = ({
           {/* 信息 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h4 className="font-bold text-text-primary truncate">{agent.name}</h4>
+              <h4 className="font-bold text-text-primary truncate">
+                {agent.name}
+              </h4>
               {agent.status === "draft" && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-warning/20 text-warning">
                   草稿
@@ -146,7 +153,9 @@ const AgentCard: React.FC<AgentCardProps> = ({
           <div className="flex items-center gap-2 text-xs text-text-tertiary">
             {agent.model_name && (
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">smart_toy</span>
+                <span className="material-symbols-outlined text-sm">
+                  smart_toy
+                </span>
                 {agent.model_name}
               </span>
             )}

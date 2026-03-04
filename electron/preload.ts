@@ -686,6 +686,7 @@ export interface UpdateWorkflowInput {
 contextBridge.exposeInMainWorld("electronAPI", {
   // 应用环境信息
   isPackaged: (): Promise<boolean> => ipcRenderer.invoke("app:isPackaged"),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke("app:getVersion"),
 
   // 用户认证
   login: (credentials: LoginCredentials): Promise<LoginResult> =>
@@ -1400,6 +1401,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 export interface ElectronAPI {
   // 应用环境信息
   isPackaged: () => Promise<boolean>;
+  getAppVersion: () => Promise<string>;
 
   // 用户认证
   login: (credentials: LoginCredentials) => Promise<LoginResult>;

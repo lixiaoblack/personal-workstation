@@ -20,6 +20,10 @@ export function registerPythonIpc(): void {
     return app.isPackaged;
   });
 
+  ipcMain.handle("app:getVersion", async () => {
+    return app.getVersion();
+  });
+
   // ========== WebSocket 服务管理 ==========
 
   ipcMain.handle("ws:getInfo", async () => {

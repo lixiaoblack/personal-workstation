@@ -2,11 +2,23 @@
  * AboutSettings 关于页面设置组件
  * 包含软件版本信息和更新检查
  */
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const AboutSettings: React.FC = () => {
-  // 从 package.json 获取版本号（实际项目中可以通过 electron API 获取）
-  const version = "0.4.5";
+  // 从 Electron API 获取版本号
+  const [version, setVersion] = useState<string>("加载中...");
+
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        const appVersion = await window.electronAPI.getAppVersion();
+        setVersion(appVersion);
+      } catch {
+        setVersion("未知");
+      }
+    };
+    fetchVersion();
+  }, []);
 
   return (
     <section className="pb-12">

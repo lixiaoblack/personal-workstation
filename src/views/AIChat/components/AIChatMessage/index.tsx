@@ -19,6 +19,7 @@ import KnowledgeDocumentListCard, {
   type DocumentItem,
 } from "../KnowledgeDocumentListCard";
 import type { Message, ModelConfig } from "@/types/electron";
+import { useAuth } from "@/contexts";
 
 // 附件文件类型
 interface AttachmentFile {
@@ -113,6 +114,7 @@ function getFileIcon(type: string): string {
 const AIChatMessage: React.FC<AIChatMessageProps> = memo(
   ({ message, currentModel }) => {
     const isUser = message.role === "user";
+    const { user } = useAuth();
 
     // 过滤掉 answer 类型
     const thinkingSteps = useMemo(() => {
@@ -182,21 +184,31 @@ const AIChatMessage: React.FC<AIChatMessageProps> = memo(
           }`}
         >
           {/* 头像 */}
-          <div
-            className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-              isUser
-                ? "bg-primary/10 border border-primary/20"
-                : "bg-bg-tertiary border border-border"
-            }`}
-          >
-            <span
-              className={`material-symbols-outlined text-lg ${
-                isUser ? "text-primary" : "text-text-secondary"
+          {isUser && user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.nickname || user.username || "用户"}
+              className="size-8 rounded-lg object-cover shrink-0"
+            />
+          ) : (
+            <div
+              className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
+                isUser
+                  ? "bg-primary/10 border border-primary/20"
+                  : "bg-bg-tertiary border border-border"
               }`}
             >
-              {isUser ? "person" : "smart_toy"}
-            </span>
-          </div>
+              {isUser ? (
+                <span className="text-sm font-bold text-primary">
+                  {(user?.nickname || user?.username || "我").charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <span className="material-symbols-outlined text-lg text-text-secondary">
+                  smart_toy
+                </span>
+              )}
+            </div>
+          )}
 
           {/* 消息内容 */}
           <div className="flex flex-col gap-1">

@@ -24,7 +24,7 @@ from api import (
     get_db_path,
     knowledge_router, conversation_router,
     memory_router, user_router, ocr_router, llm_router,
-    notes_router, agents_router, workflows_router
+    notes_router, agents_router, workflows_router, pdf_router
 )
 
 # 配置日志
@@ -72,6 +72,7 @@ app.include_router(llm_router)
 app.include_router(notes_router)
 app.include_router(agents_router)
 app.include_router(workflows_router)
+app.include_router(pdf_router)
 
 
 # ==================== 启动入口 ====================

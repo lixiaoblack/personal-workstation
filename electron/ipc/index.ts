@@ -15,6 +15,7 @@ import { registerModelIpc } from "./registerModelIpc";
 import { registerKnowledgeIpc } from "./registerKnowledgeIpc";
 import { registerMemoryIpc } from "./registerMemoryIpc";
 import { registerOcrIpc } from "./registerOcrIpc";
+import { registerPdfIpc } from "./registerPdfIpc";
 import { registerPythonIpc } from "./registerPythonIpc";
 import { registerSwaggerIpc } from "./registerSwaggerIpc";
 import { registerPostmanIpc } from "./registerPostmanIpc";
@@ -50,6 +51,9 @@ export function registerAllIpcHandlers(mainWindow: BrowserWindow | null): void {
 
   // OCR 识别
   registerOcrIpc();
+
+  // PDF 解析
+  registerPdfIpc();
 
   // Python 服务和 Ollama
   registerPythonIpc();

@@ -703,11 +703,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateProfile: (data: UpdateProfileData): Promise<User | null> =>
     ipcRenderer.invoke("user:updateProfile", data),
   updatePassword: (
-    data: UpdatePasswordData
+    data: UpdatePasswordData,
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke("user:updatePassword", data),
   resetPassword: (
-    data: ResetPasswordData
+    data: ResetPasswordData,
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke("user:resetPassword", data),
 
@@ -754,13 +754,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Python 服务管理
   startPythonService: (
-    config?: PythonServiceConfig
+    config?: PythonServiceConfig,
   ): Promise<PythonServiceStartResult> =>
     ipcRenderer.invoke("python:service:start", config),
   stopPythonService: (): Promise<PythonServiceStopResult> =>
     ipcRenderer.invoke("python:service:stop"),
   restartPythonService: (
-    config?: PythonServiceConfig
+    config?: PythonServiceConfig,
   ): Promise<PythonServiceStartResult> =>
     ipcRenderer.invoke("python:service:restart", config),
   getPythonServiceInfo: (): Promise<PythonServiceInfo> =>
@@ -779,7 +779,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("model:create", input),
   updateModelConfig: (
     id: number,
-    input: UpdateModelConfigInput
+    input: UpdateModelConfigInput,
   ): Promise<ModelConfig | null> =>
     ipcRenderer.invoke("model:update", id, input),
   deleteModelConfig: (id: number): Promise<boolean> =>
@@ -798,7 +798,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("conversation:create", input),
   updateConversation: (
     id: number,
-    input: UpdateConversationInput
+    input: UpdateConversationInput,
   ): Promise<Conversation | null> =>
     ipcRenderer.invoke("conversation:update", id, input),
   deleteConversation: (id: number): Promise<boolean> =>
@@ -811,7 +811,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("message:autoSetTitle", conversationId),
   getRecentMessages: (
     conversationId: number,
-    limit?: number
+    limit?: number,
   ): Promise<Message[]> =>
     ipcRenderer.invoke("message:getRecent", conversationId, limit),
 
@@ -828,7 +828,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("skill:getList"),
   executeSkill: (
     skillName: string,
-    parameters?: Record<string, unknown>
+    parameters?: Record<string, unknown>,
   ): Promise<SkillExecuteResult> =>
     ipcRenderer.invoke("skill:execute", skillName, parameters),
   reloadSkills: (skillName?: string): Promise<SkillReloadResult> =>
@@ -836,11 +836,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Knowledge 知识库相关
   createKnowledge: (
-    input: KnowledgeCreateInput
+    input: KnowledgeCreateInput,
   ): Promise<KnowledgeListResult> =>
     ipcRenderer.invoke("knowledge:create", input),
   deleteKnowledge: (
-    knowledgeId: string
+    knowledgeId: string,
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke("knowledge:delete", knowledgeId),
   listKnowledge: (): Promise<KnowledgeListResult> =>
@@ -850,27 +850,27 @@ contextBridge.exposeInMainWorld("electronAPI", {
   addKnowledgeDocument: (
     knowledgeId: string,
     filePath: string,
-    originalFileName?: string
+    originalFileName?: string,
   ): Promise<KnowledgeAddDocumentResult> =>
     ipcRenderer.invoke(
       "knowledge:addDocument",
       knowledgeId,
       filePath,
-      originalFileName
+      originalFileName,
     ),
   removeKnowledgeDocument: (
     knowledgeId: string,
-    documentId: string
+    documentId: string,
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke("knowledge:removeDocument", knowledgeId, documentId),
   searchKnowledge: (
     knowledgeId: string,
     query: string,
-    topK?: number
+    topK?: number,
   ): Promise<KnowledgeSearchResultData> =>
     ipcRenderer.invoke("knowledge:search", knowledgeId, query, topK),
   listKnowledgeDocuments: (
-    knowledgeId: string
+    knowledgeId: string,
   ): Promise<{
     success: boolean;
     documents: KnowledgeDocumentInfo[];
@@ -884,33 +884,33 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Knowledge Files 知识库文件操作
   selectAndSaveKnowledgeFiles: (
-    knowledgeId: string
+    knowledgeId: string,
   ): Promise<KnowledgeFilesResult> =>
     ipcRenderer.invoke("knowledge:selectAndSaveFiles", knowledgeId),
   saveFileToKnowledge: (
     knowledgeId: string,
-    filePath: string
+    filePath: string,
   ): Promise<KnowledgeFileResult> =>
     ipcRenderer.invoke("knowledge:saveFile", knowledgeId, filePath),
   saveFilesToKnowledge: (
     knowledgeId: string,
-    filePaths: string[]
+    filePaths: string[],
   ): Promise<KnowledgeFilesResult> =>
     ipcRenderer.invoke("knowledge:saveFiles", knowledgeId, filePaths),
   pasteFileToKnowledge: (knowledgeId: string): Promise<KnowledgeFileResult> =>
     ipcRenderer.invoke("knowledge:pasteFile", knowledgeId),
   deleteKnowledgeFile: (
     knowledgeId: string,
-    fileId: string
+    fileId: string,
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke("knowledge:deleteFile", knowledgeId, fileId),
   getKnowledgeFileInfo: (
     knowledgeId: string,
-    fileId: string
+    fileId: string,
   ): Promise<KnowledgeFileResult> =>
     ipcRenderer.invoke("knowledge:getFileInfo", knowledgeId, fileId),
   getKnowledgeStorageInfo: (
-    knowledgeId: string
+    knowledgeId: string,
   ): Promise<KnowledgeStorageInfoResult> =>
     ipcRenderer.invoke("knowledge:getStorageInfo", knowledgeId),
   getAllKnowledgeStorageInfo: (): Promise<KnowledgeAllStorageInfoResult> =>
@@ -919,7 +919,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 文件内容读取（用于文件预览）
   readFileContent: (
     filePath: string,
-    maxSize?: number
+    maxSize?: number,
   ): Promise<{
     success: boolean;
     content?: string;
@@ -937,7 +937,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     memoryKey: string,
     memoryValue: string,
     sourceConversationId?: number,
-    confidence?: number
+    confidence?: number,
   ): Promise<Omit<MemorySaveResponseMessage, "type" | "id" | "timestamp">> =>
     ipcRenderer.invoke(
       "memory:save",
@@ -945,7 +945,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       memoryKey,
       memoryValue,
       sourceConversationId,
-      confidence
+      confidence,
     ),
   saveMemories: (
     memories: Array<{
@@ -953,7 +953,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       key: string;
       value: string;
       sourceConversationId?: number;
-    }>
+    }>,
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke("memory:saveBatch", memories),
   createSummary: (
@@ -962,7 +962,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     endMessageId: number,
     summary: string,
     keyTopics: string[],
-    messageCount: number
+    messageCount: number,
   ): Promise<
     Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">
   > =>
@@ -973,18 +973,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
       endMessageId,
       summary,
       keyTopics,
-      messageCount
+      messageCount,
     ),
   listMemories: (
-    memoryType?: string
+    memoryType?: string,
   ): Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">> =>
     ipcRenderer.invoke("memory:list", memoryType),
   deleteMemory: (
-    memoryId: number
+    memoryId: number,
   ): Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">> =>
     ipcRenderer.invoke("memory:delete", memoryId),
   getConversationSummaries: (
-    conversationId: number
+    conversationId: number,
   ): Promise<{
     success: boolean;
     summaries: Array<{
@@ -1000,7 +1000,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   generateSummary: (
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
-    modelId?: number
+    modelId?: number,
   ): Promise<
     Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
   > =>
@@ -1008,7 +1008,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       "memory:generateSummary",
       conversationId,
       messages,
-      modelId
+      modelId,
     ),
 
   // OCR 识别相关
@@ -1020,9 +1020,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ocrSaveToKnowledge: (
     knowledgeId: string,
     title: string,
-    content: string
+    content: string,
   ): Promise<OcrSaveToKnowledgeResult> =>
     ipcRenderer.invoke("ocr:saveToKnowledge", knowledgeId, title, content),
+
+  // PDF 解析相关
+  pdfStatus: (): Promise<{
+    success: boolean;
+    data?: { available: boolean; message: string };
+    error?: string;
+  }> => ipcRenderer.invoke("pdf:status"),
+  pdfParse: (
+    pdfBase64: string,
+    useOcr?: boolean,
+  ): Promise<{
+    success: boolean;
+    data?: Record<string, unknown>;
+    error?: string;
+  }> => ipcRenderer.invoke("pdf:parse", pdfBase64, useOcr),
+  pdfParseFile: (
+    filePath: string,
+    useOcr?: boolean,
+  ): Promise<{
+    success: boolean;
+    data?: Record<string, unknown>;
+    error?: string;
+  }> => ipcRenderer.invoke("pdf:parseFile", filePath, useOcr),
 
   // Swagger 解析相关
   swaggerParseUrl: (url: string): Promise<SwaggerParseResult> =>
@@ -1031,7 +1054,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("swagger:parseFile", filePath),
   swaggerParseContent: (
     content: string,
-    format?: "json" | "yaml"
+    format?: "json" | "yaml",
   ): Promise<SwaggerParseResult> =>
     ipcRenderer.invoke("swagger:parseContent", content, format),
   swaggerSelectFile: (): Promise<{ canceled: boolean; filePaths: string[] }> =>
@@ -1133,26 +1156,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
   notesCreateFolderForce: (
     parentPath: string | null,
     folderName: string,
-    mode: "overwrite" | "copy"
+    mode: "overwrite" | "copy",
   ) =>
     ipcRenderer.invoke("notes:createFolderForce", parentPath, folderName, mode),
   notesCreateNote: (
     parentPath: string | null,
     fileName: string,
-    content?: string
+    content?: string,
   ) => ipcRenderer.invoke("notes:createNote", parentPath, fileName, content),
   notesCreateNoteForce: (
     parentPath: string | null,
     fileName: string,
     mode: "overwrite" | "copy",
-    content?: string
+    content?: string,
   ) =>
     ipcRenderer.invoke(
       "notes:createNoteForce",
       parentPath,
       fileName,
       mode,
-      content
+      content,
     ),
   notesReadFile: (filePath: string) =>
     ipcRenderer.invoke("notes:readFile", filePath),
@@ -1180,12 +1203,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   todoGetCategory: (id: number): Promise<TodoCategory | null> =>
     ipcRenderer.invoke("todo:getCategory", id),
   todoCreateCategory: (
-    input: TodoCategoryInput
+    input: TodoCategoryInput,
   ): Promise<TodoCategory | null> =>
     ipcRenderer.invoke("todo:createCategory", input),
   todoUpdateCategory: (
     id: number,
-    input: Partial<TodoCategoryInput>
+    input: Partial<TodoCategoryInput>,
   ): Promise<TodoCategory | null> =>
     ipcRenderer.invoke("todo:updateCategory", id, input),
   todoDeleteCategory: (id: number): Promise<boolean> =>
@@ -1249,7 +1272,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke(
       "agent:conversations:updateTitle",
       conversationId,
-      title
+      title,
     ),
   agentConversationAutoTitle: (conversationId: number) =>
     ipcRenderer.invoke("agent:conversations:autoTitle", conversationId),
@@ -1286,29 +1309,29 @@ contextBridge.exposeInMainWorld("electronAPI", {
   workflowExecuteNode: (
     workflowId: string,
     nodeId: string,
-    inputVariables?: Record<string, unknown>
+    inputVariables?: Record<string, unknown>,
   ) =>
     ipcRenderer.invoke(
       "workflow:executeNode",
       workflowId,
       nodeId,
-      inputVariables
+      inputVariables,
     ),
   workflowExecuteFromNode: (
     workflowId: string,
     nodeId: string,
-    initialVariables?: Record<string, unknown>
+    initialVariables?: Record<string, unknown>,
   ) =>
     ipcRenderer.invoke(
       "workflow:executeFromNode",
       workflowId,
       nodeId,
-      initialVariables
+      initialVariables,
     ),
   workflowResume: (
     executionId: string,
     nodeId: string,
-    responseData: Record<string, unknown>
+    responseData: Record<string, unknown>,
   ) => ipcRenderer.invoke("workflow:resume", executionId, nodeId, responseData),
   workflowSelectFiles: (options?: {
     multiple?: boolean;
@@ -1353,12 +1376,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // 导航事件监听
   onNavigate: (
-    callback: (event: Electron.IpcRendererEvent, route: string) => void
+    callback: (event: Electron.IpcRendererEvent, route: string) => void,
   ) => {
     ipcRenderer.on("app:navigate", callback);
   },
   removeNavigateListener: (
-    callback: (event: Electron.IpcRendererEvent, route: string) => void
+    callback: (event: Electron.IpcRendererEvent, route: string) => void,
   ) => {
     ipcRenderer.removeListener("app:navigate", callback);
   },
@@ -1370,7 +1393,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       downloaded: number;
       total: number;
       percent: number;
-    }) => void
+    }) => void,
   ) => {
     const listener = (
       _event: Electron.IpcRendererEvent,
@@ -1379,7 +1402,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
         downloaded: number;
         total: number;
         percent: number;
-      }
+      },
     ) => callback(progress);
     ipcRenderer.on("module:downloadProgress", listener);
     return () =>
@@ -1390,7 +1413,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onThemeChanged: (callback: (theme: "light" | "dark") => void) => {
     const listener = (
       _event: Electron.IpcRendererEvent,
-      theme: "light" | "dark"
+      theme: "light" | "dark",
     ) => callback(theme);
     ipcRenderer.on("theme-changed", listener);
     return () => ipcRenderer.removeListener("theme-changed", listener);
@@ -1413,10 +1436,10 @@ export interface ElectronAPI {
   // 用户信息管理
   updateProfile: (data: UpdateProfileData) => Promise<User | null>;
   updatePassword: (
-    data: UpdatePasswordData
+    data: UpdatePasswordData,
   ) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (
-    data: ResetPasswordData
+    data: ResetPasswordData,
   ) => Promise<{ success: boolean; error?: string }>;
 
   // 检查状态
@@ -1450,11 +1473,11 @@ export interface ElectronAPI {
 
   // Python 服务管理
   startPythonService: (
-    config?: PythonServiceConfig
+    config?: PythonServiceConfig,
   ) => Promise<PythonServiceStartResult>;
   stopPythonService: () => Promise<PythonServiceStopResult>;
   restartPythonService: (
-    config?: PythonServiceConfig
+    config?: PythonServiceConfig,
   ) => Promise<PythonServiceStartResult>;
   getPythonServiceInfo: () => Promise<PythonServiceInfo>;
 
@@ -1466,7 +1489,7 @@ export interface ElectronAPI {
   createModelConfig: (input: CreateModelConfigInput) => Promise<ModelConfig>;
   updateModelConfig: (
     id: number,
-    input: UpdateModelConfigInput
+    input: UpdateModelConfigInput,
   ) => Promise<ModelConfig | null>;
   deleteModelConfig: (id: number) => Promise<boolean>;
   setDefaultModelConfig: (id: number) => Promise<boolean>;
@@ -1478,7 +1501,7 @@ export interface ElectronAPI {
   createConversation: (input: CreateConversationInput) => Promise<Conversation>;
   updateConversation: (
     id: number,
-    input: UpdateConversationInput
+    input: UpdateConversationInput,
   ) => Promise<Conversation | null>;
   deleteConversation: (id: number) => Promise<boolean>;
 
@@ -1487,7 +1510,7 @@ export interface ElectronAPI {
   autoSetConversationTitle: (conversationId: number) => Promise<string | null>;
   getRecentMessages: (
     conversationId: number,
-    limit?: number
+    limit?: number,
   ) => Promise<Message[]>;
 
   // Ollama 相关
@@ -1499,32 +1522,32 @@ export interface ElectronAPI {
   getSkillList: () => Promise<SkillListResult>;
   executeSkill: (
     skillName: string,
-    parameters?: Record<string, unknown>
+    parameters?: Record<string, unknown>,
   ) => Promise<SkillExecuteResult>;
   reloadSkills: (skillName?: string) => Promise<SkillReloadResult>;
 
   // Knowledge 知识库相关
   createKnowledge: (
-    input: KnowledgeCreateInput
+    input: KnowledgeCreateInput,
   ) => Promise<KnowledgeListResult>;
   deleteKnowledge: (
-    knowledgeId: string
+    knowledgeId: string,
   ) => Promise<{ success: boolean; error?: string }>;
   listKnowledge: () => Promise<KnowledgeListResult>;
   getKnowledge: (knowledgeId: string) => Promise<KnowledgeListResult>;
   addKnowledgeDocument: (
     knowledgeId: string,
     filePath: string,
-    originalFileName?: string
+    originalFileName?: string,
   ) => Promise<KnowledgeAddDocumentResult>;
   removeKnowledgeDocument: (
     knowledgeId: string,
-    documentId: string
+    documentId: string,
   ) => Promise<{ success: boolean; error?: string }>;
   searchKnowledge: (
     knowledgeId: string,
     query: string,
-    topK?: number
+    topK?: number,
   ) => Promise<KnowledgeSearchResultData>;
   listKnowledgeDocuments: (knowledgeId: string) => Promise<{
     success: boolean;
@@ -1539,34 +1562,34 @@ export interface ElectronAPI {
 
   // Knowledge Files 知识库文件操作
   selectAndSaveKnowledgeFiles: (
-    knowledgeId: string
+    knowledgeId: string,
   ) => Promise<KnowledgeFilesResult>;
   saveFileToKnowledge: (
     knowledgeId: string,
-    filePath: string
+    filePath: string,
   ) => Promise<KnowledgeFileResult>;
   saveFilesToKnowledge: (
     knowledgeId: string,
-    filePaths: string[]
+    filePaths: string[],
   ) => Promise<KnowledgeFilesResult>;
   pasteFileToKnowledge: (knowledgeId: string) => Promise<KnowledgeFileResult>;
   deleteKnowledgeFile: (
     knowledgeId: string,
-    fileId: string
+    fileId: string,
   ) => Promise<{ success: boolean; error?: string }>;
   getKnowledgeFileInfo: (
     knowledgeId: string,
-    fileId: string
+    fileId: string,
   ) => Promise<KnowledgeFileResult>;
   getKnowledgeStorageInfo: (
-    knowledgeId: string
+    knowledgeId: string,
   ) => Promise<KnowledgeStorageInfoResult>;
   getAllKnowledgeStorageInfo: () => Promise<KnowledgeAllStorageInfoResult>;
 
   // 文件内容读取（用于文件预览）
   readFileContent: (
     filePath: string,
-    maxSize?: number
+    maxSize?: number,
   ) => Promise<{
     success: boolean;
     content?: string;
@@ -1584,7 +1607,7 @@ export interface ElectronAPI {
     memoryKey: string,
     memoryValue: string,
     sourceConversationId?: number,
-    confidence?: number
+    confidence?: number,
   ) => Promise<Omit<MemorySaveResponseMessage, "type" | "id" | "timestamp">>;
   saveMemories: (
     memories: Array<{
@@ -1592,7 +1615,7 @@ export interface ElectronAPI {
       key: string;
       value: string;
       sourceConversationId?: number;
-    }>
+    }>,
   ) => Promise<{ success: boolean; error?: string }>;
   createSummary: (
     conversationId: number,
@@ -1600,15 +1623,15 @@ export interface ElectronAPI {
     endMessageId: number,
     summary: string,
     keyTopics: string[],
-    messageCount: number
+    messageCount: number,
   ) => Promise<
     Omit<MemoryCreateSummaryResponseMessage, "type" | "id" | "timestamp">
   >;
   listMemories: (
-    memoryType?: string
+    memoryType?: string,
   ) => Promise<Omit<MemoryListResponseMessage, "type" | "id" | "timestamp">>;
   deleteMemory: (
-    memoryId: number
+    memoryId: number,
   ) => Promise<Omit<MemoryDeleteResponseMessage, "type" | "id" | "timestamp">>;
   getConversationSummaries: (conversationId: number) => Promise<{
     success: boolean;
@@ -1623,7 +1646,7 @@ export interface ElectronAPI {
   generateSummary: (
     conversationId: number,
     messages: Array<{ role: string; content: string }>,
-    modelId?: number
+    modelId?: number,
   ) => Promise<
     Omit<MemoryGenerateSummaryResponseMessage, "type" | "id" | "timestamp">
   >;
@@ -1635,15 +1658,38 @@ export interface ElectronAPI {
   ocrSaveToKnowledge: (
     knowledgeId: string,
     title: string,
-    content: string
+    content: string,
   ) => Promise<OcrSaveToKnowledgeResult>;
+
+  // PDF 解析相关
+  pdfStatus: () => Promise<{
+    success: boolean;
+    data?: { available: boolean; message: string };
+    error?: string;
+  }>;
+  pdfParse: (
+    pdfBase64: string,
+    useOcr?: boolean,
+  ) => Promise<{
+    success: boolean;
+    data?: Record<string, unknown>;
+    error?: string;
+  }>;
+  pdfParseFile: (
+    filePath: string,
+    useOcr?: boolean,
+  ) => Promise<{
+    success: boolean;
+    data?: Record<string, unknown>;
+    error?: string;
+  }>;
 
   // Swagger 解析相关
   swaggerParseUrl: (url: string) => Promise<SwaggerParseResult>;
   swaggerParseFile: (filePath: string) => Promise<SwaggerParseResult>;
   swaggerParseContent: (
     content: string,
-    format?: "json" | "yaml"
+    format?: "json" | "yaml",
   ) => Promise<SwaggerParseResult>;
   swaggerSelectFile: () => Promise<{ canceled: boolean; filePaths: string[] }>;
 
@@ -1653,7 +1699,7 @@ export interface ElectronAPI {
   postmanCreateProject: (input: PostmanProjectInput) => Promise<PostmanProject>;
   postmanUpdateProject: (
     id: number,
-    input: Partial<PostmanProjectInput>
+    input: Partial<PostmanProjectInput>,
   ) => Promise<PostmanProject | null>;
   postmanDeleteProject: (id: number) => Promise<boolean>;
 
@@ -1662,28 +1708,28 @@ export interface ElectronAPI {
   postmanCreateGroup: (input: PostmanGroupInput) => Promise<PostmanGroup>;
   postmanUpdateGroup: (
     id: number,
-    input: Partial<PostmanGroupInput>
+    input: Partial<PostmanGroupInput>,
   ) => Promise<PostmanGroup | null>;
   postmanDeleteGroup: (id: number) => Promise<boolean>;
 
   // SimplePostman 请求管理
   postmanGetRequestsByProjectId: (
-    projectId: number
+    projectId: number,
   ) => Promise<PostmanRequest[]>;
   postmanGetRequestsByGroupId: (groupId: number) => Promise<PostmanRequest[]>;
   postmanGetRequestById: (id: number) => Promise<PostmanRequest | null>;
   postmanCreateRequest: (input: PostmanRequestInput) => Promise<PostmanRequest>;
   postmanUpdateRequest: (
     id: number,
-    input: Partial<PostmanRequestInput>
+    input: Partial<PostmanRequestInput>,
   ) => Promise<PostmanRequest | null>;
   postmanDeleteRequest: (id: number) => Promise<boolean>;
   postmanUpdateRequestLlmTypes: (
     id: number,
-    llmTypes: string
+    llmTypes: string,
   ) => Promise<PostmanRequest | null>;
   postmanBatchCreateRequests: (
-    requests: PostmanRequestInput[]
+    requests: PostmanRequestInput[],
   ) => Promise<PostmanRequest[]>;
 
   // SimplePostman 历史记录
@@ -1695,7 +1741,7 @@ export interface ElectronAPI {
   postmanGetSetting: (key: string) => Promise<PostmanSetting | null>;
   postmanSaveSetting: (
     key: string,
-    value: Record<string, unknown>
+    value: Record<string, unknown>,
   ) => Promise<PostmanSetting>;
 
   // 模块管理
@@ -1744,10 +1790,10 @@ export interface ElectronAPI {
     >
   >;
   moduleInstall: (
-    moduleId: string
+    moduleId: string,
   ) => Promise<{ success: boolean; error?: string }>;
   moduleUninstall: (
-    moduleId: string
+    moduleId: string,
   ) => Promise<{ success: boolean; error?: string }>;
   moduleCancelDownload: (moduleId: string) => Promise<boolean>;
 
@@ -1779,7 +1825,7 @@ export interface ElectronAPI {
   // 文件夹选择
   notesSelectFolder: () => Promise<{ canceled: boolean; filePaths: string[] }>;
   notesValidateFolder: (
-    folderPath: string
+    folderPath: string,
   ) => Promise<{ valid: boolean; error?: string }>;
 
   // 文件扫描
@@ -1794,7 +1840,7 @@ export interface ElectronAPI {
   // 文件操作
   notesCreateFolder: (
     parentPath: string | null,
-    folderName: string
+    folderName: string,
   ) => Promise<{
     success: boolean;
     path?: string;
@@ -1804,12 +1850,12 @@ export interface ElectronAPI {
   notesCreateFolderForce: (
     parentPath: string | null,
     folderName: string,
-    mode: "overwrite" | "copy"
+    mode: "overwrite" | "copy",
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   notesCreateNote: (
     parentPath: string | null,
     fileName: string,
-    content?: string
+    content?: string,
   ) => Promise<{
     success: boolean;
     path?: string;
@@ -1820,30 +1866,30 @@ export interface ElectronAPI {
     parentPath: string | null,
     fileName: string,
     mode: "overwrite" | "copy",
-    content?: string
+    content?: string,
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   notesReadFile: (
-    filePath: string
+    filePath: string,
   ) => Promise<{ success: boolean; content?: string; error?: string }>;
   notesSaveFile: (
     filePath: string,
-    content: string
+    content: string,
   ) => Promise<{ success: boolean; error?: string }>;
   notesRenameItem: (
     oldPath: string,
-    newName: string
+    newName: string,
   ) => Promise<{ success: boolean; newPath?: string; error?: string }>;
   notesDeleteItem: (
-    itemPath: string
+    itemPath: string,
   ) => Promise<{ success: boolean; error?: string }>;
   notesGetFileInfo: (
-    filePath: string
+    filePath: string,
   ) => Promise<{ success: boolean; file?: NotesFile; error?: string }>;
 
   // Notes 向量索引
   notesIndexNote: (
     filePath: string,
-    content: string
+    content: string,
   ) => Promise<{ success: boolean; chunkCount?: number; error?: string }>;
   notesIndexAllNotes: (rootPath: string) => Promise<{
     success: boolean;
@@ -1868,11 +1914,11 @@ export interface ElectronAPI {
   todoListCategories: () => Promise<TodoCategory[]>;
   todoGetCategory: (id: number) => Promise<TodoCategory | null>;
   todoCreateCategory: (
-    input: TodoCategoryInput
+    input: TodoCategoryInput,
   ) => Promise<TodoCategory | null>;
   todoUpdateCategory: (
     id: number,
-    input: Partial<TodoCategoryInput>
+    input: Partial<TodoCategoryInput>,
   ) => Promise<TodoCategory | null>;
   todoDeleteCategory: (id: number) => Promise<boolean>;
   todoGetCategoryStats: () => Promise<
@@ -1916,7 +1962,7 @@ export interface ElectronAPI {
   }>;
   agentUpdate: (
     agentId: string,
-    input: UpdateAgentInput
+    input: UpdateAgentInput,
   ) => Promise<{
     success: boolean;
     data?: AgentConfig;
@@ -1955,7 +2001,7 @@ export interface ElectronAPI {
   }>;
   agentConversationUpdateTitle: (
     conversationId: number,
-    title: string
+    title: string,
   ) => Promise<{
     success: boolean;
     error?: string;
@@ -1979,7 +2025,7 @@ export interface ElectronAPI {
   }>;
   agentMessageRecent: (
     conversationId: number,
-    limit?: number
+    limit?: number,
   ) => Promise<{
     success: boolean;
     data?: AgentMessage[];
@@ -2007,7 +2053,7 @@ export interface ElectronAPI {
   }>;
   workflowUpdate: (
     workflowId: string,
-    input: UpdateWorkflowInput
+    input: UpdateWorkflowInput,
   ) => Promise<{
     success: boolean;
     data?: WorkflowConfig;
@@ -2029,7 +2075,7 @@ export interface ElectronAPI {
   }>;
   workflowExecute: (
     workflowId: string,
-    inputData?: Record<string, unknown>
+    inputData?: Record<string, unknown>,
   ) => Promise<{
     success: boolean;
     execution_id?: string;
@@ -2042,7 +2088,7 @@ export interface ElectronAPI {
   workflowExecuteNode: (
     workflowId: string,
     nodeId: string,
-    inputVariables?: Record<string, unknown>
+    inputVariables?: Record<string, unknown>,
   ) => Promise<{
     success: boolean;
     node_id?: string;
@@ -2056,7 +2102,7 @@ export interface ElectronAPI {
   workflowExecuteFromNode: (
     workflowId: string,
     nodeId: string,
-    initialVariables?: Record<string, unknown>
+    initialVariables?: Record<string, unknown>,
   ) => Promise<{
     success: boolean;
     execution_id?: string;
@@ -2067,7 +2113,7 @@ export interface ElectronAPI {
   workflowResume: (
     executionId: string,
     nodeId: string,
-    responseData: Record<string, unknown>
+    responseData: Record<string, unknown>,
   ) => Promise<{
     success: boolean;
     error?: string;
@@ -2101,16 +2147,16 @@ export interface ElectronAPI {
   // 分组浮窗操作
   categoryFloatToggle: (
     categoryId: number,
-    categoryData: TodoCategory
+    categoryData: TodoCategory,
   ) => Promise<{ success: boolean }>;
   categoryFloatClose: (categoryId: number) => Promise<{ success: boolean }>;
   categoryFloatSetAlwaysOnTop: (
     categoryId: number,
-    alwaysOnTop: boolean
+    alwaysOnTop: boolean,
   ) => Promise<{ success: boolean }>;
   categoryFloatGetFloatedCategories: () => Promise<TodoCategory[]>;
   categoryFloatNotifyThemeChange: (
-    theme: "light" | "dark"
+    theme: "light" | "dark",
   ) => Promise<{ success: boolean }>;
   categoryFloatGetCurrentTheme: () => Promise<"light" | "dark">;
 
@@ -2129,10 +2175,10 @@ export interface ElectronAPI {
 
   // 导航事件监听
   onNavigate: (
-    callback: (event: Electron.IpcRendererEvent, route: string) => void
+    callback: (event: Electron.IpcRendererEvent, route: string) => void,
   ) => void;
   removeNavigateListener: (
-    callback: (event: Electron.IpcRendererEvent, route: string) => void
+    callback: (event: Electron.IpcRendererEvent, route: string) => void,
   ) => void;
 
   // 模块下载进度监听
@@ -2142,7 +2188,7 @@ export interface ElectronAPI {
       downloaded: number;
       total: number;
       percent: number;
-    }) => void
+    }) => void,
   ) => () => void;
 
   // 主题变更监听（用于浮窗）

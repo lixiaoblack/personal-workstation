@@ -51,6 +51,12 @@ export const TOOL_MENU_CONFIG: ToolMenuItem[] = [
     path: "/developer/ocr",
     icon: "document_scanner",
   },
+  {
+    key: "pdf-compare",
+    label: "PDF 识别对比",
+    path: "/developer/pdf-compare",
+    icon: "picture_as_pdf",
+  },
 ];
 
 export default TOOL_MENU_CONFIG;

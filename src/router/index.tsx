@@ -40,6 +40,7 @@ import ColorConvert from "@/views/Developer/ColorConvert";
 import ExcelToJson from "@/views/Developer/ExcelToJson";
 import SimplePostman from "@/views/Developer/SimplePostman";
 import OcrTool from "@/views/Developer/OcrTool";
+import PdfCompare from "@/views/Developer/PdfCompare";
 
 // 路由守卫
 import ProtectedRoute from "./ProtectedRoute";
@@ -112,6 +113,10 @@ const protectedRoutes: RouteObject[] = [
               {
                 path: "ocr",
                 element: <OcrTool />,
+              },
+              {
+                path: "pdf-compare",
+                element: <PdfCompare />,
               },
             ],
           },
